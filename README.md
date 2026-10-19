@@ -2,6 +2,23 @@
 
 An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 58) and grounded in sleep research. Black and white throughout: the only colour is the weather emojis.
 
+## Try it on your phone (Expo Go)
+
+You need a computer with [Node.js](https://nodejs.org) (the LTS version) and git, and the **Expo Go** app on your phone (App Store or Google Play).
+
+```bash
+git clone https://github.com/federicoblanchard1-hash/ryz-alarm
+cd ryz-alarm
+npm install
+npm run go
+```
+
+A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or with **Expo Go** on Android. Ryz opens in Expo Go and reloads by itself when the code changes.
+
+- The phone and computer must be on the **same Wi-Fi**. If it won't connect (office or school Wi-Fi often blocks it), run `npx expo login` once, then `npm run go:tunnel`.
+- In the terminal, press `r` to reload the app and `Ctrl+C` to stop.
+- Keep Ryz open to test alarms: Settings → **Test alarm in 1 minute**. In Expo Go, alarms that ring while Ryz is closed use the phone's default notification sound, not Ryz's sounds. The full alarm needs a real build (see *Running it* below).
+
 ## Home
 
 - **Weather where you wake up**: your town, the temperature, conditions, today's high and low, and the next 24 hours with weather emojis, like Apple Weather. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
