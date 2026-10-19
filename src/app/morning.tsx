@@ -37,15 +37,15 @@ export default function Morning() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + space.xl }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Txt variant="title">Good morning</Txt>
+        <Txt variant="title">{data.settings.profile.name ? `Good morning, ${data.settings.profile.name.split(' ')[0]}` : 'Good morning'}</Txt>
         {checkAt ? (
           <Txt variant="muted">
             {`Ryz will ask if you're awake at ${formatClockText(checkAt.getHours(), checkAt.getMinutes(), data.settings.use24h)}. Keep your phone nearby.`}
           </Txt>
         ) : (
-          <Txt variant="muted">Three things that help the first few minutes:</Txt>
+          <Txt variant="muted">What helps in the first few minutes:</Txt>
         )}
-        {TIPS.map((tip) => (
+        {TIPS.filter((tip) => data.settings.morningLight || tip.icon !== 'sunny-outline').map((tip) => (
           <Card key={tip.title} style={styles.tip}>
             <Ionicons name={tip.icon} size={24} color={colors.text} />
             <View style={styles.tipText}>

@@ -16,6 +16,8 @@ interface Store {
   deleteAlarm: (id: string) => void;
   setEnabled: (id: string, enabled: boolean) => void;
   updateSettings: (patch: Partial<Settings>) => void;
+  /** Delete every alarm, setting and sleep record. */
+  reset: () => void;
   /** For ring actions: stop, snooze, confirm awake, test. */
   update: (fn: (data: AppData, now: number) => AppData) => void;
 }
@@ -84,6 +86,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setEnabled: (id, enabled) =>
         update((d, now) => ({ ...d, alarms: d.alarms.map((a) => (a.id === id ? withDate({ ...a, enabled }, now) : a)) })),
       updateSettings: (patch) => update((d) => ({ ...d, settings: { ...d.settings, ...patch } })),
+      reset: () => setData(emptyData(prefers24h(), preferredTempUnit())),
     }),
     [ready, data, update],
   );

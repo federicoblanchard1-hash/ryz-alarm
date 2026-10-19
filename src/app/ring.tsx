@@ -1,10 +1,10 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoldButton } from '@/components/HoldButton';
+import { RingDial } from '@/components/RingDial';
 import { Button, Txt, haptic } from '@/components/ui';
 import { MISSIONS } from '@/core/missions';
 import { phaseAt } from '@/core/plan';
@@ -14,19 +14,13 @@ import type { ActiveRing } from '@/core/types';
 import { MissionRunner } from '@/missions/MissionRunner';
 import { clearDelivered } from '@/services/notifications';
 import { useRingSound } from '@/services/sound';
+import { useBrightScreen } from '@/state/useBrightScreen';
 import { useScreenAwake } from '@/state/useScreenAwake';
 import { useStore } from '@/state/store';
 import { FONT, colors, space } from '@/theme';
 
 type Ring = Extract<ActiveRing, { type: 'ring' }>;
 
-/** After this long without a tap, shake or step, the alarm goes back to full volume. */
-const IDLE_MS = 15_000;
-
-const PULSE = {
-  from: { transform: [{ scale: 0.6 }], opacity: 0.5 },
-  to: { transform: [{ scale: 1.5 }], opacity: 0 },
-};
 
 function useClock() {
   const [now, setNow] = useState(() => Date.now());
@@ -53,8 +47,9 @@ export default function RingScreen() {
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = useClock();
   const insets = useSafeAreaInsets();
-  const reduced = useReducedMotion();
+  const { missionIdleSeconds, missionTimeLimitSeconds, quietDuringMissions, brightScreen } = data.settings;
   useScreenAwake('ryz-ring');
+  useBrightScreen(brightScreen && Boolean(ring && alarm) && !done);
   useRingSound(alarm, ring?.source ?? 'alarm', ring?.at ?? 0, Boolean(ring && alarm) && !done, busy);
 
   useEffect(() => {
@@ -65,11 +60,19 @@ export default function RingScreen() {
     if (idleTimer.current) clearTimeout(idleTimer.current);
   }, []);
 
-  /** Quiet while you work on a mission; loud again if you stop. */
+  /** Quiet while you work on a mission; loud again if you stop for `missionIdleSeconds`. */
   const activity = useCallback(() => {
+    if (!quietDuringMissions) return;
     setBusy(true);
     if (idleTimer.current) clearTimeout(idleTimer.current);
-    idleTimer.current = setTimeout(() => setBusy(false), IDLE_MS);
+    idleTimer.current = setTimeout(() => setBusy(false), missionIdleSeconds * 1000);
+  }, [quietDuringMissions, missionIdleSeconds]);
+
+  /** Out of time on a mission: it starts over and the alarm comes back at full volume. */
+  const timedOut = useCallback(() => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    setBusy(false);
+    haptic('error');
   }, []);
 
   const snoozeNow = useCallback(() => {
@@ -113,9 +116,9 @@ export default function RingScreen() {
         <View style={[styles.missions, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
           <View style={styles.bar}>
             <Txt variant="heading">{formatClockText(new Date(now).getHours(), new Date(now).getMinutes(), data.settings.use24h)}</Txt>
-            <Txt variant="caption" accessibilityLiveRegion="polite">{busy ? 'Alarm turned down while you do this' : 'Alarm back to full volume. Keep going'}</Txt>
+            <Txt variant="caption" accessibilityLiveRegion="polite">{!quietDuringMissions ? 'Finish to turn it off' : busy ? 'Alarm turned down while you do this' : 'Alarm back to full volume. Keep going'}</Txt>
           </View>
-          <MissionRunner missions={alarm.missions} onActivity={activity} onComplete={finish} />
+          <MissionRunner missions={alarm.missions} onActivity={activity} onComplete={finish} timeLimitSeconds={missionTimeLimitSeconds} onTimeout={timedOut} />
         </View>
       </KeyboardAvoidingView>
     );
@@ -130,17 +133,7 @@ export default function RingScreen() {
   return (
     <View style={[styles.screen, styles.ringing, { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }]}>
       <View style={styles.top}>
-        <View style={styles.pulseBox} accessible={false}>
-          {reduced ? (
-            <View style={[styles.pulse, { opacity: 0.3 }]} />
-          ) : (
-            [0, 1200].map((delay) => (
-              <Animated.View
-                key={delay}
-                style={[styles.pulse, { animationName: PULSE, animationDuration: '2.4s', animationDelay: `${delay}ms`, animationIterationCount: 'infinite', animationTimingFunction: 'ease-out' }]}
-              />
-            ))
-          )}
+        <RingDial second={new Date(now).getSeconds()}>
           {/* Hours over minutes, big enough to read without glasses. */}
           <View style={styles.stack} accessible accessibilityRole="header" accessibilityLabel={`${clock.time} ${clock.period}`}>
             {clock.time.split(':').map((part, i) => (
@@ -148,7 +141,7 @@ export default function RingScreen() {
             ))}
             {clock.period ? <Txt style={styles.period}>{clock.period}</Txt> : null}
           </View>
-        </View>
+        </RingDial>
         <Txt variant="heading" style={styles.center}>{subtitle}</Txt>
         {deepNow && alarm.mode === 'gentle' && ring.source !== 'recheck' ? <Txt variant="caption" style={styles.center}>Switched to the deep sleeper tone</Txt> : null}
       </View>
@@ -178,10 +171,8 @@ const styles = StyleSheet.create({
   missions: { flex: 1, paddingHorizontal: space.xl, gap: space.xl },
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   top: { alignItems: 'center', gap: space.md, marginTop: space.xxl },
-  pulseBox: { width: 340, height: 340, alignItems: 'center', justifyContent: 'center' },
-  pulse: { position: 'absolute', width: 340, height: 340, borderRadius: 170, borderWidth: 1.5, borderColor: colors.text },
   stack: { alignItems: 'center' },
-  digits: { fontSize: 112, lineHeight: 112, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -4 },
+  digits: { fontSize: 96, lineHeight: 98, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -4 },
   minutes: { color: colors.textMuted },
   period: { fontSize: 15, lineHeight: 20, fontFamily: FONT.medium, color: colors.textMuted, letterSpacing: 2, marginTop: space.xs },
   center: { textAlign: 'center' },

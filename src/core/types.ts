@@ -96,7 +96,21 @@ export interface Settings {
   tempUnit: 'C' | 'F';
   /** News topic ids ("sport.football"). null until you've picked (or skipped) them. */
   newsTopics: string[] | null;
+  /** Kept on this phone only. */
+  profile: { name: string; ageGroup: AgeGroup | null };
+  /** Seconds without a tap, shake or step before a turned-down alarm goes back to full volume. */
+  missionIdleSeconds: number;
+  /** Seconds to finish each mission before it starts over with a new puzzle; 0 means no limit. */
+  missionTimeLimitSeconds: number;
+  /** Turn the alarm down while you work on a mission. */
+  quietDuringMissions: boolean;
+  /** Turn the screen up to full brightness while the alarm rings. */
+  brightScreen: boolean;
+  /** On the morning screen, a reminder to get daylight soon after waking. */
+  morningLight: boolean;
 }
+
+export type AgeGroup = 'teen' | 'young' | 'adult' | 'older';
 
 /**
  * Something that happens once at a fixed time and isn't part of an alarm's

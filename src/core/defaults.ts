@@ -1,4 +1,4 @@
-import type { Alarm, AppData, Settings } from './types';
+import type { AgeGroup, Alarm, AppData, Settings } from './types';
 
 export const TEST_ALARM_ID = 'test';
 
@@ -33,7 +33,31 @@ export function testAlarm(): Alarm {
 
 export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): Settings {
   // Adults need at least 7 hours (AASM/SRS consensus, 2015); 8 leaves room to fall asleep.
-  return { sleepGoalMinutes: 8 * 60, bedtimeReminder: false, reminderLeadMinutes: 30, use24h, tempUnit, newsTopics: null };
+  return {
+    sleepGoalMinutes: 8 * 60,
+    bedtimeReminder: false,
+    reminderLeadMinutes: 30,
+    use24h,
+    tempUnit,
+    newsTopics: null,
+    profile: { name: '', ageGroup: null },
+    missionIdleSeconds: 15,
+    missionTimeLimitSeconds: 0,
+    quietDuringMissions: true,
+    brightScreen: true,
+    morningLight: true,
+  };
+}
+
+/**
+ * Recommended sleep by age (National Sleep Foundation, Hirshkowitz et al.,
+ * 2015), with the middle of the range as the suggested goal.
+ */
+export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, number]; goal: number }> = {
+  teen: { title: '14–17', range: [8, 10], goal: 9 * 60 },
+  young: { title: '18–25', range: [7, 9], goal: 8 * 60 },
+  adult: { title: '26–64', range: [7, 9], goal: 8 * 60 },
+  older: { title: '65+', range: [7, 8], goal: 7.5 * 60 },
 }
 
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {

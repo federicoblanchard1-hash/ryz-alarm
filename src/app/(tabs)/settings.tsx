@@ -1,18 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
+import { AGE_GROUPS } from '@/core/defaults';
 import { topicById } from '@/core/news';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { colors, space } from '@/theme';
+import type { AgeGroup } from '@/core/types';
+import { FONT, colors, radius, space } from '@/theme';
 
 const SOURCES = [
   { title: 'Low 520 Hz tone wakes deep sleepers', who: 'Bruck & Thomas, Victoria University', url: 'https://vuir.vu.edu.au/3994' },
@@ -21,9 +24,84 @@ const SOURCES = [
   { title: 'Sleep inertia: what helps after waking', who: 'Hilditch & McHill, 2019', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6710480/' },
   { title: 'Regular sleep and long-term health', who: 'Windred et al., SLEEP, 2024', url: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10782489/' },
   { title: 'Adults need 7 hours or more', who: 'AASM & Sleep Research Society, 2015', url: 'https://aasm.org/aasm-and-srs-publish-new-sleep-duration-consensus-statement/' },
+  { title: 'How much sleep each age needs', who: 'Hirshkowitz et al., Sleep Health, 2015', url: 'https://pubmed.ncbi.nlm.nih.gov/29073412/' },
+  { title: 'The reaction test (PVT)', who: 'Basner & Dinges, SLEEP, 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21532953/' },
+  { title: 'Activity, sleep and how alert you wake', who: 'Vallat et al., Nature Communications, 2022', url: 'https://www.nature.com/articles/s41467-022-34503-2' },
   { title: 'Weather data', who: 'Open-Meteo.com (CC BY 4.0)', url: 'https://open-meteo.com/' },
   { title: 'Place names on web', who: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright' },
 ];
+
+const seconds = (values: number[]) => values.map((v) => ({ value: v, label: v === 0 ? 'Off' : v < 60 ? `${v} s` : `${v / 60} min` }));
+
+function confirm(title: string, message: string, action: string, onYes: () => void) {
+  if (Platform.OS === 'web') {
+    if (globalThis.confirm?.(`${title}\n\n${message}`)) onYes();
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: action, style: 'destructive', onPress: onYes },
+  ]);
+}
+
+/** Name and age, kept on this phone. Age sets the recommended sleep goal. */
+function Profile() {
+  const { data, updateSettings } = useStore();
+  const { profile, sleepGoalMinutes } = data.settings;
+  const [name, setName] = useState(profile.name);
+  const age = profile.ageGroup ? AGE_GROUPS[profile.ageGroup] : null;
+  const initials = profile.name
+    .trim()
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  const saveName = () => {
+    const trimmed = name.trim();
+    if (trimmed !== profile.name) updateSettings({ profile: { ...profile, name: trimmed } });
+  };
+
+  return (
+    <View style={styles.profile}>
+      <View style={styles.profileTop}>
+        <View style={styles.avatar}>{initials ? <Text style={styles.initials}>{initials}</Text> : <Ionicons name="person" size={30} color={colors.textMuted} />}</View>
+        <View style={styles.flex}>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            onBlur={saveName}
+            onSubmitEditing={saveName}
+            placeholder="Your name"
+            placeholderTextColor={colors.textFaint}
+            style={styles.nameInput}
+            maxLength={30}
+            returnKeyType="done"
+            autoCapitalize="words"
+            accessibilityLabel="Your name"
+          />
+          <Txt variant="caption">Saved on this phone only. No sign-up, nothing leaves your phone.</Txt>
+        </View>
+      </View>
+      <Chips<AgeGroup | 'none'>
+        title="Your age"
+        value={profile.ageGroup ?? 'none'}
+        onChange={(v) => updateSettings({ profile: { ...profile, ageGroup: v === 'none' ? null : v } })}
+        options={(Object.keys(AGE_GROUPS) as AgeGroup[]).map((id) => ({ value: id, label: AGE_GROUPS[id].title }))}
+      />
+      {age ? (
+        <View style={styles.recommend}>
+          <Txt variant="caption" style={styles.flex}>{`Recommended for your age: ${age.range[0]}–${age.range[1]} hours a night.`}</Txt>
+          {sleepGoalMinutes !== age.goal ? (
+            <Pressable onPress={() => updateSettings({ sleepGoalMinutes: age.goal })} hitSlop={8} accessibilityRole="button">
+              <Txt variant="heading">{`Use ${formatHours(age.goal)}`}</Txt>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 const RELIABILITY_NOTE: Partial<Record<typeof Platform.OS, string>> = {
   ios: 'While Ryz is open, alarms ring even in silent mode. When Ryz is closed they ring as notifications, which follow the silent switch, so keep Ryz open overnight or silent mode off.',
@@ -63,7 +141,7 @@ function useLocationPermission() {
 }
 
 export default function SettingsScreen() {
-  const { data, updateSettings, update } = useStore();
+  const { data, updateSettings, update, reset } = useStore();
   const permissions = usePermissions();
   const location = useLocationPermission();
   const insets = useSafeAreaInsets();
@@ -74,7 +152,26 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Txt variant="largeTitle" style={styles.title} accessibilityRole="header">Settings</Txt>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]} keyboardShouldPersistTaps="handled">
+        <Section label="Profile">
+          <Profile />
+        </Section>
+
+        <Section label="Missions" footer="When time runs out, the mission starts over with a new puzzle and the alarm comes back at full volume.">
+          <Chips title="Time for each mission" value={settings.missionTimeLimitSeconds} onChange={(missionTimeLimitSeconds) => updateSettings({ missionTimeLimitSeconds })} options={seconds([0, 30, 60, 90, 120, 180])} />
+          <Divider />
+          <ToggleRow title="Quieter during missions" description="Turns the alarm down while you work, so you can think" value={settings.quietDuringMissions} onChange={(quietDuringMissions) => updateSettings({ quietDuringMissions })} />
+          {settings.quietDuringMissions ? (
+            <Chips title="Full volume again if you stop for" value={settings.missionIdleSeconds} onChange={(missionIdleSeconds) => updateSettings({ missionIdleSeconds })} options={seconds([5, 10, 15, 20, 30, 60])} />
+          ) : null}
+        </Section>
+
+        <Section label="Waking up" footer="Bright light right after waking helps clear grogginess faster (Hilditch & McHill, 2019).">
+          <ToggleRow title="Bright screen when ringing" description="Turns the screen up to full brightness" value={settings.brightScreen} onChange={(brightScreen) => updateSettings({ brightScreen })} />
+          <Divider />
+          <ToggleRow title="Daylight reminder" description="After you stop the alarm, a nudge to get light in the first hour" value={settings.morningLight} onChange={(morningLight) => updateSettings({ morningLight })} />
+        </Section>
+
         <Section label="Sleep" footer="Adults need at least 7 hours a night. Ryz uses your goal to suggest a bedtime.">
           <Chips
             title="Sleep goal"
@@ -162,6 +259,22 @@ export default function SettingsScreen() {
           />
         </Section>
 
+        <Section label="Your data" footer="Ryz keeps alarms, sleep history and your profile on this phone only. Nothing is uploaded.">
+          <Pressable
+            onPress={() =>
+              confirm('Erase everything?', 'This deletes all alarms, your sleep history and settings. It cannot be undone.', 'Erase', () => {
+                haptic('success');
+                reset();
+              })
+            }
+            accessibilityRole="button"
+            style={styles.status}
+          >
+            <Ionicons name="trash-outline" size={22} color={colors.danger} />
+            <Txt variant="row" style={[styles.flex, styles.danger]}>Erase all data</Txt>
+          </Pressable>
+        </Section>
+
         <Section label="The research behind Ryz">
           {SOURCES.map((s, i) => (
             <View key={s.url}>
@@ -176,6 +289,8 @@ export default function SettingsScreen() {
             </View>
           ))}
         </Section>
+
+        <Txt variant="caption" style={styles.about}>{`Ryz ${Constants.expoConfig?.version ?? ''} · Made for mornings`}</Txt>
       </ScrollView>
     </View>
   );
@@ -190,5 +305,13 @@ const styles = StyleSheet.create({
   statusAction: { minHeight: 44, justifyContent: 'center' },
   webNote: { paddingVertical: space.md },
   test: { gap: space.sm, paddingVertical: space.md },
+  danger: { color: colors.danger },
+  about: { textAlign: 'center' },
+  profile: { gap: space.md, paddingVertical: space.md },
+  profileTop: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontSize: 26, fontFamily: FONT.display, color: colors.text },
+  nameInput: { fontSize: 22, fontFamily: FONT.regular, color: colors.text, paddingVertical: space.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
+  recommend: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: colors.surfaceRaised, borderRadius: radius.sm, padding: space.md },
   source: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
 });

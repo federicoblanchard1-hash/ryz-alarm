@@ -33,7 +33,10 @@ export async function loadData(): Promise<AppData> {
     return {
       // Fill in fields added since the alarm was saved.
       alarms: (saved.alarms ?? []).map((a) => ({ ...newAlarm(a.id), ...a })),
-      settings: { ...defaultSettings(prefers24h(), preferredTempUnit()), ...saved.settings },
+      settings: (() => {
+        const defaults = defaultSettings(prefers24h(), preferredTempUnit());
+        return { ...defaults, ...saved.settings, profile: { ...defaults.profile, ...saved.settings?.profile } };
+      })(),
       pending: saved.pending ?? [],
       handled: saved.handled ?? {},
     };
