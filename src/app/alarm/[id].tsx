@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -11,14 +10,16 @@ import { MissionCard } from '@/components/editor/MissionCard';
 import { CATEGORY_ICON } from '@/components/ModeBadge';
 import { Sheet } from '@/components/Sheet';
 import { TimePicker } from '@/components/TimePicker';
-import { Checkbox, Chips, LinkRow, PressableScale, Slider, Txt, haptic, ToggleRow } from '@/components/ui';
+import { Slider } from '@/components/Slider';
+import { Chips, LinkRow, PressableScale, Txt, haptic, ToggleRow } from '@/components/ui';
 import { newAlarm } from '@/core/defaults';
 import { makeId } from '@/core/ring';
 import { formatSpan, nextClock, nextOccurrence } from '@/core/time';
-import { SOUNDS, SOUND_CATEGORIES, soundsIn } from '@/core/sounds';
+import { SOUNDS, SOUND_CATEGORIES, soundsIn, type SoundCategory } from '@/core/sounds';
 import type { Alarm, AlarmSoundId } from '@/core/types';
 import { requestPermissions } from '@/services/notifications';
-import { usePreview } from '@/services/sound';
+import { VIBRATIONS, VIBRATION_IDS } from '@/core/vibration';
+import { previewVibration, stopVibration, usePreview } from '@/services/sound';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
@@ -34,7 +35,7 @@ const PREVIEW_PROGRESS = {
   animationTimingFunction: 'linear',
 } as const;
 
-type SheetName = 'sound' | 'gentle' | 'ring' | 'snooze' | 'check' | null;
+type SheetName = 'sound' | 'vibration' | 'gentle' | 'ring' | 'snooze' | 'check' | null;
 
 export default function EditAlarm() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,6 +44,7 @@ export default function EditAlarm() {
   const [draft, setDraft] = useState<Alarm>(() => existing ?? newAlarm(makeId()));
   const [sheet, setSheet] = useState<SheetName>(null);
   const [playing, setPlaying] = useState<AlarmSoundId | null>(null);
+  const [soundTab, setSoundTab] = useState<SoundCategory>(() => (SOUNDS[draft.sound] ?? SOUNDS.gentle).category);
   const playTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preview = usePreview();
   const permissions = usePermissions();
@@ -52,6 +54,7 @@ export default function EditAlarm() {
 
   useEffect(() => () => {
     if (playTimer.current) clearTimeout(playTimer.current);
+    stopVibration();
   }, []);
 
   const togglePlay = (sound: AlarmSoundId) => {
@@ -135,7 +138,12 @@ export default function EditAlarm() {
             >
               <Ionicons name={playing === draft.sound ? 'stop' : 'play'} size={18} color={colors.text} />
             </Pressable>
-            <Pressable onPress={() => setSheet('sound')} accessibilityRole="button" accessibilityLabel={`Sound: ${soundTitle(draft.sound)}. Change`} style={({ pressed }) => [styles.soundPick, pressed && styles.pressed]}>
+            <Pressable
+              onPress={() => {
+                setSoundTab((SOUNDS[draft.sound] ?? SOUNDS.gentle).category);
+                setSheet('sound');
+              }}
+              accessibilityRole="button" accessibilityLabel={`Sound: ${soundTitle(draft.sound)}. Change`} style={({ pressed }) => [styles.soundPick, pressed && styles.pressed]}>
               <Txt style={styles.soundName} numberOfLines={1}>{soundTitle(draft.sound)}</Txt>
               <Ionicons name="chevron-forward" size={24} color={colors.text} />
             </Pressable>
@@ -144,11 +152,22 @@ export default function EditAlarm() {
             {playing === draft.sound ? <Animated.View key={String(playing)} style={[styles.progressFill, PREVIEW_PROGRESS]} /> : <View style={styles.progressDot} />}
           </View>
           <View style={styles.volumeRow}>
-            <Ionicons name="volume-medium" size={26} color={colors.text} />
-            <Slider value={draft.volume} min={0.1} onChange={(volume) => set({ volume })} label="Alarm volume" />
-            <MaterialCommunityIcons name="vibrate" size={26} color={colors.text} />
-            <Checkbox checked={draft.vibrate} onChange={(vibrate) => set({ vibrate })} label="Vibration" />
+            <Ionicons name={draft.volume < 0.4 ? 'volume-low' : 'volume-high'} size={26} color={colors.text} />
+            <Slider
+              value={draft.volume}
+              min={0.1}
+              label="Alarm volume"
+              showValue
+              // Play the sound while you drag, so you hear the level you're picking.
+              onSlideStart={() => playing !== draft.sound && togglePlay(draft.sound)}
+              onSlide={(v) => preview.setVolume(v)}
+              onChange={(volume) => {
+                preview.setVolume(volume);
+                set({ volume });
+              }}
+            />
           </View>
+          <LinkRow title="Vibration" value={draft.vibrate ? VIBRATIONS[draft.vibration]?.title ?? 'On' : 'Off'} onPress={() => setSheet('vibration')} />
           <LinkRow title="Gentle wake-up" value={draft.mode === 'gentle' ? fadeLabel(draft.fadeInSeconds) : 'Off'} onPress={() => (draft.mode === 'gentle' ? setSheet('gentle') : setSheet('sound'))} />
           <LinkRow title="Keep ringing" value={`${draft.ringMinutes} min`} onPress={() => setSheet('ring')} />
         </View>
@@ -179,41 +198,105 @@ export default function EditAlarm() {
       </View>
 
       <Sheet visible={sheet === 'sound'} onClose={() => setSheet(null)} title="Alarm sound">
-        {SOUND_CATEGORIES.map((category) => (
-          <View key={category.id} style={styles.soundGroup}>
-            <View style={styles.groupHead}>
-              <Ionicons name={CATEGORY_ICON[category.id]} size={18} color={colors.textMuted} />
-              <Txt variant="section">{category.title}</Txt>
-            </View>
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {SOUND_CATEGORIES.map((c) => {
+            const on = soundTab === c.id;
+            return (
+              <Pressable
+                key={c.id}
+                onPress={() => {
+                  if (!on) haptic('select');
+                  setSoundTab(c.id);
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                style={[styles.tab, on && styles.tabOn]}
+              >
+                <Ionicons name={CATEGORY_ICON[c.id]} size={16} color={on ? colors.onAccent : colors.text} />
+                <Text style={[styles.tabText, on && styles.tabTextOn]}>{c.title}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        {SOUND_CATEGORIES.filter((c) => c.id === soundTab).map((category) => (
+          <View key={category.id}>
             <Txt variant="caption" style={styles.groupText}>{category.description}</Txt>
-            {soundsIn(category.id).map((id) => {
-              const on = draft.sound === id;
-              return (
-                <View key={id} style={styles.soundOption}>
-                  <Pressable onPress={() => togglePlay(id)} hitSlop={6} accessibilityRole="button" accessibilityLabel={playing === id ? 'Stop preview' : `Play ${SOUNDS[id].title}`} style={styles.playSmall}>
-                    <Ionicons name={playing === id ? 'stop' : 'play'} size={16} color={colors.text} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      if (!on) haptic('select');
-                      set({ sound: id, mode: SOUNDS[id].mode });
-                    }}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: on }}
-                    accessibilityLabel={SOUNDS[id].description ? `${SOUNDS[id].title}. ${SOUNDS[id].description}` : SOUNDS[id].title}
-                    style={({ pressed }) => [styles.soundPickRow, pressed && styles.pressed]}
-                  >
-                    <View style={styles.flex}>
-                      <Txt style={[styles.optionTitle, on && styles.optionTitleOn]}>{SOUNDS[id].title}</Txt>
-                      {SOUNDS[id].description ? <Txt variant="caption">{SOUNDS[id].description}</Txt> : null}
+            {category.groups.map((group) => (
+              <View key={group} style={styles.soundGroup}>
+                <Txt variant="label" style={styles.subhead}>{group}</Txt>
+                {soundsIn(category.id, group).map((id) => {
+                  const on = draft.sound === id;
+                  return (
+                    <View key={id} style={styles.soundOption}>
+                      <Pressable onPress={() => togglePlay(id)} hitSlop={6} accessibilityRole="button" accessibilityLabel={playing === id ? 'Stop preview' : `Play ${SOUNDS[id].title}`} style={[styles.playSmall, playing === id && styles.playSmallOn]}>
+                        <Ionicons name={playing === id ? 'stop' : 'play'} size={16} color={playing === id ? colors.onAccent : colors.text} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => {
+                          if (!on) haptic('select');
+                          set({ sound: id, mode: SOUNDS[id].mode });
+                        }}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: on }}
+                        accessibilityLabel={SOUNDS[id].description ? `${SOUNDS[id].title}. ${SOUNDS[id].description}` : SOUNDS[id].title}
+                        style={({ pressed }) => [styles.soundPickRow, pressed && styles.pressed]}
+                      >
+                        <View style={styles.flex}>
+                          <Txt style={[styles.optionTitle, on && styles.optionTitleOn]}>{SOUNDS[id].title}</Txt>
+                          {SOUNDS[id].description ? <Txt variant="caption">{SOUNDS[id].description}</Txt> : null}
+                        </View>
+                        {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : null}
+                      </Pressable>
                     </View>
-                    {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : null}
-                  </Pressable>
-                </View>
-              );
-            })}
+                  );
+                })}
+              </View>
+            ))}
           </View>
         ))}
+      </Sheet>
+
+      <Sheet
+        visible={sheet === 'vibration'}
+        onClose={() => {
+          stopVibration();
+          setSheet(null);
+        }}
+        title="Vibration"
+      >
+        <ToggleRow
+          title="Vibrate"
+          description="While the alarm rings. It pauses during missions so it can't count as shakes or squats."
+          value={draft.vibrate}
+          onChange={(vibrate) => {
+            set({ vibrate });
+            if (vibrate) previewVibration(draft.vibration);
+            else stopVibration();
+          }}
+        />
+        {draft.vibrate
+          ? VIBRATION_IDS.map((id) => {
+              const on = draft.vibration === id;
+              return (
+                <Pressable
+                  key={id}
+                  onPress={() => {
+                    set({ vibration: id });
+                    previewVibration(id);
+                  }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: on }}
+                  style={({ pressed }) => [styles.vibeOption, pressed && styles.pressed]}
+                >
+                  <Txt style={[styles.optionTitle, on && styles.optionTitleOn, styles.flex]}>{VIBRATIONS[id].title}</Txt>
+                  {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : null}
+                </Pressable>
+              );
+            })
+          : null}
+        <Txt variant="caption">
+          {Platform.OS === 'ios' ? 'Tap a pattern to feel it. iPhones buzz for a fixed length, so patterns differ in rhythm.' : 'Tap a pattern to feel it.'}
+        </Txt>
       </Sheet>
 
       <Sheet visible={sheet === 'gentle'} onClose={() => setSheet(null)} title="Gentle wake-up">
@@ -285,9 +368,16 @@ const styles = StyleSheet.create({
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
   save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   saveText: { fontSize: 19, fontFamily: FONT.semibold, color: colors.onAccent },
-  soundGroup: { marginBottom: space.lg },
-  groupHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  groupText: { marginTop: 2, marginBottom: space.xs },
+  soundGroup: { marginTop: space.lg },
+  groupText: { marginTop: space.xs },
+  subhead: { marginBottom: space.xs },
+  tabs: { flexDirection: 'row', gap: space.sm },
+  tab: { flex: 1, flexDirection: 'row', gap: 6, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised },
+  tabOn: { backgroundColor: colors.accent },
+  tabText: { fontSize: 15, fontFamily: FONT.medium, color: colors.text },
+  tabTextOn: { color: colors.onAccent },
+  playSmallOn: { backgroundColor: colors.accent },
+  vibeOption: { flexDirection: 'row', alignItems: 'center', minHeight: 52, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   soundOption: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 60 },
   soundPickRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   optionTitle: { fontSize: 18, lineHeight: 24, fontFamily: FONT.regular, color: colors.text },

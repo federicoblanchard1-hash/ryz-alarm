@@ -16,6 +16,7 @@ export function newAlarm(id: string): Alarm {
     escalate: true,
     escalateAfterMinutes: 2,
     vibrate: true,
+    vibration: 'basic',
     volume: 1,
     ringMinutes: 10,
     // Up to ~30 min of snoozing didn't harm sleep or mood (Sundelin et al., 2023).

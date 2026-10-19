@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
-import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, Text, View, type GestureResponderEvent, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, Switch, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
 import Animated, { useReducedMotion, type CSSTransitionProperties } from 'react-native-reanimated';
 
 import { EASE_OUT, FONT, colors, radius, space } from '@/theme';
@@ -222,42 +222,6 @@ export function Checkbox({ checked, onChange, label }: { checked: boolean; onCha
   );
 }
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-
-/** A horizontal slider from 0 to 1. Built on the responder system, so it needs no gesture library. */
-export function Slider({ value, onChange, label, min = 0 }: { value: number; onChange: (value: number) => void; label: string; min?: number }) {
-  const [width, setWidth] = useState(0);
-  const start = useRef({ x: 0, pageX: 0 });
-  const set = (x: number) => width > 0 && onChange(Math.max(min, clamp01(x / width)));
-  const step = (delta: number) => onChange(Math.max(min, clamp01(Math.round((value + delta) * 10) / 10)));
-  return (
-    <View
-      style={styles.slider}
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-      onStartShouldSetResponder={() => true}
-      onMoveShouldSetResponder={() => true}
-      onResponderTerminationRequest={() => false}
-      onResponderGrant={(e: GestureResponderEvent) => {
-        // locationX is only reliable at the first touch; after that, follow the finger by pageX.
-        start.current = { x: e.nativeEvent.locationX, pageX: e.nativeEvent.pageX };
-        set(e.nativeEvent.locationX);
-      }}
-      onResponderMove={(e: GestureResponderEvent) => set(start.current.x + e.nativeEvent.pageX - start.current.pageX)}
-      accessible
-      accessibilityRole="adjustable"
-      accessibilityLabel={label}
-      accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100), text: `${Math.round(value * 100)}%` }}
-      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
-      onAccessibilityAction={(e) => step(e.nativeEvent.actionName === 'increment' ? 0.1 : -0.1)}
-    >
-      <View style={styles.sliderTrack} pointerEvents="none">
-        <View style={[styles.sliderFill, { width: `${value * 100}%` }]} />
-      </View>
-      <View style={[styles.sliderThumb, { left: Math.min(Math.max(0, value * width - 12), width - 24) }]} pointerEvents="none" />
-    </View>
-  );
-}
-
 /** − value + for picking any number in a range. Holding a button jumps ten steps. */
 export function Stepper({ value, min, max, step = 1, onChange, format, label }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; format: (v: number) => string; label: string }) {
   const set = (v: number) => {
@@ -384,10 +348,6 @@ const styles = StyleSheet.create({
   rowValue: { color: colors.textMuted, flexShrink: 1 },
   checkbox: { width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  slider: { flex: 1, height: 36, justifyContent: 'center', marginRight: space.xs },
-  sliderTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
-  sliderFill: { height: '100%', backgroundColor: colors.text },
-  sliderThumb: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.text },
   segmented: { flexDirection: 'row', padding: 3, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   segment: { minWidth: 48, height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: colors.accent },

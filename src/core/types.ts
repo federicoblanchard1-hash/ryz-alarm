@@ -1,4 +1,5 @@
 import type { Mission } from './missions';
+import type { VibrationId } from './vibration';
 
 /** 0 = Sunday … 6 = Saturday, like `Date.getDay()`. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -10,7 +11,46 @@ export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type WakeMode = 'gentle' | 'deep';
 
 /** The sounds an alarm can ring with; see core/sounds.ts. */
-export type AlarmSoundId = 'gentle' | 'deep' | 'air_raid' | 'yelp' | 'two_tone' | 'buzzer' | 'bell' | 'wind_chimes' | 'ocean' | 'birds' | 'sunrise' | 'music_box';
+export type AlarmSoundId =
+  | 'gentle'
+  | 'deep'
+  | 'deep_400'
+  | 'rising'
+  | 'rhythmic'
+  | 'air_raid'
+  | 'yelp'
+  | 'two_tone'
+  | 'wail'
+  | 'hi_lo'
+  | 'red_alert'
+  | 'klaxon'
+  | 'foghorn'
+  | 'car'
+  | 'buzzer'
+  | 'continuous'
+  | 'pulse'
+  | 'escalating'
+  | 'smoke'
+  | 'bell'
+  | 'fire_bell'
+  | 'phone'
+  | 'reveille'
+  | 'wind_chimes'
+  | 'ocean'
+  | 'birds'
+  | 'rain'
+  | 'stream'
+  | 'forest'
+  | 'sunrise'
+  | 'music_box'
+  | 'harp'
+  | 'guitar'
+  | 'kalimba'
+  | 'piano'
+  | 'singing_bowl'
+  | 'lofi'
+  | 'pink_noise'
+  | 'brown_noise';
 
 /** Every sound file, including the reminder chime. */
 export type SoundId = AlarmSoundId | 'chime';
@@ -34,6 +74,8 @@ export interface Alarm {
   escalate: boolean;
   escalateAfterMinutes: number;
   vibrate: boolean;
+  /** The buzz rhythm while Ryz rings; see core/vibration.ts. */
+  vibration: VibrationId;
   /** 0.1–1: the loudest the alarm gets while Ryz plays it. Notifications use the phone's alarm volume. */
   volume: number;
   /** How long it keeps ringing if nobody touches it. */

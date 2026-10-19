@@ -5,25 +5,52 @@ import { Platform, Vibration } from 'react-native';
 import { DEEP_RAMP_SECONDS, DEEP_START_DB, GENTLE_START_DB, fadeVolume } from '@/core/fade';
 import { phaseAt, soundAt } from '@/core/plan';
 import type { Alarm, SoundId } from '@/core/types';
+import { patternLength, vibrationPattern, type VibrationId } from '@/core/vibration';
 
 // Metro needs every require() spelled out.
 export const SOUND_SOURCES: Record<SoundId, number> = {
-  gentle: require('../../assets/sounds/gentle_melody.wav'),
   deep: require('../../assets/sounds/deep_520hz.wav'),
-  chime: require('../../assets/sounds/chime.wav'),
+  deep_400: require('../../assets/sounds/science_deep_400.wav'),
+  gentle: require('../../assets/sounds/gentle_melody.wav'),
+  rising: require('../../assets/sounds/science_rising.wav'),
+  rhythmic: require('../../assets/sounds/science_rhythmic.wav'),
   air_raid: require('../../assets/sounds/loud_air_raid.wav'),
+  wail: require('../../assets/sounds/loud_wail.wav'),
   yelp: require('../../assets/sounds/loud_yelp.wav'),
   two_tone: require('../../assets/sounds/loud_two_tone.wav'),
+  hi_lo: require('../../assets/sounds/loud_hi_lo.wav'),
+  red_alert: require('../../assets/sounds/loud_red_alert.wav'),
+  klaxon: require('../../assets/sounds/loud_klaxon.wav'),
+  foghorn: require('../../assets/sounds/loud_foghorn.wav'),
+  car: require('../../assets/sounds/loud_car.wav'),
+  continuous: require('../../assets/sounds/loud_continuous.wav'),
+  pulse: require('../../assets/sounds/loud_pulse.wav'),
   buzzer: require('../../assets/sounds/loud_buzzer.wav'),
+  escalating: require('../../assets/sounds/loud_escalating.wav'),
+  smoke: require('../../assets/sounds/loud_smoke.wav'),
   bell: require('../../assets/sounds/loud_bell.wav'),
-  wind_chimes: require('../../assets/sounds/calm_wind_chimes.wav'),
-  ocean: require('../../assets/sounds/calm_ocean.wav'),
+  fire_bell: require('../../assets/sounds/loud_fire_bell.wav'),
+  phone: require('../../assets/sounds/loud_phone.wav'),
+  reveille: require('../../assets/sounds/loud_reveille.wav'),
   birds: require('../../assets/sounds/calm_birds.wav'),
+  forest: require('../../assets/sounds/calm_forest.wav'),
+  rain: require('../../assets/sounds/calm_rain.wav'),
+  stream: require('../../assets/sounds/calm_stream.wav'),
+  ocean: require('../../assets/sounds/calm_ocean.wav'),
+  wind_chimes: require('../../assets/sounds/calm_wind_chimes.wav'),
   sunrise: require('../../assets/sounds/calm_sunrise.wav'),
+  piano: require('../../assets/sounds/calm_piano.wav'),
+  harp: require('../../assets/sounds/calm_harp.wav'),
+  guitar: require('../../assets/sounds/calm_guitar.wav'),
+  kalimba: require('../../assets/sounds/calm_kalimba.wav'),
   music_box: require('../../assets/sounds/calm_music_box.wav'),
+  lofi: require('../../assets/sounds/calm_lofi.wav'),
+  singing_bowl: require('../../assets/sounds/calm_singing_bowl.wav'),
+  pink_noise: require('../../assets/sounds/calm_pink_noise.wav'),
+  brown_noise: require('../../assets/sounds/calm_brown_noise.wav'),
+  chime: require('../../assets/sounds/chime.wav'),
 };
 
-const VIBRATION = [0, 800, 600];
 /** Volume while you're busy with a mission: low enough to think, loud enough to remind you. */
 const DUCKED = 0.15;
 
@@ -101,9 +128,9 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
   const vibrate = Boolean(active && alarm?.vibrate && !ducked);
   useEffect(() => {
     if (!vibrate) return;
-    Vibration.vibrate(VIBRATION, true);
+    Vibration.vibrate(vibrationPattern(alarm?.vibration), true);
     return () => Vibration.cancel();
-  }, [vibrate]);
+  }, [vibrate, alarm?.vibration]);
 }
 
 /** A short listen in the editor. Plays `seconds` of any sound at the alarm's volume. */
@@ -132,6 +159,22 @@ export function usePreview() {
       player.play();
       timer.current = setTimeout(stop, seconds * 1000);
     },
+    /** Change the volume of what's playing, e.g. while a slider moves. */
+    setVolume(volume: number) {
+      safely(() => configure(player, { volume }));
+    },
     stop,
   };
+}
+
+/** Buzz a vibration pattern once (twice for short ones), so you can feel it before picking it. */
+export function previewVibration(id: VibrationId) {
+  const pattern = vibrationPattern(id);
+  const once = patternLength(pattern);
+  Vibration.cancel();
+  Vibration.vibrate(once < 1500 ? [...pattern, ...pattern.slice(1)] : pattern);
+}
+
+export function stopVibration() {
+  Vibration.cancel();
 }

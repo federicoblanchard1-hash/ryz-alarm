@@ -1,16 +1,27 @@
-import { Geist_200ExtraLight, Geist_300Light, Geist_400Regular, Geist_500Medium, Geist_600SemiBold, useFonts } from '@expo-google-fonts/geist';
-import { InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
-import { Stack, router, usePathname } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { AppState, View } from 'react-native';
+import {
+  Geist_200ExtraLight,
+  Geist_300Light,
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  useFonts,
+} from "@expo-google-fonts/geist";
+import {
+  InstrumentSerif_400Regular,
+  InstrumentSerif_400Regular_Italic,
+} from "@expo-google-fonts/instrument-serif";
+import { Stack, router, usePathname } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { AppState, StyleSheet, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { findActive } from '@/core/ring';
-import { onNotificationActivity } from '@/services/notifications';
-import { StoreProvider, useStore } from '@/state/store';
-import { colors } from '@/theme';
+import { findActive } from "@/core/ring";
+import { onNotificationActivity } from "@/services/notifications";
+import { StoreProvider, useStore } from "@/state/store";
+import { colors } from "@/theme";
 
-const WAKE_SCREENS = new Set(['/ring', '/check', '/morning']);
+const WAKE_SCREENS = new Set(["/ring", "/check", "/morning"]);
 
 /**
  * Opens the ringing screen (or "Are you awake?") whenever something is due:
@@ -30,7 +41,7 @@ function WakeRouter() {
     if (!isReady) return;
     const active = findActive(current, Date.now());
     if (!active) return;
-    const target = active.type === 'ring' ? '/ring' : '/check';
+    const target = active.type === "ring" ? "/ring" : "/check";
     if (path === target) return;
     if (WAKE_SCREENS.has(path)) router.replace(target);
     else router.push(target);
@@ -40,7 +51,10 @@ function WakeRouter() {
   useEffect(() => onNotificationActivity(check), [check]);
   useEffect(() => {
     const timer = setInterval(check, 1_000);
-    const sub = AppState.addEventListener('change', (state) => state === 'active' && check());
+    const sub = AppState.addEventListener(
+      "change",
+      (state) => state === "active" && check(),
+    );
     return () => {
       clearInterval(timer);
       sub.remove();
@@ -61,28 +75,67 @@ export default function RootLayout() {
     InstrumentSerif_400Regular_Italic,
   });
   // A moment of black while the font loads; if it can't load, carry on with the system font.
-  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
+  if (!fontsLoaded && !fontError)
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   return (
-    <StoreProvider>
-      <StatusBar style="light" />
-      <WakeRouter />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.bg },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.bg },
-        }}
-      >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="alarm/[id]" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="try-mission" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-        <Stack.Screen name="ring" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false, animation: 'fade' }} />
-        <Stack.Screen name="check" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false, animation: 'fade' }} />
-        <Stack.Screen name="morning" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
-        <Stack.Screen name="interests" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-        <Stack.Screen name="article" options={{ headerShown: false }} />
-      </Stack>
-    </StoreProvider>
+    <GestureHandlerRootView style={styles.root}>
+      <StoreProvider>
+        <StatusBar style="light" />
+        <WakeRouter />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.bg },
+            headerTintColor: colors.text,
+            headerShadowVisible: false,
+            contentStyle: { backgroundColor: colors.bg },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="alarm/[id]"
+            options={{ presentation: "modal", headerShown: false }}
+          />
+          <Stack.Screen
+            name="try-mission"
+            options={{ presentation: "fullScreenModal", headerShown: false }}
+          />
+          <Stack.Screen
+            name="ring"
+            options={{
+              presentation: "fullScreenModal",
+              headerShown: false,
+              gestureEnabled: false,
+              animation: "fade",
+            }}
+          />
+          <Stack.Screen
+            name="check"
+            options={{
+              presentation: "fullScreenModal",
+              headerShown: false,
+              gestureEnabled: false,
+              animation: "fade",
+            }}
+          />
+          <Stack.Screen
+            name="morning"
+            options={{
+              presentation: "fullScreenModal",
+              headerShown: false,
+              animation: "fade",
+            }}
+          />
+          <Stack.Screen
+            name="interests"
+            options={{ presentation: "fullScreenModal", headerShown: false }}
+          />
+          <Stack.Screen name="article" options={{ headerShown: false }} />
+        </Stack>
+      </StoreProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.bg },
+});

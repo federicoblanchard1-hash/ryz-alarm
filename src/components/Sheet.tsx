@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { Easing, FadeIn, SlideInDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,7 +18,8 @@ export function Sheet({ visible, onClose, title, children, footer }: { visible: 
   const reduced = useReducedMotion();
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.root}>
+      {/* A Modal is its own native window on Android, so gestures need their own root. */}
+      <GestureHandlerRootView style={styles.root}>
         <Animated.View entering={reduced ? undefined : BACKDROP_IN} style={StyleSheet.absoluteFill}>
           <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
         </Animated.View>
@@ -34,7 +36,7 @@ export function Sheet({ visible, onClose, title, children, footer }: { visible: 
           </ScrollView>
           {footer ? <View style={styles.footer}>{footer}</View> : null}
         </Animated.View>
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
