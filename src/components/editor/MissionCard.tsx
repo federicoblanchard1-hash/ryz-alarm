@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Sheet } from '@/components/Sheet';
-import { Button, Chips, Divider, LinkRow, Txt, haptic } from '@/components/ui';
+import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
 import { BODY, BRAIN, LEVEL_NAMES, MAX_MISSIONS, MISSIONS, defaultMission, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
 import { MISSION_ICONS } from '@/missions/common';
 import { colors, radius, space } from '@/theme';
@@ -38,7 +38,7 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
 
   const group = (title: string, types: MissionType[]) => (
     <View style={styles.group}>
-      <Txt variant="label">{title}</Txt>
+      <Txt variant="section" style={styles.groupTitle}>{title}</Txt>
       {types.map((type) => {
         const taken = missions.some((m) => m.type === type);
         return (
@@ -52,13 +52,10 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
             style={({ pressed }) => [styles.pickRow, pressed && styles.pressed]}
           >
             <View style={styles.pickIcon}>
-              <Ionicons name={MISSION_ICONS[type]} size={22} color={colors.text} />
+              <Ionicons name={MISSION_ICONS[type]} size={24} color={colors.text} />
             </View>
-            <View style={styles.flex}>
-              <Txt variant="heading">{MISSIONS[type].title}</Txt>
-              <Txt variant="caption">{MISSIONS[type].description}</Txt>
-            </View>
-            {taken ? <Ionicons name="checkmark" size={22} color={colors.text} /> : null}
+            <Txt style={[styles.pickTitle, taken && styles.pickTaken]}>{MISSIONS[type].title}</Txt>
+            {taken ? <Ionicons name="checkmark" size={26} color={colors.text} /> : null}
           </Pressable>
         );
       })}
@@ -68,28 +65,28 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
   return (
     <View style={styles.card}>
       <View style={styles.titleRow}>
-        <Txt variant="heading">Mission</Txt>
-        <Txt variant="muted">{`${missions.length}/${MAX_MISSIONS}`}</Txt>
+        <Txt style={styles.title}>Mission</Txt>
+        <Txt variant="row" style={styles.count}>{`${missions.length}/${MAX_MISSIONS}`}</Txt>
       </View>
       <View style={styles.slots}>
         {Array.from({ length: MAX_MISSIONS }, (_, i) => {
           const m = missions[i];
           if (m) {
             return (
-              <View key={i} style={styles.flex}>
+              <View key={i}>
                 <Pressable onPress={() => setEditing(i)} accessibilityRole="button" accessibilityLabel={`${MISSIONS[m.type].title}, ${MISSIONS[m.type].unit(m.amount)}. Edit`} style={[styles.slot, styles.slotOn]}>
-                  <Ionicons name={MISSION_ICONS[m.type]} size={24} color={colors.onAccent} />
+                  <Ionicons name={MISSION_ICONS[m.type]} size={28} color={colors.onAccent} />
                   <Txt style={styles.slotLabel} numberOfLines={1}>{MISSIONS[m.type].title}</Txt>
                 </Pressable>
                 <Pressable onPress={() => remove(i)} hitSlop={8} accessibilityRole="button" accessibilityLabel={`Remove ${MISSIONS[m.type].title}`} style={styles.remove}>
-                  <Ionicons name="close" size={14} color={colors.text} />
+                  <Ionicons name="close" size={16} color={colors.text} />
                 </Pressable>
               </View>
             );
           }
           const next = i === missions.length;
           return (
-            <View key={i} style={styles.flex}>
+            <View key={i}>
               <Pressable onPress={() => setPicking(true)} accessibilityRole="button" accessibilityLabel="Add a mission" style={[styles.slot, next ? styles.slotNext : styles.slotEmpty]}>
                 <Ionicons name="add" size={26} color={next ? colors.text : colors.textFaint} />
               </Pressable>
@@ -97,10 +94,6 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
           );
         })}
       </View>
-      <Txt variant="caption" style={styles.hint}>
-        {missions.length === 0 ? 'Add a mission so you have to wake up before the alarm stops.' : 'Stop starts your missions. The alarm turns off when they’re done.'}
-      </Txt>
-      <Divider />
       <LinkRow title="Wake up check" value={awakeCheckLabel} onPress={onAwakeCheck} />
 
       <Sheet visible={picking} onClose={() => setPicking(false)} title="Mission">
@@ -147,21 +140,27 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
   );
 }
 
+const SLOT = 74;
+
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingHorizontal: space.lg, paddingTop: space.lg },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space.xs },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  slots: { flexDirection: 'row', gap: space.md, marginTop: space.lg },
-  slot: { aspectRatio: 1, borderRadius: radius.md + 4, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  title: { fontSize: 19, lineHeight: 24, fontWeight: '600', color: colors.text },
+  count: { color: colors.textMuted },
+  slots: { flexDirection: 'row', gap: space.md, marginTop: space.xl, marginBottom: space.sm },
+  slot: { width: SLOT, height: SLOT, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 4 },
   slotOn: { backgroundColor: colors.accent },
-  slotNext: { borderWidth: 1.5, borderColor: colors.borderStrong, borderStyle: 'dashed' },
-  slotEmpty: { backgroundColor: colors.surfaceRaised },
-  slotLabel: { fontSize: 13, lineHeight: 16, fontWeight: '600', color: colors.onAccent, paddingHorizontal: 6 },
-  remove: { position: 'absolute', top: -8, right: -8, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
-  hint: { marginTop: space.md, marginBottom: space.sm },
-  group: { gap: space.sm, marginBottom: space.md },
-  pickRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, minHeight: 60 },
+  slotNext: { backgroundColor: colors.surfaceRaised },
+  slotEmpty: { backgroundColor: colors.surfaceRaised, opacity: 0.6 },
+  slotLabel: { fontSize: 14, lineHeight: 18, fontWeight: '600', color: colors.onAccent, paddingHorizontal: 6 },
+  remove: { position: 'absolute', top: -10, right: -10, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  group: { marginBottom: space.lg },
+  groupTitle: { marginBottom: space.sm },
+  pickRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, minHeight: 60 },
   pressed: { opacity: 0.6 },
-  pickIcon: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  pickIcon: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  pickTitle: { flex: 1, fontSize: 19, lineHeight: 24, fontWeight: '500', color: colors.text },
+  pickTaken: { fontWeight: '700' },
   flex: { flex: 1 },
   sheetActions: { flexDirection: 'row', gap: space.md, marginTop: space.sm },
 });

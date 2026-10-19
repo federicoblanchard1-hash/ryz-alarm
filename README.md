@@ -1,6 +1,6 @@
 # Ryz
 
-An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 57) and grounded in sleep research. Black and white throughout: the only colour is the weather emojis.
+An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 57) and grounded in sleep research. Black and white throughout; the layout follows Alarmy's.
 
 ## Try it on your phone (Expo Go)
 
@@ -19,15 +19,16 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 - In the terminal, press `r` to reload the app and `Ctrl+C` to stop.
 - Keep Ryz open to test alarms: Settings → **Test alarm in 1 minute**. In Expo Go, alarms that ring while Ryz is closed use the phone's default notification sound, not Ryz's sounds. The full alarm needs a real build (see *Running it* below).
 
-## Home
+## Morning (home)
 
-- **Weather where you wake up**, laid out like Alarmy's morning screen: a greeting, your town (tap to refresh), the temperature big on the left, conditions and today's high and low on the right, and the next 24 hours with weather emojis underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
+- **Weather where you wake up**, laid out like Alarmy's morning screen: your town (tap to refresh), the temperature on the left, conditions and today's high and low on the right, and the next 24 hours with white weather icons underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
 - **A background that matches the weather**, drawn in greys and animated: sun and glow, moon and twinkling stars at night, drifting clouds, rain with drops on the glass, snow, fog, and lightning in a storm. It holds still when Reduce Motion is on.
-- **Next alarm** with how long until it rings, its sound and missions, plus quick tiles for bedtime, your sleep goal and a test alarm.
+- **Shortcut tiles** on the scene: next alarm, bedtime, sleep goal and a test alarm.
+- **Next alarm** card with how long until it rings, its sound and missions.
 
-Three tabs: **Home**, **Alarms** and **Settings**, on the platform's own tab bar. **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
+Three tabs on a floating pill bar like Alarmy's: **Alarms**, **Morning** and **Settings**. **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
 
-The **alarm editor** follows Alarmy's layout: the time, repeat days, three mission slots, an *Alarm sound* card with a play button, and *Custom setting* (snooze, label). Each setting opens in a bottom sheet, and Save stays at the bottom of the screen.
+The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Ring in …", a scroll wheel for the time, the repeat days with a *Daily* box, mission slots, an *Alarm sound* card (play button with a progress bar, volume slider, vibration box, gentle wake-up, keep ringing) and *Custom setting* (snooze). Each setting opens in a bottom sheet, and Save stays at the bottom of the screen.
 
 ## Missions
 
@@ -52,7 +53,7 @@ Every mission has **Try it** in the editor. On a phone without the needed motion
 - **Sleep coaching**: a sleep goal (7–9 h, since adults need at least 7 according to AASM/SRS), the bedtime that goal implies on the home screen, and an optional bedtime reminder before the earliest alarm of each morning.
 - **Good-morning screen** with the things that help after waking: bright light, music you like, and the same wake time tomorrow.
 - **Test alarm** in Settings, plus a check that notifications and (on Android) exact alarms are allowed.
-- Repeat days, labels, vibration, a 12/24-hour clock, haptics, reduced-motion support, and screen-reader labels.
+- Repeat days, alarm names, volume, vibration, a 12/24-hour clock, haptics, reduced-motion support, and screen-reader labels.
 
 ## How alarms ring
 

@@ -28,6 +28,8 @@ export interface Alarm {
   escalate: boolean;
   escalateAfterMinutes: number;
   vibrate: boolean;
+  /** 0.1–1: the loudest the alarm gets while Ryz plays it. Notifications use the phone's alarm volume. */
+  volume: number;
   /** How long it keeps ringing if nobody touches it. */
   ringMinutes: number;
   snooze: { enabled: boolean; minutes: number; limit: number };

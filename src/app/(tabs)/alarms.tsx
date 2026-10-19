@@ -9,7 +9,7 @@ import { nextRing } from '@/core/next';
 import { formatClock, formatSpan } from '@/core/time';
 import { useNow } from '@/state/useNow';
 import { sortedAlarms, useStore } from '@/state/store';
-import { colors, radius, space } from '@/theme';
+import { TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
 
 const openEditor = (id: string) => router.push({ pathname: '/alarm/[id]', params: { id } });
 
@@ -27,7 +27,7 @@ export default function Alarms() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 140 }]}>
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 110 }]}>
         <View style={styles.header}>
           <Txt style={styles.wordmark} accessibilityRole="header" accessibilityLabel="Ryz alarms">ryz</Txt>
           <Segmented
@@ -68,7 +68,7 @@ export default function Alarms() {
         )}
       </ScrollView>
 
-      <View style={[styles.fabWrap, { bottom: insets.bottom + 96 }]} pointerEvents="box-none">
+      <View style={[styles.fabWrap, { bottom: Math.max(insets.bottom, space.md) + TAB_BAR_HEIGHT + space.lg }]} pointerEvents="box-none">
         <PressableScale onPress={() => openEditor('new')} style={styles.fab} accessibilityLabel="Add alarm">
           <Ionicons name="add" size={32} color={colors.onAccent} />
         </PressableScale>

@@ -54,6 +54,14 @@ export function formatClockText(hour: number, minute: number, use24h: boolean): 
   return period ? `${time} ${period}` : time;
 }
 
+/** "Mon, Tue, Wed" in week order, as the editor shows the repeat days. */
+export function formatDayList(days: Weekday[]): string {
+  if (days.length === 0) return 'Once';
+  if (days.length === 7) return 'Every day';
+  const set = new Set(days);
+  return WEEK_ORDER.filter((d) => set.has(d)).map((d) => DAY_SHORT[d]).join(', ');
+}
+
 export function formatDays(days: Weekday[]): string {
   if (days.length === 0) return 'Once';
   if (days.length === 7) return 'Every day';

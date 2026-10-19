@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
-import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
+import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
+import { Platform, Pressable, StyleSheet, Switch, Text, View, type GestureResponderEvent, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
 import Animated, { useReducedMotion, type CSSTransitionProperties } from 'react-native-reanimated';
 
 import { EASE_OUT, colors, radius, space } from '@/theme';
@@ -13,6 +13,10 @@ const variants = StyleSheet.create({
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
   heading: { fontSize: 17, lineHeight: 22, fontWeight: '600', color: colors.text },
   body: { fontSize: 16, lineHeight: 22, color: colors.text },
+  /** Settings rows, at Alarmy's size. */
+  row: { fontSize: 18, lineHeight: 24, color: colors.text },
+  /** The grey title above a card ("Alarm sound"). */
+  section: { fontSize: 17, lineHeight: 22, fontWeight: '500', color: colors.textMuted },
   muted: { fontSize: 15, lineHeight: 21, color: colors.textMuted },
   caption: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
   label: { fontSize: 12, lineHeight: 16, fontWeight: '600', color: colors.textFaint, letterSpacing: 1, textTransform: 'uppercase' },
@@ -153,7 +157,7 @@ export function ToggleRow({ title, description, value, onChange }: { title: stri
   return (
     <View style={styles.row}>
       <View style={styles.rowText}>
-        <Txt variant="body">{title}</Txt>
+        <Txt variant="row">{title}</Txt>
         {description ? <Txt variant="caption">{description}</Txt> : null}
       </View>
       <ThemedSwitch value={value} onChange={onChange} label={title} />
@@ -166,9 +170,9 @@ export function LinkRow({ title, value, onPress, icon }: { title: string; value?
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={value ? `${title}: ${value}` : title} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
       {icon ? <Ionicons name={icon} size={20} color={colors.text} /> : null}
-      <Txt variant="body" style={styles.rowText}>{title}</Txt>
-      {value ? <Txt variant="muted">{value}</Txt> : null}
-      <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+      <Txt variant="row" style={styles.rowText} numberOfLines={1}>{title}</Txt>
+      {value ? <Txt variant="row" style={styles.rowValue} numberOfLines={1}>{value}</Txt> : null}
+      <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
     </Pressable>
   );
 }
@@ -195,6 +199,61 @@ export function Segmented<T extends string | number>({ options, value, onChange,
           </Pressable>
         );
       })}
+    </View>
+  );
+}
+
+/** A square checkbox, white when ticked. */
+export function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
+  return (
+    <Pressable
+      onPress={() => {
+        haptic('light');
+        onChange(!checked);
+      }}
+      hitSlop={10}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={label}
+      style={[styles.checkbox, checked && styles.checkboxOn]}
+    >
+      {checked ? <Ionicons name="checkmark" size={18} color={colors.onAccent} /> : null}
+    </Pressable>
+  );
+}
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+/** A horizontal slider from 0 to 1. Built on the responder system, so it needs no gesture library. */
+export function Slider({ value, onChange, label, min = 0 }: { value: number; onChange: (value: number) => void; label: string; min?: number }) {
+  const [width, setWidth] = useState(0);
+  const start = useRef({ x: 0, pageX: 0 });
+  const set = (x: number) => width > 0 && onChange(Math.max(min, clamp01(x / width)));
+  const step = (delta: number) => onChange(Math.max(min, clamp01(Math.round((value + delta) * 10) / 10)));
+  return (
+    <View
+      style={styles.slider}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      onStartShouldSetResponder={() => true}
+      onMoveShouldSetResponder={() => true}
+      onResponderTerminationRequest={() => false}
+      onResponderGrant={(e: GestureResponderEvent) => {
+        // locationX is only reliable at the first touch; after that, follow the finger by pageX.
+        start.current = { x: e.nativeEvent.locationX, pageX: e.nativeEvent.pageX };
+        set(e.nativeEvent.locationX);
+      }}
+      onResponderMove={(e: GestureResponderEvent) => set(start.current.x + e.nativeEvent.pageX - start.current.pageX)}
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(value * 100), text: `${Math.round(value * 100)}%` }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={(e) => step(e.nativeEvent.actionName === 'increment' ? 0.1 : -0.1)}
+    >
+      <View style={styles.sliderTrack} pointerEvents="none">
+        <View style={[styles.sliderFill, { width: `${value * 100}%` }]} />
+      </View>
+      <View style={[styles.sliderThumb, { left: Math.min(Math.max(0, value * width - 12), width - 24) }]} pointerEvents="none" />
     </View>
   );
 }
@@ -282,6 +341,13 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
   rowText: { flex: 1, gap: 2 },
   rowPressed: { opacity: 0.6 },
+  rowValue: { color: colors.textMuted, flexShrink: 1 },
+  checkbox: { width: 26, height: 26, borderRadius: 7, borderWidth: 2, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  checkboxOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  slider: { flex: 1, height: 36, justifyContent: 'center', marginRight: space.xs },
+  sliderTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
+  sliderFill: { height: '100%', backgroundColor: colors.text },
+  sliderThumb: { position: 'absolute', width: 24, height: 24, borderRadius: 12, backgroundColor: colors.text },
   segmented: { flexDirection: 'row', padding: 3, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   segment: { minWidth: 48, height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: colors.accent },

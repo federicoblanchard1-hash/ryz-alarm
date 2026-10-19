@@ -1,12 +1,14 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { DAY_LETTERS, WEEK_ORDER, formatDays } from '@/core/time';
+import { DAY_LETTERS, WEEK_ORDER, formatDayList } from '@/core/time';
 import type { Weekday } from '@/core/types';
-import { colors, radius, space } from '@/theme';
-import { Txt, haptic } from './ui';
+import { colors, space } from '@/theme';
+import { Checkbox, Txt, haptic } from './ui';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const ALL: Weekday[] = [0, 1, 2, 3, 4, 5, 6];
 
+/** The repeat days as Alarmy lays them out: the list and a Daily box above, a square per day below. */
 export function DayPicker({ days, onChange }: { days: Weekday[]; onChange: (days: Weekday[]) => void }) {
   const toggle = (day: Weekday) => {
     haptic('select');
@@ -14,6 +16,11 @@ export function DayPicker({ days, onChange }: { days: Weekday[]; onChange: (days
   };
   return (
     <View style={styles.wrap}>
+      <View style={styles.summary}>
+        <Txt variant="row" style={styles.list} numberOfLines={1}>{formatDayList(days)}</Txt>
+        <Checkbox checked={days.length === 7} onChange={(daily) => onChange(daily ? ALL : [])} label="Every day" />
+        <Txt variant="row">Daily</Txt>
+      </View>
       <View style={styles.row}>
         {WEEK_ORDER.map((day) => {
           const on = days.includes(day);
@@ -32,24 +39,17 @@ export function DayPicker({ days, onChange }: { days: Weekday[]; onChange: (days
           );
         })}
       </View>
-      <Txt variant="caption">{days.length === 0 ? 'Once — rings the next time this time comes round' : formatDays(days)}</Txt>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: space.sm, paddingVertical: space.md },
+  wrap: { gap: space.lg },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.xs },
+  list: { flex: 1, color: colors.textMuted },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  day: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  on: { backgroundColor: colors.accent, borderColor: colors.accent },
-  letter: { fontSize: 15, fontWeight: '600', color: colors.text },
+  day: { width: 42, height: 42, borderRadius: 12, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  on: { backgroundColor: colors.accent },
+  letter: { fontSize: 17, fontWeight: '600', color: colors.textFaint },
   letterOn: { color: colors.onAccent },
 });

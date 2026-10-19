@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DayPicker } from '@/components/DayPicker';
@@ -9,12 +11,14 @@ import { MissionCard } from '@/components/editor/MissionCard';
 import { MODE_ICON } from '@/components/ModeBadge';
 import { Sheet } from '@/components/Sheet';
 import { TimePicker } from '@/components/TimePicker';
-import { Button, Chips, Divider, LinkRow, Txt, haptic, ToggleRow } from '@/components/ui';
+import { Checkbox, Chips, LinkRow, PressableScale, Slider, Txt, haptic, ToggleRow } from '@/components/ui';
 import { newAlarm } from '@/core/defaults';
 import { makeId } from '@/core/ring';
+import { formatSpan, nextClock, nextOccurrence } from '@/core/time';
 import type { Alarm, WakeMode } from '@/core/types';
 import { requestPermissions } from '@/services/notifications';
 import { usePreview } from '@/services/sound';
+import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
 import { colors, radius, space } from '@/theme';
@@ -27,6 +31,11 @@ const soundTitle = (mode: WakeMode) => SOUNDS.find((s) => s.mode === mode)!.titl
 const minutes = (values: number[]) => values.map((v) => ({ value: v, label: `${v} min` }));
 const fadeLabel = (s: number) => (s < 60 ? `${s} s` : `${s / 60} min`);
 const PREVIEW_SECONDS = 6;
+const PREVIEW_PROGRESS = {
+  animationName: { from: { transform: [{ scaleX: 0 }] }, to: { transform: [{ scaleX: 1 }] } },
+  animationDuration: `${PREVIEW_SECONDS}s`,
+  animationTimingFunction: 'linear',
+} as const;
 
 type SheetName = 'sound' | 'gentle' | 'ring' | 'snooze' | 'check' | null;
 
@@ -41,6 +50,7 @@ export default function EditAlarm() {
   const preview = usePreview();
   const permissions = usePermissions();
   const insets = useSafeAreaInsets();
+  const now = useNow();
   const set = (patch: Partial<Alarm>) => setDraft((d) => ({ ...d, ...patch }));
 
   useEffect(() => () => {
@@ -54,7 +64,7 @@ export default function EditAlarm() {
       setPlaying(null);
       return;
     }
-    preview.play(mode, PREVIEW_SECONDS);
+    preview.play(mode, PREVIEW_SECONDS, draft.volume);
     setPlaying(mode);
     playTimer.current = setTimeout(() => setPlaying(null), PREVIEW_SECONDS * 1000);
   };
@@ -76,74 +86,79 @@ export default function EditAlarm() {
   const { snooze, awakeCheck } = draft;
   const checkLabel = awakeCheck.enabled ? `After ${awakeCheck.delayMinutes} min` : 'Off';
   const snoozeLabel = snooze.enabled ? `${snooze.minutes} min, ${snooze.limit}×` : 'Off';
-  const gentleLabel = draft.escalate ? `${fadeLabel(draft.fadeInSeconds)} · then 520 Hz` : fadeLabel(draft.fadeInSeconds);
+  // A one-time alarm gets its date on save, so here it's simply the next time the clock shows it.
+  const ringsAt = draft.days.length === 0 ? nextClock(draft.hour, draft.minute, now) : nextOccurrence({ ...draft, enabled: true }, now);
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? space.md : insets.top + space.sm }]}>
         <View style={styles.headerSide} />
-        <Txt variant="heading" accessibilityRole="header">{existing ? 'Edit alarm' : 'Wake-up alarm'}</Txt>
+        <Text style={styles.title} accessibilityRole="header">{existing ? 'Edit alarm' : 'Wake-up alarm'}</Text>
         <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close without saving" style={[styles.headerSide, styles.right]}>
-          <Ionicons name="close" size={28} color={colors.text} />
+          <Ionicons name="close" size={32} color={colors.text} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} keyboardShouldPersistTaps="handled">
+        <View style={styles.nameRow}>
+          <Ionicons name="alarm" size={28} color={colors.text} />
+          <TextInput
+            value={draft.label}
+            onChangeText={(label) => set({ label })}
+            placeholder="Name this alarm"
+            placeholderTextColor={colors.textFaint}
+            style={styles.name}
+            returnKeyType="done"
+            maxLength={40}
+            accessibilityLabel="Alarm name"
+          />
+          <Ionicons name="pencil" size={22} color={colors.textFaint} />
+        </View>
+
+        <Text style={styles.ringIn} accessibilityLiveRegion="polite">{ringsAt ? `Ring in ${formatSpan(ringsAt - now)}` : ' '}</Text>
+
         <TimePicker hour={draft.hour} minute={draft.minute} use24h={data.settings.use24h} onChange={(hour, minute) => set({ hour, minute })} />
 
-        <View style={styles.card}>
+        <View style={styles.days}>
           <DayPicker days={draft.days} onChange={(days) => set({ days })} />
         </View>
 
         <MissionCard missions={draft.missions} onChange={(missions) => set({ missions })} awakeCheckLabel={checkLabel} onAwakeCheck={() => setSheet('check')} />
 
-        <Txt variant="label" style={styles.sectionLabel}>Alarm sound</Txt>
+        <Txt variant="section" style={styles.sectionLabel}>Alarm sound</Txt>
         <View style={styles.card}>
           {/* Siblings, not nested: a button inside a button isn't allowed on web and confuses screen readers. */}
           <View style={styles.soundRow}>
             <Pressable
               onPress={() => togglePlay(draft.mode)}
-              hitSlop={6}
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={playing === draft.mode ? 'Stop preview' : 'Play preview'}
               style={styles.play}
             >
-              <Ionicons name={playing === draft.mode ? 'stop' : 'play'} size={20} color={colors.text} />
+              <Ionicons name={playing === draft.mode ? 'stop' : 'play'} size={18} color={colors.text} />
             </Pressable>
             <Pressable onPress={() => setSheet('sound')} accessibilityRole="button" accessibilityLabel={`Sound: ${soundTitle(draft.mode)}. Change`} style={({ pressed }) => [styles.soundPick, pressed && styles.pressed]}>
-              <Txt variant="heading" style={styles.flex}>{soundTitle(draft.mode)}</Txt>
-              <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+              <Txt style={styles.soundName} numberOfLines={1}>{soundTitle(draft.mode)}</Txt>
+              <Ionicons name="chevron-forward" size={24} color={colors.text} />
             </Pressable>
           </View>
-          <Divider />
-          <ToggleRow title="Vibration" value={draft.vibrate} onChange={(vibrate) => set({ vibrate })} />
-          {draft.mode === 'gentle' ? (
-            <>
-              <Divider />
-              <LinkRow title="Gentle wake-up" value={gentleLabel} onPress={() => setSheet('gentle')} />
-            </>
-          ) : null}
-          <Divider />
+          <View style={styles.progress} accessible={false}>
+            {playing === draft.mode ? <Animated.View key={String(playing)} style={[styles.progressFill, PREVIEW_PROGRESS]} /> : <View style={styles.progressDot} />}
+          </View>
+          <View style={styles.volumeRow}>
+            <Ionicons name="volume-medium" size={26} color={colors.text} />
+            <Slider value={draft.volume} min={0.1} onChange={(volume) => set({ volume })} label="Alarm volume" />
+            <MaterialCommunityIcons name="vibrate" size={26} color={colors.text} />
+            <Checkbox checked={draft.vibrate} onChange={(vibrate) => set({ vibrate })} label="Vibration" />
+          </View>
+          <LinkRow title="Gentle wake-up" value={draft.mode === 'gentle' ? fadeLabel(draft.fadeInSeconds) : 'Off'} onPress={() => (draft.mode === 'gentle' ? setSheet('gentle') : setSheet('sound'))} />
           <LinkRow title="Keep ringing" value={`${draft.ringMinutes} min`} onPress={() => setSheet('ring')} />
         </View>
 
-        <Txt variant="label" style={styles.sectionLabel}>Custom setting</Txt>
+        <Txt variant="section" style={styles.sectionLabel}>Custom setting</Txt>
         <View style={styles.card}>
           <LinkRow title="Snooze" value={snoozeLabel} onPress={() => setSheet('snooze')} />
-          <Divider />
-          <View style={styles.labelRow}>
-            <Txt variant="body">Label</Txt>
-            <TextInput
-              value={draft.label}
-              onChangeText={(label) => set({ label })}
-              placeholder="Work, gym…"
-              placeholderTextColor={colors.textFaint}
-              style={styles.input}
-              returnKeyType="done"
-              maxLength={40}
-              accessibilityLabel="Alarm label"
-            />
-          </View>
         </View>
 
         {existing ? (
@@ -161,7 +176,9 @@ export default function EditAlarm() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
-        <Button title="Save" onPress={save} />
+        <PressableScale onPress={save} style={styles.save} accessibilityLabel="Save">
+          <Text style={styles.saveText}>Save</Text>
+        </PressableScale>
       </View>
 
       <Sheet visible={sheet === 'sound'} onClose={() => setSheet(null)} title="Alarm sound">
@@ -237,23 +254,33 @@ export default function EditAlarm() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingBottom: space.md },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingBottom: space.sm },
   headerSide: { width: 44, height: 44, justifyContent: 'center' },
   right: { alignItems: 'flex-end' },
+  title: { fontSize: 20, lineHeight: 26, fontWeight: '700', color: colors.text },
   content: { paddingHorizontal: space.lg, gap: space.lg },
-  sectionLabel: { marginLeft: space.xs, marginTop: space.sm, marginBottom: -space.sm },
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, paddingHorizontal: space.lg },
-  soundRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.lg },
-  play: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingHorizontal: space.sm, paddingVertical: space.lg },
+  name: { flex: 1, minWidth: 0, fontSize: 19, fontWeight: '500', color: colors.text, paddingVertical: space.sm },
+  ringIn: { fontSize: 19, lineHeight: 24, fontWeight: '500', color: colors.text, textAlign: 'center', marginTop: space.md, marginBottom: space.lg },
+  days: { marginTop: space.xl, marginBottom: space.md },
+  sectionLabel: { marginLeft: space.sm, marginTop: space.lg, marginBottom: -space.xs },
+  card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.xl, paddingVertical: space.sm },
+  soundRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingTop: space.lg, paddingBottom: space.md },
+  play: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
   pressed: { opacity: 0.6 },
-  soundPick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48 },
-  playSmall: { position: 'absolute', top: space.md, right: space.md, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
-  input: { flex: 1, fontSize: 16, color: colors.text, textAlign: 'right', paddingVertical: space.md },
+  soundPick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
+  soundName: { flex: 1, fontSize: 19, lineHeight: 24, fontWeight: '500', color: colors.text },
+  progress: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden', justifyContent: 'center', marginVertical: space.sm },
+  progressFill: { height: '100%', width: '100%', backgroundColor: colors.text, transformOrigin: 'left' },
+  progressDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 1, backgroundColor: colors.textMuted },
+  volumeRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
   delete: { alignSelf: 'center', paddingVertical: space.md, paddingHorizontal: space.xl, minHeight: 44 },
-  deleteText: { fontSize: 16, fontWeight: '600', color: colors.danger },
-  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.lg, paddingTop: space.md, backgroundColor: colors.bg },
-  option: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+  deleteText: { fontSize: 17, fontWeight: '600', color: colors.danger },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
+  save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  saveText: { fontSize: 19, fontWeight: '700', color: colors.onAccent },
+  option: { gap: space.sm, padding: space.lg, borderRadius: radius.md + 6, borderWidth: 1.5, borderColor: colors.surfaceRaised, backgroundColor: colors.surfaceRaised },
   optionOn: { borderColor: colors.text },
-  optionTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  optionTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: 44 },
+  playSmall: { position: 'absolute', top: space.md, right: space.md, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
 });

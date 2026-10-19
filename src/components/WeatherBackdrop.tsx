@@ -248,7 +248,7 @@ function Backdrop({ scene, isDay, height }: Props) {
       ) : null}
 
       {/* Fades the scene into the black page below. */}
-      <LinearGradient colors={['rgba(0,0,0,0)', '#000000']} style={[styles.fade, { height: height * 0.4 }]} />
+      <LinearGradient colors={['rgba(0,0,0,0)', '#000000']} style={[styles.fade, { height: height * 0.3 }]} />
     </View>
   );
 }

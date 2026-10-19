@@ -71,7 +71,8 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
       }
       const volume =
         want === gentle ? fadeVolume(seconds, alarm.fadeInSeconds, GENTLE_START_DB) : fadeVolume(seconds - switchedAt, DEEP_RAMP_SECONDS, DEEP_START_DB);
-      configure(want, { volume: duckRef.current ? volume * DUCKED : volume });
+      const max = alarm.volume ?? 1;
+      configure(want, { volume: (duckRef.current ? volume * DUCKED : volume) * max });
     };
     tick();
     const timer = setInterval(tick, 200);
@@ -93,7 +94,7 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
   }, [vibrate]);
 }
 
-/** A short listen in the editor. Plays `seconds` of a sound at full volume. */
+/** A short listen in the editor. Plays `seconds` of a sound at the alarm's volume. */
 export function usePreview() {
   const gentle = useAudioPlayer(SOUND_SOURCES.gentle);
   const deep = useAudioPlayer(SOUND_SOURCES.deep);
@@ -108,11 +109,11 @@ export function usePreview() {
   useEffect(() => stop, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    play(sound: 'gentle' | 'deep', seconds = 6) {
+    play(sound: 'gentle' | 'deep', seconds = 6, volume = 1) {
       stop();
       setAlarmAudioMode().catch(() => {});
       const player = sound === 'gentle' ? gentle : deep;
-      configure(player, { volume: 1 });
+      configure(player, { volume });
       player.seekTo(0);
       player.play();
       timer.current = setTimeout(stop, seconds * 1000);

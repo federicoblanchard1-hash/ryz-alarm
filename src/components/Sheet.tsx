@@ -4,7 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeIn, SlideInDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, radius, space } from '@/theme';
+import { colors, space } from '@/theme';
 import { Txt } from './ui';
 
 // The iOS sheet curve (animate-expo skill). Module scope: layout-animation builders shouldn't be rebuilt per render.
@@ -24,9 +24,9 @@ export function Sheet({ visible, onClose, title, children, footer }: { visible: 
         <Animated.View entering={reduced ? undefined : SHEET_IN} style={[styles.sheet, { paddingBottom: insets.bottom + space.lg }]} accessibilityViewIsModal>
           <View style={styles.grabber} />
           <View style={styles.header}>
-            <Txt variant="heading" accessibilityRole="header">{title}</Txt>
+            <Txt style={styles.title} accessibilityRole="header">{title}</Txt>
             <Pressable onPress={onClose} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close" style={styles.close}>
-              <Ionicons name="close" size={22} color={colors.text} />
+              <Ionicons name="close" size={30} color={colors.text} />
             </Pressable>
           </View>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -43,16 +43,17 @@ const styles = StyleSheet.create({
   root: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
   sheet: {
-    maxHeight: '88%',
+    maxHeight: '92%',
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: colors.borderStrong, marginTop: space.sm },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: space.md, paddingHorizontal: space.xl },
-  close: { position: 'absolute', right: space.lg, width: 36, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised },
+  title: { fontSize: 20, lineHeight: 26, fontWeight: '700', color: colors.text },
+  close: { position: 'absolute', right: space.lg, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.md },
   footer: { paddingHorizontal: space.xl, paddingTop: space.sm },
 });

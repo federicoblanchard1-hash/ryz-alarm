@@ -1,15 +1,16 @@
 import { cubicBezier } from 'react-native-reanimated';
 
-// Black and white. The only colours in the app are the weather emojis and red for errors.
+// Black and white. The only colour in the app is red, for errors and Delete.
 export const colors = {
   bg: '#000000',
-  surface: '#0E0E0E',
-  surfaceRaised: '#1A1A1A',
-  border: '#242424',
-  borderStrong: '#3A3A3A',
+  // Cards and controls in iOS's dark greys, like Alarmy's layout.
+  surface: '#1C1C1E',
+  surfaceRaised: '#2C2C2E',
+  border: '#2C2C2E',
+  borderStrong: '#48484A',
   text: '#FFFFFF',
-  textMuted: '#9A9A9A',
-  textFaint: '#5C5C5C',
+  textMuted: '#9A9A9F',
+  textFaint: '#636366',
   accent: '#FFFFFF',
   onAccent: '#000000',
   danger: '#FF453A',
@@ -20,7 +21,10 @@ export const colors = {
 };
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
-export const radius = { sm: 10, md: 14, lg: 22, pill: 999 };
+/** The floating tab bar; tab screens leave this much room (plus the safe area) at the bottom. */
+export const TAB_BAR_HEIGHT = 68;
+
+export const radius = { sm: 10, md: 14, lg: 28, pill: 999 };
 
 /** Strong ease-out for UI (animate-expo skill). Reanimated's CSS easing takes this object, not a 'cubic-bezier()' string. */
 export const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);

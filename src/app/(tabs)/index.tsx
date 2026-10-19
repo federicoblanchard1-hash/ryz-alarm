@@ -12,19 +12,22 @@ import { HOUR, MINUTE, formatClock, formatClockText, formatHours, formatSpan } f
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { colors, radius, space } from '@/theme';
+import { TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
 
-function Tile({ icon, label, value, onPress }: { icon: IconName; label: string; value: string; onPress: () => void }) {
+/** A shortcut like Alarmy's: a rounded square holding a value or an icon, with its name below. */
+function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string; label: string; onPress: () => void }) {
   return (
-    // PressableScale styles its inner view, so the outer one takes the row's share.
-    <View style={styles.flex}>
-      <PressableScale onPress={onPress} style={styles.tile} accessibilityLabel={`${label}: ${value}`}>
-        <Ionicons name={icon} size={20} color={colors.text} />
-        <View>
-          <Txt style={styles.tileValue} numberOfLines={1}>{value}</Txt>
-          <Txt variant="caption" numberOfLines={1}>{label}</Txt>
-        </View>
+    <View style={styles.tileWrap}>
+      <PressableScale onPress={onPress} style={styles.tile} accessibilityLabel={value ? `${label}: ${value}` : label}>
+        {value ? (
+          <Txt style={styles.tileValue} numberOfLines={1} adjustsFontSizeToFit>
+            {value}
+          </Txt>
+        ) : (
+          <Ionicons name={icon ?? 'ellipse'} size={32} color={colors.text} />
+        )}
       </PressableScale>
+      <Txt style={styles.tileLabel} numberOfLines={2}>{label}</Txt>
     </View>
   );
 }
@@ -44,8 +47,32 @@ export default function Home() {
   const needsPermission = permissions.supported && permissions.state !== null && permissions.state.notifications !== 'granted' && data.alarms.length > 0;
 
   return (
-    <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}>
-      <WeatherHero />
+    <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xxl }}>
+      <WeatherHero>
+        <View style={styles.tiles}>
+          <Tile
+            label="Next alarm"
+            value={clock ? clock.time : undefined}
+            icon="add"
+            onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: next ? next.alarm.id : 'new' } })}
+          />
+          <Tile
+            label="Bedtime"
+            value={bedtime ? formatClock(bedtime.getHours(), bedtime.getMinutes(), use24h).time : undefined}
+            icon="bed-outline"
+            onPress={() => router.push('/settings')}
+          />
+          <Tile label="Sleep goal" value={formatHours(sleepGoalMinutes).replace(' ', '')} onPress={() => router.push('/settings')} />
+          <Tile
+            label="Test alarm"
+            icon="alarm"
+            onPress={() => {
+              haptic('light');
+              update((d, t) => scheduleTest(d, t, permissions.supported ? 60 : 5));
+            }}
+          />
+        </View>
+      </WeatherHero>
 
       <View style={styles.content}>
         {needsPermission ? (
@@ -91,25 +118,6 @@ export default function Home() {
           </Card>
         ) : null}
 
-        <View style={styles.tiles}>
-          <Tile
-            icon="bed-outline"
-            label="Bedtime"
-            value={bedtime ? formatClockText(bedtime.getHours(), bedtime.getMinutes(), use24h) : '—'}
-            onPress={() => router.push('/settings')}
-          />
-          <Tile icon="moon-outline" label="Sleep goal" value={formatHours(sleepGoalMinutes)} onPress={() => router.push('/settings')} />
-          <Tile
-            icon="alarm-outline"
-            label="Test alarm"
-            value={permissions.supported ? 'In 1 min' : 'In 5 s'}
-            onPress={() => {
-              haptic('light');
-              update((d, t) => scheduleTest(d, t, permissions.supported ? 60 : 5));
-            }}
-          />
-        </View>
-
         {awakeCheck ? (
           <Card style={styles.inline}>
             <Ionicons name="help-circle-outline" size={20} color={colors.text} />
@@ -125,7 +133,7 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  content: { paddingHorizontal: space.lg, gap: space.md },
+  content: { paddingHorizontal: space.lg, paddingTop: space.sm, gap: space.md },
   flex: { flex: 1 },
   warning: { gap: space.md, paddingVertical: space.lg },
   warningRow: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
@@ -134,8 +142,6 @@ const styles = StyleSheet.create({
     gap: space.xs,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
   },
   nextTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pill: { paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
@@ -154,15 +160,10 @@ const styles = StyleSheet.create({
   },
   emptyCard: { padding: space.xl, gap: space.sm },
   emptyButton: { marginTop: space.sm },
-  tiles: { flexDirection: 'row', gap: space.sm },
-  tile: {
-    gap: space.md,
-    padding: space.md,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  tileValue: { fontSize: 17, lineHeight: 22, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  tiles: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: space.sm, paddingTop: space.xxl, paddingBottom: space.xl },
+  tileWrap: { width: 84, alignItems: 'center', gap: space.sm },
+  tile: { width: 68, height: 68, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  tileValue: { fontSize: 21, lineHeight: 26, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+  tileLabel: { fontSize: 16, lineHeight: 20, fontWeight: '600', color: colors.text, textAlign: 'center' },
   inline: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.md },
 });

@@ -9,7 +9,7 @@ import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { colors, space } from '@/theme';
+import { TAB_BAR_HEIGHT, colors, space } from '@/theme';
 
 const SOURCES = [
   { title: 'Low 520 Hz tone wakes deep sleepers', who: 'Bruck & Thomas, Victoria University', url: 'https://vuir.vu.edu.au/3994' },
@@ -70,7 +70,7 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Txt variant="largeTitle" style={styles.title} accessibilityRole="header">Settings</Txt>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xxl }]}>
         <Section label="Sleep" footer="Adults need at least 7 hours a night. Ryz uses your goal to suggest a bedtime.">
           <Chips
             title="Sleep goal"
@@ -167,7 +167,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   title: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.md },
-  content: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.xl },
+  content: { paddingHorizontal: space.lg, gap: space.xl },
   flex: { flex: 1, gap: 2 },
   status: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
   statusAction: { minHeight: 44, justifyContent: 'center' },
