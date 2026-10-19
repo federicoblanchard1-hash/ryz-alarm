@@ -5,8 +5,10 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DayPicker } from '@/components/DayPicker';
+import { MissionPicker } from '@/components/MissionPicker';
+import { MODE_ICON } from '@/components/ModeBadge';
 import { TimePicker } from '@/components/TimePicker';
-import { Button, Chips, Divider, PressableScale, Section, ToggleRow, Txt, haptic, type IconName } from '@/components/ui';
+import { Button, Chips, Divider, PressableScale, Section, ToggleRow, Txt, haptic } from '@/components/ui';
 import { newAlarm } from '@/core/defaults';
 import { makeId } from '@/core/ring';
 import type { Alarm, WakeMode } from '@/core/types';
@@ -16,37 +18,20 @@ import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
 import { colors, radius, space } from '@/theme';
 
-const MODES: { mode: WakeMode; icon: IconName; title: string; text: string }[] = [
-  {
-    mode: 'gentle',
-    icon: 'sunny-outline',
-    title: 'Gentle',
-    text: 'A melody that starts almost silent and slowly gets louder. For normal sleepers.',
-  },
-  {
-    mode: 'deep',
-    icon: 'pulse-outline',
-    title: 'Deep sleeper',
-    text: 'A low 520 Hz tone in bursts of three. It woke far more deep sleepers than high beeps in tests. Hold to stop.',
-  },
+const MODES: { mode: WakeMode; title: string; text: string }[] = [
+  { mode: 'gentle', title: 'Gentle', text: 'A melody that starts almost silent and slowly gets louder. For normal sleepers.' },
+  { mode: 'deep', title: 'Deep sleeper', text: 'A low 520 Hz tone in bursts of three. It woke far more deep sleepers than high beeps in tests.' },
 ];
 
 const minutes = (values: number[]) => values.map((v) => ({ value: v, label: `${v} min` }));
 
-function ModeCard({ selected, onSelect, onListen, mode, icon, title, text }: (typeof MODES)[number] & { selected: boolean; onSelect: () => void; onListen: () => void }) {
-  const accent = mode === 'deep' ? colors.deep : colors.gentle;
+function ModeCard({ selected, onSelect, onListen, mode, title, text }: (typeof MODES)[number] & { selected: boolean; onSelect: () => void; onListen: () => void }) {
   return (
-    <Pressable
-      onPress={onSelect}
-      accessibilityRole="radio"
-      accessibilityState={{ selected }}
-      accessibilityLabel={`${title}. ${text}`}
-      style={[styles.mode, selected && { borderColor: accent, backgroundColor: mode === 'deep' ? colors.deepSoft : colors.gentleSoft }]}
-    >
+    <Pressable onPress={onSelect} accessibilityRole="radio" accessibilityState={{ selected }} accessibilityLabel={`${title}. ${text}`} style={[styles.mode, selected && styles.modeOn]}>
       <View style={styles.modeTop}>
-        <Ionicons name={icon} size={22} color={accent} />
+        <Ionicons name={MODE_ICON[mode]} size={22} color={colors.text} />
         <Txt variant="heading" style={styles.flex}>{title}</Txt>
-        <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={22} color={selected ? accent : colors.textFaint} />
+        <Ionicons name={selected ? 'radio-button-on' : 'radio-button-off'} size={22} color={selected ? colors.text : colors.textFaint} />
       </View>
       <Txt variant="caption">{text}</Txt>
       <PressableScale onPress={onListen} style={styles.listen} accessibilityLabel={`Listen to ${title}`}>
@@ -65,7 +50,6 @@ export default function EditAlarm() {
   const preview = usePreview();
   const permissions = usePermissions();
   const insets = useSafeAreaInsets();
-  const accent = draft.mode === 'deep' ? colors.deep : colors.gentle;
   const set = (patch: Partial<Alarm>) => setDraft((d) => ({ ...d, ...patch }));
 
   const close = () => {
@@ -90,15 +74,15 @@ export default function EditAlarm() {
         </Pressable>
         <Txt variant="heading">{existing ? 'Edit alarm' : 'New alarm'}</Txt>
         <Pressable onPress={save} hitSlop={12} accessibilityRole="button" style={[styles.headerButton, styles.right]}>
-          <Txt variant="heading" style={{ color: accent }}>Save</Txt>
+          <Txt variant="heading">Save</Txt>
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xxl }]} keyboardShouldPersistTaps="handled">
-        <TimePicker hour={draft.hour} minute={draft.minute} use24h={data.settings.use24h} accent={accent} onChange={(hour, minute) => set({ hour, minute })} />
+        <TimePicker hour={draft.hour} minute={draft.minute} use24h={data.settings.use24h} onChange={(hour, minute) => set({ hour, minute })} />
 
         <Section label="Repeat">
-          <DayPicker days={draft.days} onChange={(days) => set({ days })} accent={accent} />
+          <DayPicker days={draft.days} onChange={(days) => set({ days })} />
         </Section>
 
         <Section label="Label">
@@ -115,7 +99,7 @@ export default function EditAlarm() {
         </Section>
 
         <View style={styles.group}>
-          <Txt variant="label" style={styles.groupLabel}>Wake-up style</Txt>
+          <Txt variant="label" style={styles.groupLabel}>Sound</Txt>
           {MODES.map((m) => (
             <ModeCard
               key={m.mode}
@@ -130,11 +114,12 @@ export default function EditAlarm() {
           ))}
         </View>
 
+        <MissionPicker missions={draft.missions} onChange={(missions) => set({ missions })} />
+
         {draft.mode === 'gentle' ? (
           <Section label="Gentle wake-up" footer="If you sleep through the melody, the deep sleeper tone takes over.">
             <Chips
               title="Fade in over"
-              accent={accent}
               value={draft.fadeInSeconds}
               onChange={(fadeInSeconds) => set({ fadeInSeconds })}
               options={[
@@ -145,28 +130,25 @@ export default function EditAlarm() {
               ]}
             />
             <Divider />
-            <ToggleRow title="Switch to the deep tone" description="If you're still asleep" value={draft.escalate} onChange={(escalate) => set({ escalate })} accent={accent} />
-            {draft.escalate ? (
-              <Chips title="After" accent={accent} value={draft.escalateAfterMinutes} onChange={(escalateAfterMinutes) => set({ escalateAfterMinutes })} options={minutes([1, 2, 3, 5])} />
-            ) : null}
+            <ToggleRow title="Switch to the deep tone" description="If you're still asleep" value={draft.escalate} onChange={(escalate) => set({ escalate })} />
+            {draft.escalate ? <Chips title="After" value={draft.escalateAfterMinutes} onChange={(escalateAfterMinutes) => set({ escalateAfterMinutes })} options={minutes([1, 2, 3, 5])} /> : null}
           </Section>
         ) : null}
 
         <Section label="Ringing" footer="If nobody touches it, the alarm snoozes itself when snoozes are left.">
-          <ToggleRow title="Vibrate" value={draft.vibrate} onChange={(vibrate) => set({ vibrate })} accent={accent} />
+          <ToggleRow title="Vibrate" value={draft.vibrate} onChange={(vibrate) => set({ vibrate })} />
           <Divider />
-          <Chips title="Keep ringing for" accent={accent} value={draft.ringMinutes} onChange={(ringMinutes) => set({ ringMinutes })} options={minutes([5, 10, 15])} />
+          <Chips title="Keep ringing for" value={draft.ringMinutes} onChange={(ringMinutes) => set({ ringMinutes })} options={minutes([5, 10, 15])} />
         </Section>
 
         <Section label="Snooze" footer="Snoozing for up to about 30 minutes didn't hurt sleep or mood in a 2023 study.">
-          <ToggleRow title="Allow snooze" value={draft.snooze.enabled} onChange={(enabled) => set({ snooze: { ...draft.snooze, enabled } })} accent={accent} />
+          <ToggleRow title="Allow snooze" value={draft.snooze.enabled} onChange={(enabled) => set({ snooze: { ...draft.snooze, enabled } })} />
           {draft.snooze.enabled ? (
             <>
               <Divider />
-              <Chips title="Length" accent={accent} value={draft.snooze.minutes} onChange={(m) => set({ snooze: { ...draft.snooze, minutes: m } })} options={minutes([5, 9, 10, 15, 20, 30])} />
+              <Chips title="Length" value={draft.snooze.minutes} onChange={(m) => set({ snooze: { ...draft.snooze, minutes: m } })} options={minutes([5, 9, 10, 15, 20, 30])} />
               <Chips
                 title="How many times"
-                accent={accent}
                 value={draft.snooze.limit}
                 onChange={(limit) => set({ snooze: { ...draft.snooze, limit } })}
                 options={[1, 2, 3, 5].map((v) => ({ value: v, label: String(v) }))}
@@ -181,13 +163,12 @@ export default function EditAlarm() {
             description="Asks a few minutes after you stop the alarm"
             value={draft.awakeCheck.enabled}
             onChange={(enabled) => set({ awakeCheck: { ...draft.awakeCheck, enabled } })}
-            accent={accent}
           />
           {draft.awakeCheck.enabled ? (
             <>
               <Divider />
-              <Chips title="Ask after" accent={accent} value={draft.awakeCheck.delayMinutes} onChange={(delayMinutes) => set({ awakeCheck: { ...draft.awakeCheck, delayMinutes } })} options={minutes([3, 5, 10])} />
-              <Chips title="Answer within" accent={accent} value={draft.awakeCheck.answerMinutes} onChange={(answerMinutes) => set({ awakeCheck: { ...draft.awakeCheck, answerMinutes } })} options={minutes([2, 3, 5])} />
+              <Chips title="Ask after" value={draft.awakeCheck.delayMinutes} onChange={(delayMinutes) => set({ awakeCheck: { ...draft.awakeCheck, delayMinutes } })} options={minutes([3, 5, 10])} />
+              <Chips title="Answer within" value={draft.awakeCheck.answerMinutes} onChange={(answerMinutes) => set({ awakeCheck: { ...draft.awakeCheck, answerMinutes } })} options={minutes([2, 3, 5])} />
             </>
           ) : null}
         </Section>
@@ -232,6 +213,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface,
   },
+  modeOn: { borderColor: colors.text },
   modeTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   listen: {
     alignSelf: 'flex-start',

@@ -10,10 +10,9 @@ interface Props {
   minute: number;
   use24h: boolean;
   onChange: (hour: number, minute: number) => void;
-  accent: string;
 }
 
-export function TimePicker({ hour, minute, use24h, onChange, accent }: Props) {
+export function TimePicker({ hour, minute, use24h, onChange }: Props) {
   const value = new Date(2000, 0, 1, hour, minute);
 
   if (Platform.OS === 'ios') {
@@ -25,7 +24,7 @@ export function TimePicker({ hour, minute, use24h, onChange, accent }: Props) {
         is24Hour={use24h}
         themeVariant="dark"
         textColor={colors.text}
-        accentColor={accent}
+        accentColor={colors.text}
         onChange={(_, date) => date && onChange(date.getHours(), date.getMinutes())}
         style={styles.ios}
       />
@@ -52,7 +51,7 @@ export function TimePicker({ hour, minute, use24h, onChange, accent }: Props) {
     >
       <View style={styles.clockRow}>
         <Txt style={styles.clock}>{time}</Txt>
-        {period ? <Txt style={[styles.period, { color: accent }]}>{period}</Txt> : null}
+        {period ? <Txt style={styles.period}>{period}</Txt> : null}
       </View>
       <Txt variant="caption">Tap to change</Txt>
     </PressableScale>
@@ -69,5 +68,5 @@ const styles = StyleSheet.create({
   },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   clock: { fontSize: 64, lineHeight: 76, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'] },
-  period: { fontSize: 20, lineHeight: 26, fontWeight: '600' },
+  period: { fontSize: 20, lineHeight: 26, fontWeight: '600', color: colors.textMuted },
 });

@@ -2,31 +2,34 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
+import Animated, { useReducedMotion, type CSSTransitionProperties } from 'react-native-reanimated';
 
-import { EASE_OUT_CSS, colors, radius, space } from '@/theme';
+import { EASE_OUT, colors, radius, space } from '@/theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 const variants = StyleSheet.create({
-  title: { fontSize: 30, lineHeight: 36, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
-  heading: { fontSize: 17, fontWeight: '600', color: colors.text },
-  body: { fontSize: 16, color: colors.text, lineHeight: 22 },
-  muted: { fontSize: 15, color: colors.textMuted, lineHeight: 21 },
-  caption: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.textFaint, letterSpacing: 0.6, textTransform: 'uppercase' },
+  largeTitle: { fontSize: 34, lineHeight: 40, fontWeight: '700', color: colors.text, letterSpacing: -0.8 },
+  title: { fontSize: 28, lineHeight: 34, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
+  heading: { fontSize: 17, lineHeight: 22, fontWeight: '600', color: colors.text },
+  body: { fontSize: 16, lineHeight: 22, color: colors.text },
+  muted: { fontSize: 15, lineHeight: 21, color: colors.textMuted },
+  caption: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
+  label: { fontSize: 12, lineHeight: 16, fontWeight: '600', color: colors.textFaint, letterSpacing: 1, textTransform: 'uppercase' },
 });
 
 export function Txt({ variant = 'body', style, ...props }: TextProps & { variant?: keyof typeof variants }) {
   return <Text {...props} style={[variants[variant], style]} />;
 }
 
-export function haptic(kind: 'select' | 'light' | 'success') {
+export function haptic(kind: 'select' | 'light' | 'success' | 'error') {
   if (Platform.OS === 'web') return;
   if (kind === 'select') Haptics.selectionAsync().catch(() => {});
   else if (kind === 'light') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-  else Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  else Haptics.notificationAsync(kind === 'success' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error).catch(() => {});
 }
+
+const PRESS_TRANSITION: CSSTransitionProperties = { transitionProperty: 'transform', transitionDuration: '120ms', transitionTimingFunction: EASE_OUT };
 
 /** Feedback on press-in: a 3% scale in 120 ms, so every tap feels physical. */
 export function PressableScale({
@@ -38,8 +41,6 @@ export function PressableScale({
   children,
   accessibilityLabel,
   accessibilityHint,
-  onPressIn,
-  onPressOut,
 }: {
   onPress?: () => void;
   onLongPress?: () => void;
@@ -49,8 +50,6 @@ export function PressableScale({
   children: ReactNode;
   accessibilityLabel?: string;
   accessibilityHint?: string;
-  onPressIn?: () => void;
-  onPressOut?: () => void;
 }) {
   const [pressed, setPressed] = useState(false);
   const reduced = useReducedMotion();
@@ -60,14 +59,8 @@ export function PressableScale({
       onLongPress={onLongPress}
       delayLongPress={delayLongPress}
       disabled={disabled}
-      onPressIn={() => {
-        setPressed(true);
-        onPressIn?.();
-      }}
-      onPressOut={() => {
-        setPressed(false);
-        onPressOut?.();
-      }}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
       hitSlop={8}
       pressRetentionOffset={16}
       accessibilityRole="button"
@@ -75,42 +68,46 @@ export function PressableScale({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled }}
     >
-      <Animated.View style={[PRESS_TRANSITION, style, pressed && !reduced && styles.pressed, disabled && styles.disabled]}>{children}</Animated.View>
+      <Animated.View style={[styles.unpressed, PRESS_TRANSITION, style, pressed && !reduced && styles.pressed, disabled && styles.disabled]}>{children}</Animated.View>
     </Pressable>
   );
 }
+
+const BUTTON_LOOKS = {
+  primary: { box: { backgroundColor: colors.accent }, fg: colors.onAccent },
+  secondary: { box: { backgroundColor: colors.surfaceRaised }, fg: colors.text },
+  outline: { box: { borderWidth: 1.5, borderColor: colors.text }, fg: colors.text },
+  danger: { box: { backgroundColor: colors.dangerSoft }, fg: colors.danger },
+};
 
 export function Button({
   title,
   onPress,
   variant = 'primary',
-  accent = colors.gentle,
   icon,
   disabled,
   style,
 }: {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  accent?: string;
+  variant?: keyof typeof BUTTON_LOOKS;
   icon?: IconName;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const bg = variant === 'primary' ? accent : variant === 'secondary' ? colors.surfaceRaised : variant === 'danger' ? colors.dangerSoft : 'transparent';
-  const fg = variant === 'primary' ? colors.onAccent : variant === 'danger' ? colors.danger : colors.text;
+  const look = BUTTON_LOOKS[variant];
   return (
-    <PressableScale onPress={onPress} disabled={disabled} style={[styles.button, { backgroundColor: bg }, style]} accessibilityLabel={title}>
-      {icon ? <Ionicons name={icon} size={20} color={fg} /> : null}
-      <Text style={[styles.buttonText, { color: fg }]}>{title}</Text>
+    <PressableScale onPress={onPress} disabled={disabled} style={[styles.button, look.box, style]} accessibilityLabel={title}>
+      {icon ? <Ionicons name={icon} size={20} color={look.fg} /> : null}
+      <Text style={[styles.buttonText, { color: look.fg }]}>{title}</Text>
     </PressableScale>
   );
 }
 
-export function IconButton({ icon, onPress, label }: { icon: IconName; onPress: () => void; label: string }) {
+export function IconButton({ icon, onPress, label, filled }: { icon: IconName; onPress: () => void; label: string; filled?: boolean }) {
   return (
-    <PressableScale onPress={onPress} style={styles.iconButton} accessibilityLabel={label}>
-      <Ionicons name={icon} size={22} color={colors.text} />
+    <PressableScale onPress={onPress} style={[styles.iconButton, filled && styles.iconButtonFilled]} accessibilityLabel={label}>
+      <Ionicons name={icon} size={22} color={filled ? colors.onAccent : colors.text} />
     </PressableScale>
   );
 }
@@ -133,33 +130,9 @@ export function Divider() {
   return <View style={styles.divider} />;
 }
 
-export function ToggleRow({
-  title,
-  description,
-  value,
-  onChange,
-  accent = colors.gentle,
-}: {
-  title: string;
-  description?: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  accent?: string;
-}) {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowText}>
-        <Txt variant="body">{title}</Txt>
-        {description ? <Txt variant="caption">{description}</Txt> : null}
-      </View>
-      <ThemedSwitch value={value} onChange={onChange} accent={accent} label={title} />
-    </View>
-  );
-}
-
-/** The platform switch in Ryz colours: accent track, light thumb (web needs its own thumb prop). */
-export function ThemedSwitch({ value, onChange, accent, label }: { value: boolean; onChange: (value: boolean) => void; accent: string; label: string }) {
-  const webThumb = Platform.OS === 'web' ? ({ activeThumbColor: colors.text } as object) : {};
+/** The platform switch in black and white (web needs its own thumb prop). */
+export function ThemedSwitch({ value, onChange, label }: { value: boolean; onChange: (value: boolean) => void; label: string }) {
+  const webThumb = Platform.OS === 'web' ? ({ activeThumbColor: colors.onAccent } as object) : {};
   return (
     <Switch
       value={value}
@@ -167,12 +140,24 @@ export function ThemedSwitch({ value, onChange, accent, label }: { value: boolea
         haptic('light');
         onChange(v);
       }}
-      trackColor={{ true: accent, false: colors.border }}
-      thumbColor={Platform.OS === 'ios' ? undefined : colors.text}
-      ios_backgroundColor={colors.border}
+      trackColor={{ true: colors.accent, false: colors.borderStrong }}
+      thumbColor={Platform.OS === 'ios' ? undefined : value ? colors.onAccent : colors.text}
+      ios_backgroundColor={colors.borderStrong}
       accessibilityLabel={label}
       {...webThumb}
     />
+  );
+}
+
+export function ToggleRow({ title, description, value, onChange }: { title: string; description?: string; value: boolean; onChange: (value: boolean) => void }) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowText}>
+        <Txt variant="body">{title}</Txt>
+        {description ? <Txt variant="caption">{description}</Txt> : null}
+      </View>
+      <ThemedSwitch value={value} onChange={onChange} label={title} />
+    </View>
   );
 }
 
@@ -187,17 +172,15 @@ export function Chips<T extends string | number>({
   options,
   value,
   onChange,
-  accent = colors.gentle,
 }: {
   title?: string;
   options: Option<T>[];
   value: T;
   onChange: (value: T) => void;
-  accent?: string;
 }) {
   return (
     <View style={styles.chipBlock}>
-      {title ? <Txt variant="caption" style={styles.chipTitle}>{title}</Txt> : null}
+      {title ? <Txt variant="caption">{title}</Txt> : null}
       <View style={styles.chips} accessibilityRole="radiogroup">
         {options.map((o) => {
           const selected = o.value === value;
@@ -212,9 +195,9 @@ export function Chips<T extends string | number>({
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={title ? `${title}: ${o.label}` : o.label}
-              style={[styles.chip, selected && { backgroundColor: accent, borderColor: accent }]}
+              style={[styles.chip, selected && styles.chipOn]}
             >
-              <Text style={[styles.chipText, selected && { color: colors.onAccent }]}>{o.label}</Text>
+              <Text style={[styles.chipText, selected && styles.chipTextOn]}>{o.label}</Text>
             </Pressable>
           );
         })}
@@ -223,20 +206,13 @@ export function Chips<T extends string | number>({
   );
 }
 
-// Reanimated CSS transition props, which StyleSheet.create doesn't type.
-const PRESS_TRANSITION = {
-  transform: [{ scale: 1 }],
-  transitionProperty: 'transform',
-  transitionDuration: '120ms',
-  transitionTimingFunction: EASE_OUT_CSS,
-} as const;
-
 const styles = StyleSheet.create({
+  unpressed: { transform: [{ scale: 1 }] },
   pressed: { transform: [{ scale: 0.97 }] },
-  disabled: { opacity: 0.4 },
+  disabled: { opacity: 0.35 },
   button: {
     minHeight: 54,
-    borderRadius: radius.md,
+    borderRadius: radius.pill,
     paddingHorizontal: space.xl,
     flexDirection: 'row',
     alignItems: 'center',
@@ -250,11 +226,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
   },
+  iconButtonFilled: { backgroundColor: colors.accent },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
     paddingHorizontal: space.lg,
     paddingVertical: space.xs,
   },
@@ -265,7 +244,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
   rowText: { flex: 1, gap: 2 },
   chipBlock: { paddingVertical: space.md, gap: space.sm },
-  chipTitle: {},
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
     minHeight: 40,
@@ -273,9 +251,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md + 2,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   chipText: { fontSize: 15, fontWeight: '500', color: colors.text },
+  chipTextOn: { color: colors.onAccent },
 });

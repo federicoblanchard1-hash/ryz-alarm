@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#08090C",
+    "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ryzalarm.app",
@@ -21,7 +21,7 @@
     "android": {
       "package": "com.ryzalarm.app",
       "adaptiveIcon": {
-        "backgroundColor": "#08090C",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -29,7 +29,8 @@
       "permissions": [
         "android.permission.USE_EXACT_ALARM",
         "android.permission.SCHEDULE_EXACT_ALARM",
-        "android.permission.VIBRATE"
+        "android.permission.VIBRATE",
+        "android.permission.ACTIVITY_RECOGNITION"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -58,7 +59,19 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Ryz uses your location to show the weather where you wake up."
+        }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Ryz counts your shakes, squats and steps for wake-up missions."
+        }
+      ]
     ]
   }
 }

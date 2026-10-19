@@ -8,7 +8,7 @@ import { colors, radius } from '@/theme';
  * Stop for deep sleepers: hold for `holdMs`. A half-awake tap can't turn the
  * alarm off by accident. Screen readers activate it directly.
  */
-export function HoldButton({ title, holdMs, accent, onDone }: { title: string; holdMs: number; accent: string; onDone: () => void }) {
+export function HoldButton({ title, holdMs, onDone }: { title: string; holdMs: number; onDone: () => void }) {
   const [holding, setHolding] = useState(false);
   const [width, setWidth] = useState(0);
   return (
@@ -22,19 +22,25 @@ export function HoldButton({ title, holdMs, accent, onDone }: { title: string; h
       accessibilityLabel={title}
       accessibilityActions={[{ name: 'activate' }]}
       onAccessibilityAction={(e) => e.nativeEvent.actionName === 'activate' && onDone()}
-      style={[styles.button, { borderColor: accent }]}
+      style={styles.button}
     >
+      <View style={styles.labelWrap} pointerEvents="none">
+        <Text style={styles.label}>{title}</Text>
+      </View>
       <Animated.View
+        pointerEvents="none"
         style={[
           styles.fill,
-          { backgroundColor: accent, width: holding ? width : 0 },
+          { width: holding ? width : 0 },
           // Fills linearly while held (it's a timer), snaps back fast on release.
           { transitionProperty: 'width', transitionDuration: holding ? holdMs : 180, transitionTimingFunction: holding ? 'linear' : 'ease-out' },
         ]}
-      />
-      <View style={styles.labelWrap} pointerEvents="none">
-        <Text style={[styles.label, { color: colors.text }]}>{title}</Text>
-      </View>
+      >
+        {/* A black copy of the label, revealed by the white fill as it grows. */}
+        <View style={[styles.labelWrap, styles.inner, { width }]}>
+          <Text style={[styles.label, styles.labelOn]}>{title}</Text>
+        </View>
+      </Animated.View>
     </Pressable>
   );
 }
@@ -43,11 +49,14 @@ const styles = StyleSheet.create({
   button: {
     height: 64,
     borderRadius: radius.pill,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    borderColor: colors.text,
     overflow: 'hidden',
     justifyContent: 'center',
   },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0 },
+  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden', backgroundColor: colors.accent },
   labelWrap: { alignItems: 'center' },
-  label: { fontSize: 18, fontWeight: '700' },
+  inner: { position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center' },
+  label: { fontSize: 18, fontWeight: '700', color: colors.text },
+  labelOn: { color: colors.onAccent },
 });

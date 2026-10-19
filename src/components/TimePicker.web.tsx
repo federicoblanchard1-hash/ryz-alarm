@@ -10,11 +10,10 @@ interface Props {
   minute: number;
   use24h: boolean;
   onChange: (hour: number, minute: number) => void;
-  accent: string;
 }
 
 // The web build is a preview, so it gets simple steppers instead of a native picker.
-export function TimePicker({ hour, minute, use24h, onChange, accent }: Props) {
+export function TimePicker({ hour, minute, use24h, onChange }: Props) {
   const { time, period } = formatClock(hour, minute, use24h);
   const shift = (minutes: number) => {
     const total = (hour * 60 + minute + minutes + 24 * 60) % (24 * 60);
@@ -37,7 +36,7 @@ export function TimePicker({ hour, minute, use24h, onChange, accent }: Props) {
     <View style={styles.box}>
       <View style={styles.clockRow}>
         <Txt style={styles.clock}>{time}</Txt>
-        {period ? <Txt style={[styles.period, { color: accent }]}>{period}</Txt> : null}
+        {period ? <Txt style={styles.period}>{period}</Txt> : null}
       </View>
       <View style={styles.steppers}>
         {stepper('Hour', 60)}
@@ -49,10 +48,10 @@ export function TimePicker({ hour, minute, use24h, onChange, accent }: Props) {
 }
 
 const styles = StyleSheet.create({
-  box: { alignItems: 'center', paddingVertical: space.lg, gap: space.md, borderRadius: radius.lg, backgroundColor: colors.surface },
+  box: { alignItems: 'center', paddingVertical: space.lg, gap: space.md, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   clock: { fontSize: 64, lineHeight: 76, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'] },
-  period: { fontSize: 20, lineHeight: 26, fontWeight: '600' },
+  period: { fontSize: 20, lineHeight: 26, fontWeight: '600', color: colors.textMuted },
   steppers: { flexDirection: 'row', gap: space.lg },
   stepper: { alignItems: 'center', gap: space.xs },
   pair: { flexDirection: 'row', gap: space.xs },

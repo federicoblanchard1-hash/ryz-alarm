@@ -1,24 +1,26 @@
+import { cubicBezier } from 'react-native-reanimated';
+
+// Black and white. The only colours in the app are the weather emojis and red for errors.
 export const colors = {
-  bg: '#08090C',
-  surface: '#14161C',
-  surfaceRaised: '#1C1F27',
-  border: '#272B36',
-  text: '#F4F1EA',
-  textMuted: '#A0A5B2',
-  textFaint: '#666C7A',
-  /** Gentle mode: sunrise amber. */
-  gentle: '#F2B66D',
-  gentleSoft: 'rgba(242, 182, 109, 0.14)',
-  /** Deep sleeper mode: indigo. */
-  deep: '#8B97FF',
-  deepSoft: 'rgba(139, 151, 255, 0.14)',
-  danger: '#FF6B5E',
-  dangerSoft: 'rgba(255, 107, 94, 0.12)',
-  onAccent: '#14110B',
+  bg: '#000000',
+  surface: '#0E0E0E',
+  surfaceRaised: '#1A1A1A',
+  border: '#242424',
+  borderStrong: '#3A3A3A',
+  text: '#FFFFFF',
+  textMuted: '#9A9A9A',
+  textFaint: '#5C5C5C',
+  accent: '#FFFFFF',
+  onAccent: '#000000',
+  danger: '#FF453A',
+  dangerSoft: 'rgba(255, 69, 58, 0.12)',
+  /** Panels laid over the weather scene. */
+  glass: 'rgba(255, 255, 255, 0.08)',
+  glassBorder: 'rgba(255, 255, 255, 0.14)',
 };
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };
-export const radius = { sm: 10, md: 14, lg: 20, pill: 999 };
+export const radius = { sm: 10, md: 14, lg: 22, pill: 999 };
 
-/** Strong ease-out for UI (animate-expo skill). */
-export const EASE_OUT_CSS = 'cubic-bezier(0.23, 1, 0.32, 1)';
+/** Strong ease-out for UI (animate-expo skill). Reanimated's CSS easing takes this object, not a 'cubic-bezier()' string. */
+export const EASE_OUT = cubicBezier(0.23, 1, 0.32, 1);

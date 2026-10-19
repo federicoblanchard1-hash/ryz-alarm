@@ -19,6 +19,7 @@ export function newAlarm(id: string): Alarm {
     // Up to ~30 min of snoozing didn't harm sleep or mood (Sundelin et al., 2023).
     snooze: { enabled: true, minutes: 9, limit: 3 },
     awakeCheck: { enabled: false, delayMinutes: 5, answerMinutes: 3 },
+    missions: [],
   };
 }
 
@@ -27,11 +28,11 @@ export function testAlarm(): Alarm {
   return { ...newAlarm(TEST_ALARM_ID), label: 'Test alarm', days: [], mode: 'deep', ringMinutes: 2, snooze: { enabled: false, minutes: 9, limit: 0 } };
 }
 
-export function defaultSettings(use24h: boolean): Settings {
+export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): Settings {
   // Adults need at least 7 hours (AASM/SRS consensus, 2015); 8 leaves room to fall asleep.
-  return { sleepGoalMinutes: 8 * 60, bedtimeReminder: false, reminderLeadMinutes: 30, use24h };
+  return { sleepGoalMinutes: 8 * 60, bedtimeReminder: false, reminderLeadMinutes: 30, use24h, tempUnit };
 }
 
-export function emptyData(use24h: boolean): AppData {
-  return { alarms: [], settings: defaultSettings(use24h), pending: [], handled: {} };
+export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {
+  return { alarms: [], settings: defaultSettings(use24h, tempUnit), pending: [], handled: {} };
 }

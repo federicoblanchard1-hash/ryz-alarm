@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +7,7 @@ import { Button, Txt, haptic } from '@/components/ui';
 import { confirmAwake, findActive } from '@/core/ring';
 import { formatClockText } from '@/core/time';
 import { clearDelivered } from '@/services/notifications';
+import { useScreenAwake } from '@/state/useScreenAwake';
 import { useStore } from '@/state/store';
 import { colors, space } from '@/theme';
 
@@ -18,7 +18,7 @@ export default function AwakeCheck() {
     const a = findActive(data, Date.now());
     return a?.type === 'check' ? a : null;
   });
-  useKeepAwake();
+  useScreenAwake('ryz-check');
 
   useEffect(() => {
     if (!active) router.replace('/');

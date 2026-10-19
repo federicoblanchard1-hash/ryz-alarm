@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AppState } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 
 import { emptyData } from '@/core/defaults';
 import { buildPlan } from '@/core/plan';
@@ -7,7 +7,7 @@ import { cleanup, defaultAlarmFor } from '@/core/ring';
 import { nextClock } from '@/core/time';
 import type { Alarm, AppData, Settings } from '@/core/types';
 import { setupNotifications, syncSchedule } from '@/services/notifications';
-import { loadData, prefers24h, saveData } from './storage';
+import { loadData, preferredTempUnit, prefers24h, saveData } from './storage';
 
 interface Store {
   ready: boolean;
@@ -30,7 +30,7 @@ function withDate(alarm: Alarm, now: number): Alarm {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [data, setData] = useState<AppData>(() => emptyData(prefers24h()));
+  const [data, setData] = useState<AppData>(() => emptyData(prefers24h(), preferredTempUnit()));
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -88,7 +88,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [ready, data, update],
   );
 
-  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
+  // Screens read saved alarms as they open (the ringing screen decides what's
+  // ringing from them), so nothing renders until they're loaded.
+  return <StoreContext.Provider value={store}>{ready ? children : <View style={styles.loading} />}</StoreContext.Provider>;
 }
 
 export function useStore(): Store {
@@ -100,3 +102,5 @@ export function useStore(): Store {
 export function sortedAlarms(alarms: Alarm[]): Alarm[] {
   return [...alarms].sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
 }
+
+const styles = StyleSheet.create({ loading: { flex: 1, backgroundColor: '#000000' } });

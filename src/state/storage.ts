@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { defaultSettings, emptyData } from '@/core/defaults';
-import type { AppData } from '@/core/types';
+import { defaultSettings, emptyData, newAlarm } from '@/core/defaults';
+import type { AppData, Settings } from '@/core/types';
 
 const KEY = 'ryz/data/v1';
 
@@ -14,15 +14,26 @@ export function prefers24h(): boolean {
   }
 }
 
+/** Fahrenheit where people use it, Celsius everywhere else. */
+export function preferredTempUnit(): Settings['tempUnit'] {
+  try {
+    const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+    return /-(US|LR|MM|BS|BZ|KY|PW)\b/.test(locale) ? 'F' : 'C';
+  } catch {
+    return 'C';
+  }
+}
+
 export async function loadData(): Promise<AppData> {
-  const fallback = emptyData(prefers24h());
+  const fallback = emptyData(prefers24h(), preferredTempUnit());
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return fallback;
     const saved = JSON.parse(raw) as Partial<AppData>;
     return {
-      alarms: saved.alarms ?? [],
-      settings: { ...defaultSettings(prefers24h()), ...saved.settings },
+      // Fill in fields added since the alarm was saved.
+      alarms: (saved.alarms ?? []).map((a) => ({ ...newAlarm(a.id), ...a })),
+      settings: { ...defaultSettings(prefers24h(), preferredTempUnit()), ...saved.settings },
       pending: saved.pending ?? [],
       handled: saved.handled ?? {},
     };

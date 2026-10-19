@@ -1,25 +1,30 @@
 import { router } from 'expo-router';
-import { useKeepAwake } from 'expo-keep-awake';
-import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HoldButton } from '@/components/HoldButton';
 import { Button, Txt, haptic } from '@/components/ui';
+import { MISSIONS } from '@/core/missions';
 import { soundAt } from '@/core/plan';
 import { canSnooze, defaultAlarmFor, findActive, snooze, stop } from '@/core/ring';
-import { MINUTE, formatClock } from '@/core/time';
+import { MINUTE, formatClock, formatClockText } from '@/core/time';
 import type { ActiveRing } from '@/core/types';
+import { MissionRunner } from '@/missions/MissionRunner';
 import { clearDelivered } from '@/services/notifications';
 import { useRingSound } from '@/services/sound';
+import { useScreenAwake } from '@/state/useScreenAwake';
 import { useStore } from '@/state/store';
 import { colors, space } from '@/theme';
 
 type Ring = Extract<ActiveRing, { type: 'ring' }>;
 
+/** After this long without a tap, shake or step, the alarm goes back to full volume. */
+const IDLE_MS = 15_000;
+
 const PULSE = {
-  from: { transform: [{ scale: 0.6 }], opacity: 0.55 },
+  from: { transform: [{ scale: 0.6 }], opacity: 0.5 },
   to: { transform: [{ scale: 1.5 }], opacity: 0 },
 };
 
@@ -43,16 +48,29 @@ export default function RingScreen() {
     return { ring: r, alarm: r ? defaultAlarmFor(data, r.alarmId) : undefined };
   });
   const [done, setDone] = useState(false);
+  const [phase, setPhase] = useState<'ringing' | 'missions'>('ringing');
+  const [busy, setBusy] = useState(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const now = useClock();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
-  useKeepAwake();
-  useRingSound(alarm, ring?.source ?? 'alarm', ring?.at ?? 0, Boolean(ring && alarm) && !done);
+  useScreenAwake('ryz-ring');
+  useRingSound(alarm, ring?.source ?? 'alarm', ring?.at ?? 0, Boolean(ring && alarm) && !done, busy);
 
   useEffect(() => {
     if (!ring || !alarm) router.replace('/');
     else clearDelivered();
   }, [ring, alarm]);
+  useEffect(() => () => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+  }, []);
+
+  /** Quiet while you work on a mission; loud again if you stop. */
+  const activity = useCallback(() => {
+    setBusy(true);
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => setBusy(false), IDLE_MS);
+  }, []);
 
   const snoozeNow = useCallback(() => {
     if (!ring) return;
@@ -62,46 +80,64 @@ export default function RingScreen() {
     router.replace('/');
   }, [ring, update]);
 
-  const stopNow = () => {
+  const finish = useCallback(() => {
     if (!ring) return;
     setDone(true);
     haptic('success');
     update((d, t) => stop(d, ring, t));
     clearDelivered();
     router.replace('/morning');
+  }, [ring, update]);
+
+  const startMissions = () => {
+    haptic('light');
+    setPhase('missions');
+    activity();
   };
 
   // Nobody touched it for the whole ring: snooze if allowed, otherwise keep ringing.
   useEffect(() => {
-    if (!ring || !alarm || !canSnooze(alarm, ring)) return;
+    if (!ring || !alarm || phase !== 'ringing' || !canSnooze(alarm, ring)) return;
     const timer = setTimeout(snoozeNow, Math.max(0, ring.at + alarm.ringMinutes * MINUTE - Date.now()));
     return () => clearTimeout(timer);
-  }, [ring, alarm, snoozeNow]);
+  }, [ring, alarm, phase, snoozeNow]);
 
   if (!ring || !alarm) return <View style={styles.screen} />;
 
-  const deepNow = soundAt(alarm, ring.source, (now - ring.at) / 1000) === 'deep';
-  const accent = deepNow ? colors.deep : colors.gentle;
   const clock = formatClock(new Date(now).getHours(), new Date(now).getMinutes(), data.settings.use24h);
+  const hasMissions = alarm.missions.length > 0;
+
+  if (phase === 'missions') {
+    return (
+      <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={[styles.missions, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
+          <View style={styles.bar}>
+            <Txt variant="heading">{formatClockText(new Date(now).getHours(), new Date(now).getMinutes(), data.settings.use24h)}</Txt>
+            <Txt variant="caption" accessibilityLiveRegion="polite">{busy ? 'Alarm turned down while you do this' : 'Alarm back to full volume. Keep going'}</Txt>
+          </View>
+          <MissionRunner missions={alarm.missions} onActivity={activity} onComplete={finish} />
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  const deepNow = soundAt(alarm, ring.source, (now - ring.at) / 1000) === 'deep';
   const snoozesLeft = alarm.snooze.limit - ring.snoozesUsed;
   const subtitle =
-    ring.source === 'recheck' ? "You didn't answer — time to get up" : ring.source === 'snooze' ? 'Snooze is over' : alarm.label || (alarm.mode === 'deep' ? 'Deep sleeper alarm' : 'Good morning');
+    ring.source === 'recheck' ? "You didn't answer — time to get up" : ring.source === 'snooze' ? 'Snooze is over' : alarm.label || 'Good morning';
+  const missionNames = alarm.missions.map((m) => MISSIONS[m.type].title).join(' · ');
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }]}>
+    <View style={[styles.screen, styles.ringing, { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }]}>
       <View style={styles.top}>
         <View style={styles.pulseBox} accessible={false}>
           {reduced ? (
-            <View style={[styles.pulse, { borderColor: accent, opacity: 0.35 }]} />
+            <View style={[styles.pulse, { opacity: 0.3 }]} />
           ) : (
             [0, 1200].map((delay) => (
               <Animated.View
                 key={delay}
-                style={[
-                  styles.pulse,
-                  { borderColor: accent },
-                  { animationName: PULSE, animationDuration: '2.4s', animationDelay: `${delay}ms`, animationIterationCount: 'infinite', animationTimingFunction: 'ease-out' },
-                ]}
+                style={[styles.pulse, { animationName: PULSE, animationDuration: '2.4s', animationDelay: `${delay}ms`, animationIterationCount: 'infinite', animationTimingFunction: 'ease-out' }]}
               />
             ))
           )}
@@ -116,16 +152,17 @@ export default function RingScreen() {
 
       <View style={styles.actions}>
         {canSnooze(alarm, ring) ? (
-          <Button
-            title={`Snooze ${alarm.snooze.minutes} min${snoozesLeft > 1 ? ` · ${snoozesLeft} left` : ' · last one'}`}
-            variant="secondary"
-            onPress={snoozeNow}
-          />
+          <Button title={`Snooze ${alarm.snooze.minutes} min${snoozesLeft > 1 ? ` · ${snoozesLeft} left` : ' · last one'}`} variant="secondary" onPress={snoozeNow} />
         ) : null}
-        {alarm.mode === 'deep' || ring.source === 'recheck' ? (
-          <HoldButton title="Hold to stop" holdMs={1500} accent={accent} onDone={stopNow} />
+        {hasMissions ? (
+          <>
+            <Button title="Stop" icon="flash" onPress={startMissions} style={styles.big} />
+            <Txt variant="caption" style={styles.center}>{`Finish ${alarm.missions.length > 1 ? 'your missions' : 'your mission'} to turn it off: ${missionNames}`}</Txt>
+          </>
+        ) : alarm.mode === 'deep' || ring.source === 'recheck' ? (
+          <HoldButton title="Hold to stop" holdMs={1500} onDone={finish} />
         ) : (
-          <Button title="Stop" accent={accent} onPress={stopNow} style={styles.stop} />
+          <Button title="Stop" onPress={finish} style={styles.big} />
         )}
       </View>
     </View>
@@ -133,14 +170,17 @@ export default function RingScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: space.xl, justifyContent: 'space-between' },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  ringing: { paddingHorizontal: space.xl, justifyContent: 'space-between' },
+  missions: { flex: 1, paddingHorizontal: space.xl, gap: space.xl },
+  bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   top: { alignItems: 'center', gap: space.md, marginTop: space.xxl },
   pulseBox: { width: 300, height: 300, alignItems: 'center', justifyContent: 'center' },
-  pulse: { position: 'absolute', width: 300, height: 300, borderRadius: 150, borderWidth: 2 },
+  pulse: { position: 'absolute', width: 300, height: 300, borderRadius: 150, borderWidth: 1.5, borderColor: colors.text },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   clock: { fontSize: 84, lineHeight: 98, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -3 },
   period: { fontSize: 24, lineHeight: 30, fontWeight: '500', color: colors.textMuted },
   center: { textAlign: 'center' },
   actions: { gap: space.md },
-  stop: { height: 64 },
+  big: { height: 64 },
 });

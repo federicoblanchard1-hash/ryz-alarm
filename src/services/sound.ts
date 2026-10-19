@@ -13,6 +13,8 @@ export const SOUND_SOURCES = {
 };
 
 const VIBRATION = [0, 800, 600];
+/** Volume while you're busy with a mission: low enough to think, loud enough to remind you. */
+const DUCKED = 0.15;
 
 // expo-audio players are configured by assigning properties.
 function configure(player: AudioPlayer, options: { loop?: boolean; volume?: number }) {
@@ -37,11 +39,16 @@ async function setAlarmAudioMode() {
  * Plays an alarm while `active`: the gentle melody fades in and switches to
  * the deep tone if it escalates; the deep tone ramps up over a few seconds.
  * `startedAt` is when the ring began, so reopening the screen mid-ring picks
- * up at the right volume and tone.
+ * up at the right volume and tone. `ducked` turns it down without restarting
+ * it, for while you do a mission.
  */
-export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' | 'recheck' | 'test', startedAt: number, active: boolean) {
+export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' | 'recheck' | 'test', startedAt: number, active: boolean, ducked = false) {
   const gentle = useAudioPlayer(SOUND_SOURCES.gentle);
   const deep = useAudioPlayer(SOUND_SOURCES.deep);
+  const duckRef = useRef(ducked);
+  useEffect(() => {
+    duckRef.current = ducked;
+  }, [ducked]);
 
   useEffect(() => {
     if (!active || !alarm) return;
@@ -62,25 +69,28 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
         current = want;
         switchedAt = seconds;
       }
-      configure(want, {
-        volume:
-          want === gentle
-            ? fadeVolume(seconds, alarm.fadeInSeconds, GENTLE_START_DB)
-            : fadeVolume(seconds - switchedAt, DEEP_RAMP_SECONDS, DEEP_START_DB),
-      });
+      const volume =
+        want === gentle ? fadeVolume(seconds, alarm.fadeInSeconds, GENTLE_START_DB) : fadeVolume(seconds - switchedAt, DEEP_RAMP_SECONDS, DEEP_START_DB);
+      configure(want, { volume: duckRef.current ? volume * DUCKED : volume });
     };
     tick();
     const timer = setInterval(tick, 200);
-    if (alarm.vibrate) Vibration.vibrate(VIBRATION, true);
 
     return () => {
       clearInterval(timer);
-      Vibration.cancel();
       safely(() => gentle.pause());
       safely(() => deep.pause());
       if (Platform.OS === 'android') safely(() => current?.setActiveForLockScreen(false));
     };
   }, [active, alarm, kind, startedAt, gentle, deep]);
+
+  // Vibration stops during a mission: it's distracting, and it would count as shakes and squats.
+  const vibrate = Boolean(active && alarm?.vibrate && !ducked);
+  useEffect(() => {
+    if (!vibrate) return;
+    Vibration.vibrate(VIBRATION, true);
+    return () => Vibration.cancel();
+  }, [vibrate]);
 }
 
 /** A short listen in the editor. Plays `seconds` of a sound at full volume. */

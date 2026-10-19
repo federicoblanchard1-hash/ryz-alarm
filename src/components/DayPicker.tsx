@@ -7,10 +7,10 @@ import { Txt, haptic } from './ui';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export function DayPicker({ days, onChange, accent }: { days: Weekday[]; onChange: (days: Weekday[]) => void; accent: string }) {
+export function DayPicker({ days, onChange }: { days: Weekday[]; onChange: (days: Weekday[]) => void }) {
   const toggle = (day: Weekday) => {
     haptic('select');
-    onChange(days.includes(day) ? days.filter((d) => d !== day) : [...days, day].sort() as Weekday[]);
+    onChange(days.includes(day) ? days.filter((d) => d !== day) : ([...days, day].sort() as Weekday[]));
   };
   return (
     <View style={styles.wrap}>
@@ -25,9 +25,9 @@ export function DayPicker({ days, onChange, accent }: { days: Weekday[]; onChang
               accessibilityState={{ checked: on }}
               accessibilityLabel={DAY_NAMES[day]}
               hitSlop={4}
-              style={[styles.day, on && { backgroundColor: accent, borderColor: accent }]}
+              style={[styles.day, on && styles.on]}
             >
-              <Text style={[styles.letter, on && { color: colors.onAccent }]}>{DAY_LETTERS[day]}</Text>
+              <Text style={[styles.letter, on && styles.letterOn]}>{DAY_LETTERS[day]}</Text>
             </Pressable>
           );
         })}
@@ -45,9 +45,11 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  on: { backgroundColor: colors.accent, borderColor: colors.accent },
   letter: { fontSize: 15, fontWeight: '600', color: colors.text },
+  letterOn: { color: colors.onAccent },
 });

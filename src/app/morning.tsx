@@ -47,7 +47,7 @@ export default function Morning() {
         )}
         {TIPS.map((tip) => (
           <Card key={tip.title} style={styles.tip}>
-            <Ionicons name={tip.icon} size={24} color={colors.gentle} />
+            <Ionicons name={tip.icon} size={24} color={colors.text} />
             <View style={styles.tipText}>
               <Txt variant="heading">{tip.title}</Txt>
               <Txt variant="caption">{tip.text}</Txt>

@@ -61,9 +61,9 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="alarm/[id]" options={{ presentation: 'modal', headerShown: false }} />
-        <Stack.Screen name="settings" options={{ title: 'Settings', headerBackTitle: 'Alarms' }} />
+        <Stack.Screen name="try-mission" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen name="ring" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="check" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="morning" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />

@@ -1,3 +1,5 @@
+import type { Mission } from './missions';
+
 /** 0 = Sunday … 6 = Saturday, like `Date.getDay()`. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -31,6 +33,8 @@ export interface Alarm {
   snooze: { enabled: boolean; minutes: number; limit: number };
   /** After Stop, ask "Are you awake?" and ring again if there's no answer. */
   awakeCheck: { enabled: boolean; delayMinutes: number; answerMinutes: number };
+  /** Tasks to finish before the alarm turns off, done in order. */
+  missions: Mission[];
 }
 
 export interface Settings {
@@ -39,6 +43,7 @@ export interface Settings {
   /** Minutes before bedtime the reminder arrives. */
   reminderLeadMinutes: number;
   use24h: boolean;
+  tempUnit: 'C' | 'F';
 }
 
 /**
