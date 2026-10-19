@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlarmTags } from '@/components/ModeBadge';
 import { Button, Card, PressableScale, Txt, haptic, type IconName } from '@/components/ui';
+import { NewsFeed, NewsPrompt } from '@/components/NewsFeed';
 import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing, sleepAdvice } from '@/core/next';
 import { scheduleTest } from '@/core/ring';
@@ -44,6 +46,11 @@ export default function Home() {
   const advice = next && !next.snoozed ? sleepAdvice(next.at, now, sleepGoalMinutes, use24h) : null;
   const bedtime = next && next.at - now <= 24 * HOUR ? new Date(next.at - sleepGoalMinutes * MINUTE) : null;
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
+  const askTopics = ready && data.settings.newsTopics === null;
+  useEffect(() => {
+    // First launch: pick news topics (or skip). Asked once; Settings can change them later.
+    if (askTopics) router.push({ pathname: '/interests', params: { first: '1' } });
+  }, [askTopics]);
   const needsPermission = permissions.supported && permissions.state !== null && permissions.state.notifications !== 'granted' && data.alarms.length > 0;
 
   return (
@@ -122,6 +129,8 @@ export default function Home() {
             <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
           </PressableScale>
         ) : null}
+
+        {data.settings.newsTopics && data.settings.newsTopics.length > 0 ? <NewsFeed topics={data.settings.newsTopics} /> : ready ? <NewsPrompt /> : null}
 
         {awakeCheck ? (
           <Card style={styles.inline}>

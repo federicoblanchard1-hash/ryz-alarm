@@ -32,7 +32,7 @@ export function testAlarm(): Alarm {
 
 export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): Settings {
   // Adults need at least 7 hours (AASM/SRS consensus, 2015); 8 leaves room to fall asleep.
-  return { sleepGoalMinutes: 8 * 60, bedtimeReminder: false, reminderLeadMinutes: 30, use24h, tempUnit };
+  return { sleepGoalMinutes: 8 * 60, bedtimeReminder: false, reminderLeadMinutes: 30, use24h, tempUnit, newsTopics: null };
 }
 
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {

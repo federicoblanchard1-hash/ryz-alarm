@@ -1,0 +1,85 @@
+import { CATEGORIES, decodeEntities, extractArticle, feedsFor, mergeArticles, parseFeed, timeAgo } from '../news';
+
+const BBC_FEED = `<rss><channel>
+<item><title><![CDATA[Wiegman signs new deal]]></title>
+<description><![CDATA[The England manager commits until 2029.]]></description>
+<link>https://www.bbc.co.uk/sport/football/articles/abc?at_medium=RSS&amp;at_campaign=rss</link>
+<pubDate>Mon, 19 Oct 2026 10:08:01 GMT</pubDate>
+<media:thumbnail width="240" height="135" url="https://ichef.bbci.co.uk/ace/standard/240/x/live/pic.jpg"/></item>
+<item><title>Older story</title><link>https://www.bbc.co.uk/news/1</link><pubDate>Sun, 18 Oct 2026 10:00:00 GMT</pubDate></item>
+</channel></rss>`;
+
+const GUARDIAN_FEED = `<rss><channel><item><title>Margaret Hamilton obituary</title>
+<link>https://www.theguardian.com/science/2026/oct/18/margaret-hamilton-obituary</link>
+<description>&lt;p&gt;Pioneering software engineer&lt;/p&gt;&lt;p&gt;Apollo was a bold project.&lt;/p&gt; &lt;a href="x"&gt;Continue reading...&lt;/a&gt;</description>
+<pubDate>Sun, 18 Oct 2026 16:00:00 GMT</pubDate>
+<media:content width="140" url="https://i.guim.co.uk/small.jpg"/><media:content width="460" url="https://i.guim.co.uk/big.jpg"/></item></channel></rss>`;
+
+describe('parseFeed', () => {
+  it('reads titles, links, dates and the biggest picture', () => {
+    const [first, second] = parseFeed(BBC_FEED, 'sport.football');
+    expect(first.title).toBe('Wiegman signs new deal');
+    expect(first.url).toBe('https://www.bbc.co.uk/sport/football/articles/abc');
+    expect(first.image).toBe('https://ichef.bbci.co.uk/ace/standard/800/x/live/pic.jpg');
+    expect(first.source).toBe('BBC');
+    expect(second.title).toBe('Older story');
+    const [g] = parseFeed(GUARDIAN_FEED, 'science.space');
+    expect(g.image).toBe('https://i.guim.co.uk/big.jpg');
+    expect(g.summary).toBe('Pioneering software engineer');
+    expect(g.source).toBe('The Guardian');
+  });
+
+  it('merges feeds newest first without repeats', () => {
+    const a = parseFeed(BBC_FEED, 'x');
+    const merged = mergeArticles([a, a, parseFeed(GUARDIAN_FEED, 'y')]);
+    expect(merged.map((m) => m.title)).toEqual(['Wiegman signs new deal', 'Margaret Hamilton obituary', 'Older story']);
+  });
+});
+
+describe('extractArticle', () => {
+  const para = (n: number) => `<p>This is paragraph number ${n}, long enough to count as part of the story text.</p>`;
+  it('keeps the story and drops banners, menus and scripts', () => {
+    const html = `<html><head><meta property="og:title" content="Big &amp; news"><meta property="og:image" content="https://img/hero.jpg?w=1200"><meta property="article:author" content="https://site/profile/mick-o-hare"></head><body>
+      <div class="cookie-banner"><p>We use cookies. Accept all cookies to continue reading this site please.</p></div>
+      <article><nav><p>Home News Sport Weather and lots of other menu links here</p></nav>
+      <figure><img src="https://img/hero.jpg?w=600"><figcaption>Same picture</figcaption></figure>
+      ${para(1)}<h2>A sub-heading</h2>${para(2)}
+      <script>window.paywall()</script>
+      <p>Sign up to our newsletter to get the morning briefing.</p>
+      <figure><img src="https://img/second.jpg"><figcaption>A second picture</figcaption></figure>
+      ${para(3)}</article></body></html>`;
+    const r = extractArticle(html)!;
+    expect(r.title).toBe('Big & news');
+    expect(r.image).toBe('https://img/hero.jpg?w=600');
+    expect(r.byline).toBe('Mick O Hare');
+    expect(r.blocks).toEqual([
+      { type: 'p', text: 'This is paragraph number 1, long enough to count as part of the story text.' },
+      { type: 'h', text: 'A sub-heading' },
+      { type: 'p', text: 'This is paragraph number 2, long enough to count as part of the story text.' },
+      { type: 'img', src: 'https://img/second.jpg', caption: 'A second picture' },
+      { type: 'p', text: 'This is paragraph number 3, long enough to count as part of the story text.' },
+    ]);
+  });
+
+  it('gives up on pages without a story, like a blocked or video page', () => {
+    expect(extractArticle('<html><body><p>This content is not available in your region, sorry about that.</p></body></html>')).toBeNull();
+  });
+});
+
+describe('topics', () => {
+  it('reads one feed per topic before seconds, up to the limit', () => {
+    const feeds = feedsFor(['tech.tech', 'sport.football', 'sport.basketball'], 4);
+    expect(feeds.map((f) => f.topic)).toEqual(['tech.tech', 'sport.football', 'sport.basketball', 'tech.tech']);
+  });
+
+  it('has unique topic ids', () => {
+    const ids = CATEGORIES.flatMap((c) => c.topics.map((t) => t.id));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+it('decodes entities and formats ages', () => {
+  expect(decodeEntities('Fish &amp; chips &#8217; &#x2014;')).toBe('Fish & chips ’ —');
+  expect(timeAgo(0, 30 * 60_000)).toBe('30 min ago');
+  expect(timeAgo(0, 5 * 3_600_000)).toBe('5 h ago');
+});

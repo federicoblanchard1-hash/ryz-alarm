@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
+import { topicById } from '@/core/news';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
@@ -133,6 +135,19 @@ export default function SettingsScreen() {
             />
             <Txt variant="caption">{permissions.supported ? 'Lock your phone after tapping to hear how it wakes you.' : 'Keep this tab open to hear it.'}</Txt>
           </View>
+        </Section>
+
+        <Section label="News">
+          <Pressable onPress={() => router.push('/interests')} accessibilityRole="button" style={styles.status}>
+            <Ionicons name="newspaper-outline" size={22} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="body">Topics</Txt>
+              <Txt variant="caption">
+                {settings.newsTopics && settings.newsTopics.length > 0 ? `${settings.newsTopics.length} picked: ${settings.newsTopics.map((id) => topicById(id)?.title ?? id).slice(0, 4).join(', ')}${settings.newsTopics.length > 4 ? '…' : ''}` : 'Off — tap to pick what you like to read'}
+              </Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </Pressable>
         </Section>
 
         <Section label="Weather">

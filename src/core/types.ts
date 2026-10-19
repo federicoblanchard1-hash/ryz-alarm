@@ -52,6 +52,8 @@ export interface Settings {
   reminderLeadMinutes: number;
   use24h: boolean;
   tempUnit: 'C' | 'F';
+  /** News topic ids ("sport.football"). null until you've picked (or skipped) them. */
+  newsTopics: string[] | null;
 }
 
 /**

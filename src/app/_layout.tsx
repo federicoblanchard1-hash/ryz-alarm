@@ -78,6 +78,8 @@ export default function RootLayout() {
         <Stack.Screen name="ring" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="check" options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false, animation: 'fade' }} />
         <Stack.Screen name="morning" options={{ presentation: 'fullScreenModal', headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="interests" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+        <Stack.Screen name="article" options={{ headerShown: false }} />
       </Stack>
     </StoreProvider>
   );

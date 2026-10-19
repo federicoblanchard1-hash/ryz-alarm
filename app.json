@@ -80,7 +80,9 @@
         {
           "motionPermission": "Ryz counts your shakes, squats and steps for wake-up missions."
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-image"
     ]
   }
 }

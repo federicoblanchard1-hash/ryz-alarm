@@ -1,6 +1,6 @@
 # Ryz
 
-An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 57) and grounded in sleep research. Black and white throughout; the layout follows Alarmy's.
+An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 57) and grounded in sleep research. Black and white, in the Outfit font, with a layout that follows Alarmy's; the only colour is the weather sky.
 
 ## Try it on your phone (Expo Go)
 
@@ -22,9 +22,10 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 ## Morning (home)
 
 - **Weather where you wake up**, laid out like Alarmy's morning screen: your town (tap to refresh), the temperature on the left, conditions and today's high and low on the right, and the next 24 hours with white weather icons underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
-- **A background that matches the weather**, drawn in greys and animated: sun and glow, moon and twinkling stars at night, drifting clouds, rain with drops on the glass, snow, fog, and lightning in a storm. It holds still when Reduce Motion is on.
+- **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
 - **Shortcut tiles** on the scene: next alarm, bedtime, sleep goal and a test alarm.
 - **Next alarm** card with how long until it rings, its sound and missions.
+- **Your news**: on first launch Ryz asks what you like to read, from 9 categories and 58 topics (Sport opens into Football, Basketball, Tennis, Formula 1, Cycling, Ice hockey…). Stories come from BBC, The Guardian and Ars Technica: free, no paywall, available in Switzerland. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
 
 Three tabs on a floating pill bar like Alarmy's: **Alarms**, **Morning** and **Settings**. **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
 
@@ -32,7 +33,7 @@ The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Rin
 
 ## Missions
 
-Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to three per alarm, done in order. While you work on one, the alarm drops to a low volume and stops vibrating; after 15 seconds without a tap, shake or step it's back to full volume.
+Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. While you work on one, the alarm drops to a low volume and stops vibrating; after 15 seconds without a tap, shake or step it's back to full volume.
 
 | Wake your brain | Wake your body |
 | --- | --- |
@@ -47,7 +48,12 @@ Every mission has **Try it** in the editor. On a phone without the needed motion
 - **Two wake-up styles**
   - **Gentle** for normal sleepers: a melody that starts almost silent and fades in (30 s to 5 min). Melodic alarms were linked with less morning grogginess than harsh beeps (McFarlane et al., 2020).
   - **Deep sleeper**: a low 520 Hz square-wave tone in bursts of three (the T-3 pattern). In fire-safety research it woke far more deep sleepers than the usual ~3 kHz beep, and it's the tone US fire code now requires in bedrooms (Bruck & Thomas). Stopping it takes a 1.5 s hold, so a half-asleep tap can't turn it off.
-- **Escalation**: if you sleep through the gentle melody, the deep tone takes over after 1–5 minutes.
+- **Sounds in three groups**:
+  - *Scientific*: the gentle melody and the 520 Hz deep-sleeper tone above.
+  - *Loud*: air-raid siren, emergency yelp, two-tone siren, digital buzzer, alarm bell. Full volume from the first second, and a hold to stop.
+  - *Calm*: wind chimes, ocean waves, birdsong, sunrise, music box. They fade in like the melody.
+  All are synthesized by `scripts/generate-sounds.mjs`, so there's nothing to license. Each alarm also has a volume.
+- **Escalation**: if you sleep through a gentle or calm sound, the deep tone takes over after 1–5 minutes.
 - **Snooze** of 5–30 minutes, limited to 1–5 times. Snoozing for up to about 30 minutes didn't hurt sleep or mood in a 2023 study (Sundelin et al.). If nobody touches the alarm for the whole ring time (5–15 min), it snoozes itself while snoozes are left.
 - **"Are you awake?"**: a few minutes after you stop the alarm, Ryz asks. If you don't answer in time, it rings again with the deep tone.
 - **Sleep coaching**: a sleep goal (7–9 h, since adults need at least 7 according to AASM/SRS), the bedtime that goal implies on the home screen, and an optional bedtime reminder before the earliest alarm of each morning.
@@ -90,7 +96,7 @@ npm run typecheck
 npm run lint
 ```
 
-The alarm sounds are generated by `scripts/generate-sounds.mjs`. Run `npm run sounds` after changing it.
+The alarm sounds are generated by `scripts/generate-sounds.mjs` (`npm run sounds`) and the weather skies by `scripts/generate-skies.py` (`npm run skies`, needs Python with numpy and Pillow).
 
 ## Project layout
 
@@ -102,7 +108,8 @@ src/
   services/       expo-notifications scheduling, expo-audio playback, location and weather
   state/          the store (saved with AsyncStorage) and permission state
   components/     shared UI
-assets/sounds/    deep_520hz.wav, gentle_melody.wav, chime.wav
+assets/sounds/    the alarm and reminder sounds
+assets/weather/   the rendered sky backgrounds
 ```
 
 ## Known limits and next steps
@@ -117,6 +124,7 @@ assets/sounds/    deep_520hz.wav, gentle_melody.wav, chime.wav
 ## Sources
 
 - Weather: Open-Meteo.com (CC BY 4.0). Place names on web: © OpenStreetMap contributors.
+- News: BBC, The Guardian and Ars Technica RSS feeds; each story links to its original page.
 
 - Bruck & Thomas, low-frequency alarms and waking deep sleepers: https://vuir.vu.edu.au/3994
 - McFarlane et al. (RMIT, 2020), melodic alarms: https://neurosciencenews.com/alarm-music-grogginess-15625/
