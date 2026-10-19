@@ -61,5 +61,5 @@ export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, numbe
 }
 
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {
-  return { alarms: [], settings: defaultSettings(use24h, tempUnit), pending: [], handled: {} };
+  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {} };
 }

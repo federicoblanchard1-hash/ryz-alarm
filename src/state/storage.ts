@@ -37,6 +37,8 @@ export async function loadData(): Promise<AppData> {
         const defaults = defaultSettings(prefers24h(), preferredTempUnit());
         return { ...defaults, ...saved.settings, profile: { ...defaults.profile, ...saved.settings?.profile } };
       })(),
+      sleep: saved.sleep ?? [],
+      sleepingSince: saved.sleepingSince ?? null,
       pending: saved.pending ?? [],
       handled: saved.handled ?? {},
     };

@@ -8,6 +8,7 @@ import { RingDial } from '@/components/RingDial';
 import { Button, Txt, haptic } from '@/components/ui';
 import { MISSIONS } from '@/core/missions';
 import { phaseAt } from '@/core/plan';
+import { endSleep } from '@/core/sleep';
 import { canSnooze, defaultAlarmFor, findActive, snooze, stop } from '@/core/ring';
 import { MINUTE, formatClock, formatClockText } from '@/core/time';
 import type { ActiveRing } from '@/core/types';
@@ -87,7 +88,8 @@ export default function RingScreen() {
     if (!ring) return;
     setDone(true);
     haptic('success');
-    update((d, t) => stop(d, ring, t));
+    // Stopping the alarm also ends a running sleep session.
+    update((d, t) => endSleep(stop(d, ring, t), t).data);
     clearDelivered();
     router.replace('/morning');
   }, [ring, update]);

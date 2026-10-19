@@ -125,8 +125,21 @@ export interface PendingEvent {
   snoozesUsed: number;
 }
 
+/** One night: when you went to sleep and when you got up (ms). */
+export interface SleepRecord {
+  id: string;
+  start: number;
+  end: number;
+  /** How rested you felt, 1 (awful) to 5 (great). */
+  rating?: 1 | 2 | 3 | 4 | 5;
+}
+
 export interface AppData {
   alarms: Alarm[];
+  /** Logged nights, oldest first. */
+  sleep: SleepRecord[];
+  /** When the running sleep session started; null when awake. */
+  sleepingSince: number | null;
   settings: Settings;
   pending: PendingEvent[];
   /** Alarm id → the last occurrence (ms) that was stopped or snoozed. */
