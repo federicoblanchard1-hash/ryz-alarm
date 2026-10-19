@@ -3,6 +3,7 @@ import { AppState, Linking } from 'react-native';
 
 import { MINUTE } from '@/core/time';
 import type { Weather } from '@/core/weather';
+import { onPullToRefresh } from './pullToRefresh';
 import { cachedWeather, fetchWeather, getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 
 /** Older than this, the forecast is fetched again when the app opens. */
@@ -45,7 +46,11 @@ export function useWeather() {
       load(false);
     });
     const sub = AppState.addEventListener('change', (state) => state === 'active' && load(false));
-    return () => sub.remove();
+    const unsubscribe = onPullToRefresh(() => load(true));
+    return () => {
+      sub.remove();
+      unsubscribe();
+    };
   }, [load]);
 
   /** Asks for location if the system still lets us, otherwise opens Settings. */

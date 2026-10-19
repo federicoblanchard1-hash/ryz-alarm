@@ -55,7 +55,7 @@ function Row({ article, now }: { article: Article; now: number }) {
 
 /** "Your news" on Morning: a filter per chosen topic, a lead story, then a list. */
 export function NewsFeed({ topics }: { topics: string[] }) {
-  const { articles, status, refresh } = useNews(topics);
+  const { articles, status, refresh, refreshing, updatedAt } = useNews(topics);
   const [filter, setFilter] = useState<string | null>(null);
   const now = useNow(60_000);
   const shown = filter ? articles.filter((a) => a.topic === filter) : articles;
@@ -69,6 +69,12 @@ export function NewsFeed({ topics }: { topics: string[] }) {
           <Txt style={styles.edit}>Edit</Txt>
         </Pressable>
       </View>
+      {updatedAt > 0 ? (
+        <Pressable onPress={refresh} disabled={refreshing} hitSlop={8} accessibilityRole="button" accessibilityLabel="Refresh news" style={styles.updated}>
+          {refreshing ? <ActivityIndicator size="small" color={colors.textMuted} /> : <Ionicons name="refresh" size={14} color={colors.textMuted} />}
+          <Text style={styles.meta}>{refreshing ? 'Updating…' : `Updated ${timeAgo(updatedAt, now).toLowerCase()}`}</Text>
+        </Pressable>
+      ) : null}
 
       {topics.length > 1 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filters}>
@@ -127,6 +133,7 @@ export function NewsPrompt() {
 const styles = StyleSheet.create({
   wrap: { marginTop: space.lg, gap: space.md },
   header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  updated: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -space.sm, alignSelf: 'flex-start', minHeight: 24 },
   title: { fontSize: 30, lineHeight: 34, fontFamily: FONT.display, color: colors.text },
   edit: { fontSize: 16, lineHeight: 22, fontFamily: FONT.regular, color: colors.textMuted },
   filterScroll: { marginHorizontal: -space.lg },

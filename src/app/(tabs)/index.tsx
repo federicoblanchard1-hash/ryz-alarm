@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { AlarmTags } from '@/components/ModeBadge';
@@ -11,6 +11,7 @@ import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing, sleepAdvice } from '@/core/next';
 import { scheduleTest } from '@/core/ring';
 import { HOUR, MINUTE, formatClock, formatClockText, formatHours, formatSpan } from '@/core/time';
+import { pullToRefresh } from '@/state/pullToRefresh';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
@@ -47,6 +48,11 @@ export default function Home() {
   const bedtime = next && next.at - now <= 24 * HOUR ? new Date(next.at - sleepGoalMinutes * MINUTE) : null;
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
   const askTopics = ready && data.settings.newsTopics === null;
+  const [pulling, setPulling] = useState(false);
+  const onRefresh = () => {
+    setPulling(true);
+    pullToRefresh().finally(() => setPulling(false));
+  };
   useEffect(() => {
     // First launch: pick news topics (or skip). Asked once; Settings can change them later.
     if (askTopics) router.push({ pathname: '/interests', params: { first: '1' } });
@@ -54,7 +60,12 @@ export default function Home() {
   const needsPermission = permissions.supported && permissions.state !== null && permissions.state.notifications !== 'granted' && data.alarms.length > 0;
 
   return (
-    <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: tabSpace + space.xl }}>
+    <ScrollView
+      style={styles.screen}
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={{ paddingBottom: tabSpace + space.xl }}
+      refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={colors.text} colors={[colors.onAccent]} progressBackgroundColor={colors.accent} />}
+    >
       <WeatherHero>
         <View style={styles.tiles}>
           <Tile

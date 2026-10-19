@@ -6,15 +6,18 @@ import { colors } from '@/theme';
 
 const CACHE_KEY = 'ryz/news/v1';
 /** Older than this, the feed is fetched again when Morning opens. */
-export const NEWS_FRESH_MS = 20 * 60_000;
+export const NEWS_FRESH_MS = 5 * 60_000;
 // Some sites send a lighter page, without app banners, to a phone browser.
 const USER_AGENT = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
 
-async function get(url: string, timeoutMs = 10_000): Promise<string> {
+async function get(url: string, timeoutMs = 10_000, fresh = false): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml,application/xml,application/rss+xml' }, signal: controller.signal });
+    const headers: Record<string, string> = { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml,application/xml,application/rss+xml' };
+    // Feeds must never come from the phone's HTTP cache, or "fresh" news could be hours old.
+    if (fresh) headers['Cache-Control'] = 'no-cache';
+    const res = await fetch(url, { headers, signal: controller.signal, ...(fresh ? { cache: 'no-store' as const } : {}) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
   } finally {
@@ -41,7 +44,7 @@ export async function cachedNews(topics: string[]): Promise<Cached | null> {
 /** The latest stories for these topics, from every feed that answers. Throws only if none does. */
 export async function fetchNews(topics: string[]): Promise<Article[]> {
   const feeds = feedsFor(topics);
-  const results = await Promise.allSettled(feeds.map((f) => get(f.url).then((xml) => parseFeed(xml, f.topic))));
+  const results = await Promise.allSettled(feeds.map((f) => get(f.url, 10_000, true).then((xml) => parseFeed(xml, f.topic))));
   const lists = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : []));
   if (feeds.length > 0 && lists.length === 0) throw new Error('No news feed answered');
   const articles = mergeArticles(lists);

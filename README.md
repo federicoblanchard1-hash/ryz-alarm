@@ -25,39 +25,59 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 - **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
 - **Shortcut tiles** on the scene: next alarm, bedtime, sleep goal and a test alarm.
 - **Next alarm** card with how long until it rings, its sound and missions.
-- **Your news**: on first launch Ryz asks what you like to read, from 9 categories and 58 topics (Sport opens into Football, Basketball, Tennis, Formula 1, Cycling, Ice hockey…). Stories come from BBC, The Guardian and Ars Technica: free, no paywall, available in Switzerland. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
+- **Your news**: on first launch Ryz asks what you like to read, from 13 categories and 133 topics, each category opening into its sub-topics (Football into Premier League, Champions League, La Liga, Serie A…; Countries into France, Germany, Japan…; Science into Space, Physics, Neuroscience…). It stays up to date: re-fetched every 5 minutes while Ryz is open, when you come back to the app or the tab, and when you pull down on Morning, with "Updated x min ago" under the title. Stories come from BBC, The Guardian and Ars Technica: free, no paywall, available in Switzerland. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
 
-Three tabs on a floating pill bar like Alarmy's: **Alarms**, **Morning** and **Settings**. **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
+Four tabs: **Morning**, **Alarms**, **Sleep** and **Settings**, in the native iOS tab bar on iPhone (a floating pill on web). **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
 
 The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Ring in …", a scroll wheel for the time, the repeat days with a *Daily* box, mission slots, an *Alarm sound* card (play button with a progress bar, volume slider, vibration box, gentle wake-up, keep ringing) and *Custom setting* (snooze). Each setting opens in a bottom sheet, and Save stays at the bottom of the screen.
 
 ## Missions
 
-Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. While you work on one, the alarm drops to a low volume and stops vibrating; after 15 seconds without a tap, shake or step it's back to full volume.
+Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each (any number of sums, squats, steps… with a − / + stepper, or a preset) and how hard. While you work, the alarm turns down; if you stop for a while (5 s to 1 min, Settings) it's back to full volume. An optional **time limit per mission** (30 s to 3 min) restarts the mission with a new puzzle when it runs out.
 
-| Wake your brain | Wake your body |
-| --- | --- |
-| **Math**: 3, 5 or 10 sums, easy to hard (`34 + 7` up to `14 × 6 + 57`) | **Shake**: 20, 40 or 80 hard shakes |
-| **Memory**: squares light up, tap the same ones; 2–5 rounds on a 3×3 to 5×5 grid | **Squats**: 5, 10 or 20, phone held to your chest |
-| **Typing**: type 1–3 sentences word for word | **Steps**: 20, 50 or 100 steps |
+| Wake your brain | Wake your body | Scientific |
+| --- | --- | --- |
+| **Math**: sums, easy to hard | **Shake** the phone hard | **Reaction test**: tap the moment the screen lights up. The psychomotor vigilance task sleep labs use to measure alertness (Basner & Dinges) |
+| **Memory**: repeat the squares that light up | **Squats**, phone held to your chest | **Arrow test**: answer where the arrow points, not what the word says (a spatial Stroop test of attention) |
+| **Typing**: type sentences word for word | **Steps** | |
+| **Number hunt**: tap 1, 2, 3… on a shuffled grid | **Jumping jacks** | |
+| **Odd one out**: find the square that's a different grey | **Scan a code**: register any QR code or barcode (toothpaste, coffee jar…) and scan it to stop the alarm, so you have to get up | |
+| **Missing sign**: `12 ? 4 = 48` | | |
+| **Unscramble** a word | | |
 
-Every mission has **Try it** in the editor. On a phone without the needed motion sensor, a body mission turns into sums so you can always turn the alarm off.
+Every mission has **Try it** in the editor. On a phone without the needed sensor, a body mission turns into sums so you can always turn the alarm off.
 
 ## Alarms
 
 - **Two wake-up styles**
   - **Gentle** for normal sleepers: a melody that starts almost silent and fades in (30 s to 5 min). Melodic alarms were linked with less morning grogginess than harsh beeps (McFarlane et al., 2020).
   - **Deep sleeper**: a low 520 Hz square-wave tone in bursts of three (the T-3 pattern). In fire-safety research it woke far more deep sleepers than the usual ~3 kHz beep, and it's the tone US fire code now requires in bedrooms (Bruck & Thomas). Stopping it takes a 1.5 s hold, so a half-asleep tap can't turn it off.
-- **Sounds in three groups**:
-  - *Scientific*: the gentle melody and the 520 Hz deep-sleeper tone above.
-  - *Loud*: air-raid siren, emergency yelp, two-tone siren, digital buzzer, alarm bell. Full volume from the first second, and a hold to stop.
-  - *Calm*: wind chimes, ocean waves, birdsong, sunrise, music box. They fade in like the melody.
-  All are synthesized by `scripts/generate-sounds.mjs`, so there's nothing to license. Each alarm also has a volume.
+- **39 sounds in three tabs, each with sub-groups**:
+  - *Scientific*: low tones (520 Hz and 400 Hz deep-sleeper square waves) and melodic (gentle, rising and rhythmic melodies).
+  - *Loud*, full volume and nonstop, with a hold to stop: sirens (air raid, wail, yelp, two-tone, hi-lo, red alert, klaxon, foghorn, car alarm), beeps (continuous tone, rapid pulse, digital buzzer, escalating beeps, smoke detector) and bells (alarm clock, fire bell, old phone, reveille bugle).
+  - *Calm*, fading in: nature (birdsong, morning forest, rain, stream, ocean, wind chimes), music (sunrise, soft piano, harp, guitar, kalimba, music box, lo-fi, singing bowl) and noise (pink, brown).
+  All are synthesized by `scripts/generate-sounds.mjs` (`npm run sounds`), so there's nothing to license.
+- **Volume slider** that follows your finger on the UI thread, plays the sound while you drag so you hear the level, and ticks every 10%.
+- **Vibration patterns**: basic, heartbeat, rapid, strong, waves, SOS. Tap one to feel it.
 - **Escalation**: if you sleep through a gentle or calm sound, the deep tone takes over after 1–5 minutes.
 - **Snooze** of 5–30 minutes, limited to 1–5 times. Snoozing for up to about 30 minutes didn't hurt sleep or mood in a 2023 study (Sundelin et al.). If nobody touches the alarm for the whole ring time (5–15 min), it snoozes itself while snoozes are left.
 - **"Are you awake?"**: a few minutes after you stop the alarm, Ryz asks. If you don't answer in time, it rings again with the deep tone.
 - **Sleep coaching**: a sleep goal (7–9 h, since adults need at least 7 according to AASM/SRS), the bedtime that goal implies on the home screen, and an optional bedtime reminder before the earliest alarm of each morning.
-- **Good-morning screen** with the things that help after waking: bright light, music you like, and the same wake time tomorrow.
+- **Ringing screen**: black, with the time inside a dial of 60 ticks that fill with the seconds, a dot sweeping round once a minute and a breathing glow. The screen turns up to full brightness (light right after waking helps clear grogginess; Settings can turn it off).
+- **Good-morning screen** greets you by name, asks how you slept, and lists what helps after waking: bright light, music you like, the same wake time tomorrow.
+
+## Sleep
+
+- **Start sleep** when you go to bed; stopping your alarm ends it (or tap *I'm awake*). Nights can also be added by hand and deleted with a long press.
+- Your **average night** against your goal, **hours per night** for a week, two weeks or a month (tap a night for its times and rating), average bedtime and wake-up, **regularity** (how much your wake time moves) and **sleep debt**.
+- One research-based note at a time: under 7 hours (AASM/SRS), irregular mornings (Windred et al., 2024), or short of your goal.
+
+## Settings
+
+- **Profile**: your name and age group, kept on the phone only (no account, nothing is uploaded). Your age suggests a sleep goal (Hirshkowitz et al., 2015).
+- **Missions**: time for each mission, quieter during missions, and how long before the alarm is back at full volume.
+- **Waking up**: bright screen when ringing, daylight reminder.
+- Sleep goal and bedtime reminder, clock and temperature units, alarm checks and a test alarm, news topics, location, erase all data, and the research behind Ryz.
 - **Test alarm** in Settings, plus a check that notifications and (on Android) exact alarms are allowed.
 - Repeat days, alarm names, volume, vibration, a 12/24-hour clock, haptics, reduced-motion support, and screen-reader labels.
 
@@ -102,9 +122,9 @@ The alarm sounds are generated by `scripts/generate-sounds.mjs` (`npm run sounds
 
 ```
 src/
-  app/            screens (Expo Router): tabs (home, alarms, settings), alarm editor, ringing, try a mission, "Are you awake?", good morning
-  core/           plain TypeScript, unit-tested: the alarm model, when things ring, the notification plan, volume fades, missions, weather
-  missions/       the six mission screens and the runner
+  app/            screens (Expo Router): tabs (morning, alarms, sleep, settings), alarm editor, ringing, try a mission, "Are you awake?", good morning, news topics, article reader
+  core/           plain TypeScript, unit-tested: the alarm model, when things ring, the notification plan, volume fades, missions, sounds, vibration, sleep stats, weather, news
+  missions/       the mission screens and the runner
   services/       expo-notifications scheduling, expo-audio playback, location and weather
   state/          the store (saved with AsyncStorage) and permission state
   components/     shared UI
@@ -117,6 +137,7 @@ assets/weather/   the rendered sky backgrounds
 - **iPhone silent switch**: when Ryz is closed, iOS notifications are silent in silent mode. The fix is Apple's **AlarmKit** (iOS 26+), which rings like the Clock app. It needs a native module and is the top priority for version 2.
 - **Android lock screen**: Ryz rings from a notification; it doesn't yet take over the lock screen with a full-screen alarm (that needs the full-screen intent, also a native module).
 - **When the app is in the background on Android**, in-app playback uses media volume. Notifications use alarm volume.
+- **Real accounts**: the profile lives on the phone. Syncing between devices would need a sign-in and a server (for example Supabase).
 - **Squat counting** uses a simple motion pattern (a dip then a peak), tuned on synthetic data. It needs testing on real phones and people.
 - **Not built yet**, from the research list: a voice alarm (record a familiar voice), a smart wake window from Apple Health / Health Connect sleep data, smart-bulb dawn light, and a study with a sleep researcher to measure whether Ryz actually reduces grogginess.
 - The bundle identifier `com.ryzalarm.app` in `app.json` is a placeholder. Change it to your own before publishing.
@@ -130,5 +151,8 @@ assets/weather/   the rendered sky backgrounds
 - McFarlane et al. (RMIT, 2020), melodic alarms: https://neurosciencenews.com/alarm-music-grogginess-15625/
 - Sundelin et al. (2023), snoozing: https://livescience.com/health/sleep/hitting-snooze-can-boost-morning-cognition-study-hints
 - Hilditch & McHill (2019), sleep inertia: https://pmc.ncbi.nlm.nih.gov/articles/PMC6710480/
+- Basner & Dinges (2011), the psychomotor vigilance test: https://pubmed.ncbi.nlm.nih.gov/21532953/
+- Vallat et al. (2022), activity, sleep and morning alertness: https://www.nature.com/articles/s41467-022-34503-2
+- Hirshkowitz et al. (2015), sleep needed by age: https://pubmed.ncbi.nlm.nih.gov/29073412/
 - Windred et al. (2024), sleep regularity: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10782489/
 - AASM & SRS (2015), sleep duration: https://aasm.org/aasm-and-srs-publish-new-sleep-duration-consensus-statement/
