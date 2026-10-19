@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Ryz",
+    "slug": "ryz-alarm",
+    "version": "1.0.0",
+    "scheme": "ryz",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#08090C",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ryzalarm.app",
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      },
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      }
+    },
+    "android": {
+      "package": "com.ryzalarm.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#08090C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.VIBRATE"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sounds/deep_520hz.wav",
+            "./assets/sounds/gentle_melody.wav",
+            "./assets/sounds/chime.wav"
+          ]
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-asset"
+    ]
+  }
+}
