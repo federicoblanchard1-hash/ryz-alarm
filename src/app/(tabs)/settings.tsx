@@ -114,18 +114,6 @@ export default function SettingsScreen() {
                 action={permissions.state?.notifications === 'denied' ? 'Settings' : 'Allow'}
                 onAction={permissions.fix}
               />
-              {Platform.OS === 'android' ? (
-                <>
-                  <Divider />
-                  <StatusRow
-                    ok={permissions.state?.exactAlarms ?? false}
-                    title="Exact alarms"
-                    detail={permissions.state?.exactAlarms ? 'On — rings to the minute' : 'Off — alarms may ring a few minutes late'}
-                    action="Settings"
-                    onAction={() => Linking.openSettings()}
-                  />
-                </>
-              ) : null}
               <Divider />
             </>
           ) : (

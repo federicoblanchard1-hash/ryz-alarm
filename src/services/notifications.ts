@@ -60,15 +60,12 @@ export async function setupNotifications(): Promise<void> {
   ]);
 }
 
-export type PermissionState = { notifications: 'granted' | 'denied' | 'undetermined'; exactAlarms: boolean };
+export type PermissionState = { notifications: 'granted' | 'denied' | 'undetermined' };
 
 export async function getPermissions(): Promise<PermissionState> {
-  if (!canSchedule) return { notifications: 'denied', exactAlarms: false };
-  const [perm, exact] = await Promise.all([
-    Notifications.getPermissionsAsync(),
-    Platform.OS === 'android' ? Notifications.getExactAlarmPermissionsAsync() : Promise.resolve({ granted: true }),
-  ]);
-  return { notifications: perm.granted ? 'granted' : perm.canAskAgain ? 'undetermined' : 'denied', exactAlarms: exact.granted };
+  if (!canSchedule) return { notifications: 'denied' };
+  const perm = await Notifications.getPermissionsAsync();
+  return { notifications: perm.granted ? 'granted' : perm.canAskAgain ? 'undetermined' : 'denied' };
 }
 
 export async function requestPermissions(): Promise<boolean> {
@@ -77,16 +74,15 @@ export async function requestPermissions(): Promise<boolean> {
   return res.granted;
 }
 
-function toTrigger(trigger: PlannedTrigger, channel: string, alarmClock: boolean): Notifications.NotificationTriggerInput {
-  // setAlarmClock(): Android delivers it on time even in battery saving.
-  const delivery = alarmClock ? ('alarmClock' as const) : undefined;
+// On Android, SCHEDULE_EXACT_ALARM / USE_EXACT_ALARM (declared in app.json) make these fire on time.
+function toTrigger(trigger: PlannedTrigger, channel: string): Notifications.NotificationTriggerInput {
   switch (trigger.type) {
     case 'date':
-      return { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trigger.date, channelId: channel, delivery };
+      return { type: Notifications.SchedulableTriggerInputTypes.DATE, date: trigger.date, channelId: channel };
     case 'daily':
-      return { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: trigger.hour, minute: trigger.minute, channelId: channel, delivery };
+      return { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: trigger.hour, minute: trigger.minute, channelId: channel };
     case 'weekly':
-      return { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: trigger.weekday, hour: trigger.hour, minute: trigger.minute, channelId: channel, delivery };
+      return { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: trigger.weekday, hour: trigger.hour, minute: trigger.minute, channelId: channel };
   }
 }
 
@@ -102,10 +98,9 @@ async function apply(plan: PlannedNotification[], vibrateFor: (alarmId?: string)
         sound: SOUND_FILE[item.sound],
         data: { kind: item.kind, alarmId: item.alarmId },
         interruptionLevel: ringing ? 'timeSensitive' : 'active',
-        threadIdentifier: item.alarmId ? `alarm-${item.alarmId}` : 'ryz',
         priority: ringing ? Notifications.AndroidNotificationPriority.MAX : undefined,
       },
-      trigger: toTrigger(item.trigger, channelId(item.sound, vibrateFor(item.alarmId)), ringing),
+      trigger: toTrigger(item.trigger, channelId(item.sound, vibrateFor(item.alarmId))),
     });
   }
 }

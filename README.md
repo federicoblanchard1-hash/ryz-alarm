@@ -1,6 +1,6 @@
 # Ryz
 
-An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 58) and grounded in sleep research. Black and white throughout: the only colour is the weather emojis.
+An alarm app for deep sleepers and normal sleepers, built with Expo (SDK 57) and grounded in sleep research. Black and white throughout: the only colour is the weather emojis.
 
 ## Try it on your phone (Expo Go)
 
@@ -57,7 +57,7 @@ Every mission has **Try it** in the editor. On a phone without the needed motion
 | Situation | What happens |
 | --- | --- |
 | Ryz is open | Ryz plays the alarm itself, with the fade-in and the switch to the deep tone, even in silent mode. The screen stays on. |
-| Ryz is closed, Android | A notification on an alarm channel: it plays at **alarm volume**, rings **through Do Not Disturb**, and is scheduled with `setAlarmClock()` so battery saving doesn't delay it. |
+| Ryz is closed, Android | A notification on an alarm channel: it plays at **alarm volume**, rings **through Do Not Disturb**, and fires at the exact minute thanks to the exact-alarm permission. |
 | Ryz is closed, iPhone | A time-sensitive notification. It gets through Focus but follows the **silent switch**. |
 
 A notification sound plays only once (iOS caps it at 30 s), so Ryz schedules a follow-up every 30 seconds for as long as the alarm should keep ringing. Repeating alarms use weekly triggers, so they keep firing even if you don't open Ryz for weeks. Tapping the notification, or opening Ryz, brings up the ringing screen.
