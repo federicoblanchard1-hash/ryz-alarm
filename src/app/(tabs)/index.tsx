@@ -12,7 +12,7 @@ import { HOUR, MINUTE, formatClock, formatClockText, formatHours, formatSpan } f
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
+import { FONT, TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
 
 /** A shortcut like Alarmy's: a rounded square holding a value or an icon, with its name below. */
 function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string; label: string; onPress: () => void }) {
@@ -150,10 +150,10 @@ const styles = StyleSheet.create({
   },
   nextTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pill: { paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
-  pillText: { fontSize: 13, lineHeight: 18, fontWeight: '600', color: colors.text },
+  pillText: { fontSize: 13, lineHeight: 18, fontFamily: FONT.medium, color: colors.text },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  clock: { fontSize: 64, lineHeight: 74, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -2 },
-  period: { fontSize: 20, lineHeight: 26, fontWeight: '500', color: colors.textMuted },
+  clock: { fontSize: 64, lineHeight: 74, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -2 },
+  period: { fontSize: 20, lineHeight: 26, fontFamily: FONT.regular, color: colors.textMuted },
   advice: {
     flexDirection: 'row',
     gap: space.sm,
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: space.sm, paddingTop: space.xxl, paddingBottom: space.xl },
   tileWrap: { width: 84, alignItems: 'center', gap: space.sm },
   tile: { width: 68, height: 68, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  tileValue: { fontSize: 21, lineHeight: 26, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
-  tileLabel: { fontSize: 16, lineHeight: 20, fontWeight: '600', color: colors.text, textAlign: 'center' },
+  tileValue: { fontSize: 21, lineHeight: 26, fontFamily: FONT.semibold, color: colors.text, fontVariant: ['tabular-nums'] },
+  tileLabel: { fontSize: 16, lineHeight: 20, fontFamily: FONT.medium, color: colors.text, textAlign: 'center' },
   inline: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.md },
 });

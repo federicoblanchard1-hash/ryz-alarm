@@ -1,28 +1,61 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useMemo } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Image, StyleSheet, View, useWindowDimensions, type ImageSourcePropType } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 
 import { seeded } from '@/core/missions';
 import type { Scene } from '@/core/weather';
 
-// The scene behind the forecast, drawn in greys so it stays black and white.
+// The scene behind the forecast: a rendered sky (scripts/generate-skies.py),
+// drifting slowly, with rain, drops on the glass, snow and lightning on top.
 // Everything moves with transform/opacity CSS animations on the UI thread.
 
-type Sky = readonly [string, string, string];
+const SKIES = {
+  clear_day: require('../../assets/weather/clear_day.jpg'),
+  clear_night: require('../../assets/weather/clear_night.jpg'),
+  partly_day: require('../../assets/weather/partly_day.jpg'),
+  partly_night: require('../../assets/weather/partly_night.jpg'),
+  cloudy_day: require('../../assets/weather/cloudy_day.jpg'),
+  cloudy_night: require('../../assets/weather/cloudy_night.jpg'),
+  rain_day: require('../../assets/weather/rain_day.jpg'),
+  rain_night: require('../../assets/weather/rain_night.jpg'),
+  storm: require('../../assets/weather/storm.jpg'),
+  snow_day: require('../../assets/weather/snow_day.jpg'),
+  snow_night: require('../../assets/weather/snow_night.jpg'),
+  fog_day: require('../../assets/weather/fog_day.jpg'),
+  fog_night: require('../../assets/weather/fog_night.jpg'),
+} satisfies Record<string, ImageSourcePropType>;
 
-const DAY_SKY: Record<Scene, Sky> = {
-  clear: ['#767676', '#2E2E2E', '#000000'],
-  partly: ['#666666', '#2A2A2A', '#000000'],
-  cloudy: ['#4E4E4E', '#222222', '#000000'],
-  fog: ['#5E5E5E', '#2E2E2E', '#000000'],
-  drizzle: ['#424242', '#1C1C1C', '#000000'],
-  rain: ['#383838', '#181818', '#000000'],
-  snow: ['#6E6E6E', '#303030', '#000000'],
-  storm: ['#262626', '#101010', '#000000'],
-};
-const NIGHT_SKY: Sky = ['#1C1C1C', '#0B0B0B', '#000000'];
-const NIGHT_CLOUDY_SKY: Sky = ['#222222', '#0E0E0E', '#000000'];
+function skyFor(scene: Scene, isDay: boolean): ImageSourcePropType {
+  const time = isDay ? 'day' : 'night';
+  switch (scene) {
+    case 'clear':
+      return SKIES[`clear_${time}`];
+    case 'partly':
+      return SKIES[`partly_${time}`];
+    case 'cloudy':
+      return SKIES[`cloudy_${time}`];
+    case 'fog':
+      return SKIES[`fog_${time}`];
+    case 'drizzle':
+    case 'rain':
+      return SKIES[`rain_${time}`];
+    case 'snow':
+      return SKIES[`snow_${time}`];
+    case 'storm':
+      return SKIES.storm;
+  }
+}
+
+/** The sky is drawn a little larger than the screen so it can drift without showing an edge. */
+const DRIFT = 24;
+const SKY_DRIFT = {
+  animationName: { from: { transform: [{ translateX: -DRIFT }, { scale: 1.12 }] }, to: { transform: [{ translateX: DRIFT }, { scale: 1.12 }] } },
+  animationDuration: '60s',
+  animationIterationCount: 'infinite',
+  animationDirection: 'alternate',
+  animationTimingFunction: 'ease-in-out',
+} as const;
 
 type Anim = Record<string, unknown>;
 
@@ -40,31 +73,10 @@ function Backdrop({ scene, isDay, height }: Props) {
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
   const moving = !reduced;
-  const sky = isDay ? DAY_SKY[scene] : scene === 'clear' || scene === 'partly' ? NIGHT_SKY : NIGHT_CLOUDY_SKY;
-  const showSun = isDay && (scene === 'clear' || scene === 'partly');
-  const showMoon = !isDay && (scene === 'clear' || scene === 'partly');
-  const showStars = !isDay && (scene === 'clear' || scene === 'partly');
-  const cloudCount = { clear: 0, partly: 2, cloudy: 4, fog: 0, drizzle: 3, rain: 3, snow: 3, storm: 4 }[scene];
   const rainCount = { drizzle: 26, rain: 56, storm: 70 }[scene as 'rain'] ?? 0;
 
   const layers = useMemo(() => {
     const random = seeded(7);
-    const stars = Array.from({ length: 44 }, () => ({
-      left: random() * width,
-      top: random() * height * 0.75,
-      size: 1 + random() * 1.8,
-      opacity: 0.35 + random() * 0.6,
-      duration: 2200 + random() * 3000,
-      delay: random() * 3000,
-    }));
-    const clouds = Array.from({ length: cloudCount }, (_, i) => ({
-      left: (i / Math.max(1, cloudCount)) * width * 0.9 - width * 0.15 + random() * 40,
-      top: 40 + random() * height * 0.3,
-      scale: 0.7 + random() * 0.5,
-      opacity: (scene === 'storm' || scene === 'rain' ? 0.06 : 0.08) + random() * 0.05,
-      drift: 30 + random() * 40,
-      duration: 18000 + random() * 16000,
-    }));
     const drops = Array.from({ length: rainCount }, () => ({
       left: random() * (width + 80) - 40,
       length: 14 + random() * 14,
@@ -80,13 +92,6 @@ function Backdrop({ scene, isDay, height }: Props) {
       duration: 6000 + random() * 6000,
       delay: random() * 7000,
     }));
-    const bands = Array.from({ length: scene === 'fog' ? 4 : 0 }, (_, i) => ({
-      top: height * (0.18 + i * 0.16),
-      height: 60 + random() * 40,
-      opacity: 0.07 + random() * 0.06,
-      drift: 30 + random() * 30,
-      duration: 14000 + random() * 10000,
-    }));
     // Rain on glass, like a window in the morning: still beads, and a few that run down.
     const beads = Array.from({ length: rainCount ? Math.round(rainCount * 0.6) : 0 }, () => ({
       left: random() * width,
@@ -97,85 +102,16 @@ function Backdrop({ scene, isDay, height }: Props) {
       duration: 7000 + random() * 9000,
       delay: random() * 6000,
     }));
-    return { stars, clouds, drops, flakes, bands, beads };
-  }, [width, height, scene, cloudCount, rainCount]);
+    return { drops, flakes, beads };
+  }, [width, height, scene, rainCount]);
 
   return (
-    <View style={[StyleSheet.absoluteFill, { height }]} pointerEvents="none" accessible={false}>
-      <LinearGradient colors={sky} locations={[0, 0.6, 1]} style={StyleSheet.absoluteFill} />
-
-      {showStars
-        ? layers.stars.map((s, i) => (
-            <Animated.View
-              key={`star${i}`}
-              style={[
-                styles.dot,
-                { left: s.left, top: s.top, width: s.size, height: s.size, opacity: s.opacity },
-                moving && anim({ '0%': { opacity: s.opacity }, '50%': { opacity: s.opacity * 0.25 }, '100%': { opacity: s.opacity } }, s.duration, { animationDelay: `${s.delay}ms`, animationTimingFunction: 'ease-in-out' }),
-              ]}
-            />
-          ))
-        : null}
-
-      {showSun ? (
-        <View style={[styles.orb, { left: width - 96, top: -6 }]}>
-          {[220, 160].map((size, i) => (
-            <Animated.View
-              key={size}
-              style={[
-                styles.glow,
-                { width: size, height: size, borderRadius: size / 2, opacity: i === 0 ? 0.06 : 0.1 },
-                moving && anim({ from: { transform: [{ scale: 1 }] }, to: { transform: [{ scale: 1.08 }] } }, 5000 + i * 1500, { animationDirection: 'alternate', animationTimingFunction: 'ease-in-out' }),
-              ]}
-            />
-          ))}
-          <View style={[styles.glow, styles.sun]} />
-        </View>
-      ) : null}
-
-      {showMoon ? (
-        <View style={[styles.orb, { left: width - 100, top: 4 }]}>
-          <View style={[styles.glow, { width: 140, height: 140, borderRadius: 70, opacity: 0.05 }]} />
-          <View style={[styles.glow, styles.moon]} />
-          <View style={[styles.moonShade, { backgroundColor: sky[0] }]} />
-        </View>
-      ) : null}
-
-      {layers.bands.map((b, i) => (
-        <Animated.View
-          key={`band${i}`}
-          style={[
-            styles.band,
-            { top: b.top, height: b.height, width: width * 1.4, left: -width * 0.2 },
-            moving && anim({ from: { transform: [{ translateX: -b.drift }] }, to: { transform: [{ translateX: b.drift }] } }, b.duration, { animationDirection: 'alternate', animationTimingFunction: 'ease-in-out' }),
-          ]}
-        >
-          {/* Soft top and bottom edges, so the fog has no hard lines. */}
-          <LinearGradient colors={['rgba(255,255,255,0)', `rgba(255,255,255,${b.opacity * 1.6})`, 'rgba(255,255,255,0)']} style={StyleSheet.absoluteFill} />
-        </Animated.View>
-      ))}
-
-      {layers.clouds.map((c, i) => (
-        <Animated.View
-          key={`cloud${i}`}
-          // The puffs overlap; fade them as one shape, not each on its own.
-          needsOffscreenAlphaCompositing
-          style={[
-            styles.cloud,
-            { left: c.left, top: c.top, opacity: c.opacity, transform: [{ scale: c.scale }] },
-            moving &&
-              anim({ from: { transform: [{ translateX: -c.drift }, { scale: c.scale }] }, to: { transform: [{ translateX: c.drift }, { scale: c.scale }] } }, c.duration, {
-                animationDirection: 'alternate',
-                animationTimingFunction: 'ease-in-out',
-              }),
-          ]}
-        >
-          <View style={[styles.puff, { width: 70, height: 70, left: 10, top: 18 }]} />
-          <View style={[styles.puff, { width: 96, height: 96, left: 50, top: 0 }]} />
-          <View style={[styles.puff, { width: 64, height: 64, left: 118, top: 26 }]} />
-          <View style={[styles.puff, { width: 170, height: 46, left: 8, top: 44, borderRadius: 23 }]} />
-        </Animated.View>
-      ))}
+    <View style={[StyleSheet.absoluteFill, styles.clip, { height }]} pointerEvents="none" accessible={false}>
+      <Animated.View style={[styles.sky, moving ? SKY_DRIFT : styles.still]}>
+        <Image source={skyFor(scene, isDay)} style={styles.skyImage} resizeMode="cover" accessible={false} />
+      </Animated.View>
+      {/* Keeps white text readable on bright skies. */}
+      <LinearGradient colors={['rgba(0,0,0,0.28)', 'rgba(0,0,0,0)']} style={[styles.shade, { height: height * 0.45 }]} />
 
       {layers.drops.map((d, i) => (
         <Animated.View
@@ -257,17 +193,14 @@ export const WeatherBackdrop = memo(Backdrop);
 
 const styles = StyleSheet.create({
   dot: { position: 'absolute', top: 0, borderRadius: 4, backgroundColor: '#FFFFFF' },
-  orb: { position: 'absolute', width: 120, height: 120, alignItems: 'center', justifyContent: 'center' },
-  glow: { position: 'absolute', backgroundColor: '#FFFFFF' },
-  sun: { width: 86, height: 86, borderRadius: 43, opacity: 0.92 },
-  moon: { width: 62, height: 62, borderRadius: 31, opacity: 0.9 },
-  moonShade: { position: 'absolute', width: 56, height: 56, borderRadius: 28, marginLeft: 26, marginTop: -16 },
-  cloud: { position: 'absolute', width: 190, height: 96 },
-  puff: { position: 'absolute', borderRadius: 999, backgroundColor: '#FFFFFF' },
-  band: { position: 'absolute' },
+  sky: { position: 'absolute', top: 0, bottom: 0, left: -DRIFT, right: -DRIFT },
+  still: { transform: [{ scale: 1.12 }] },
+  skyImage: { width: '100%', height: '100%' },
+  shade: { position: 'absolute', left: 0, right: 0, top: 0 },
   drop: { position: 'absolute', top: 0, width: 1.5, borderRadius: 1, backgroundColor: '#FFFFFF' },
   bead: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderBottomColor: 'rgba(255,255,255,0.55)' },
   beadShine: { position: 'absolute', top: '18%', left: '22%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.8)' },
   flash: { backgroundColor: '#FFFFFF', opacity: 0 },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  clip: { overflow: 'hidden' },
 });

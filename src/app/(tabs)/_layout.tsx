@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { haptic, type IconName } from '@/components/ui';
-import { TAB_BAR_HEIGHT, colors, space } from '@/theme';
+import { FONT, TAB_BAR_HEIGHT, colors, space } from '@/theme';
 
 function TabButton({ icon, label, isFocused, onPress, onLongPress }: TabTriggerSlotProps & { icon: IconName; label: string }) {
   return (
@@ -64,6 +64,6 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: (TAB_BAR_HEIGHT - 10) / 2 },
   tabOn: { backgroundColor: colors.bg },
-  label: { fontSize: 13, lineHeight: 16, fontWeight: '600', color: colors.text },
+  label: { fontSize: 13, lineHeight: 16, fontFamily: FONT.medium, color: colors.text },
   labelOff: { color: colors.textMuted },
 });

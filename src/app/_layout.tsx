@@ -1,7 +1,15 @@
+import {
+  Outfit_200ExtraLight,
+  Outfit_300Light,
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  useFonts,
+} from '@expo-google-fonts/outfit';
 import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, View } from 'react-native';
 
 import { findActive } from '@/core/ring';
 import { onNotificationActivity } from '@/services/notifications';
@@ -49,6 +57,9 @@ function WakeRouter() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({ Outfit_200ExtraLight, Outfit_300Light, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold });
+  // A moment of black while the font loads; if it can't load, carry on with the system font.
+  if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   return (
     <StoreProvider>
       <StatusBar style="light" />

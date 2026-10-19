@@ -9,7 +9,7 @@ import { nextRing } from '@/core/next';
 import { formatClock, formatSpan } from '@/core/time';
 import { useNow } from '@/state/useNow';
 import { sortedAlarms, useStore } from '@/state/store';
-import { TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
+import { FONT, TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
 
 const openEditor = (id: string) => router.push({ pathname: '/alarm/[id]', params: { id } });
 
@@ -80,12 +80,12 @@ export default function Alarms() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.md },
-  wordmark: { fontSize: 22, lineHeight: 28, fontWeight: '300', color: colors.text, letterSpacing: 8 },
+  wordmark: { fontSize: 22, lineHeight: 28, fontFamily: FONT.light, color: colors.text, letterSpacing: 8 },
   list: { paddingHorizontal: space.lg, gap: space.md },
   now: { alignItems: 'center', paddingTop: space.xxl, paddingBottom: space.xl, gap: space.xs },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  clock: { fontSize: 84, lineHeight: 92, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -3 },
-  period: { fontSize: 22, lineHeight: 28, fontWeight: '500', color: colors.textMuted },
+  clock: { fontSize: 84, lineHeight: 92, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -3 },
+  period: { fontSize: 22, lineHeight: 28, fontFamily: FONT.regular, color: colors.textMuted },
   status: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.textFaint },
   dotOn: { backgroundColor: colors.text },
-  statusText: { fontSize: 13, lineHeight: 18, fontWeight: '500', color: colors.text },
+  statusText: { fontSize: 13, lineHeight: 18, fontFamily: FONT.regular, color: colors.text },
   empty: { alignItems: 'center', gap: space.sm, paddingVertical: space.xxl, paddingHorizontal: space.lg },
   center: { textAlign: 'center' },
   fabWrap: { position: 'absolute', right: space.xl },

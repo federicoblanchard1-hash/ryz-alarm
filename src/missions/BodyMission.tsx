@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { haptic, Txt } from '@/components/ui';
 import { MISSIONS, shakeCounter, squatCounter } from '@/core/missions';
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 import { MISSION_ICONS, Progress, type MissionProps } from './common';
 
 const HINTS = {
@@ -79,8 +79,8 @@ export function BodyMission({ mission, onActivity, onDone }: MissionProps) {
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'space-between' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm },
-  count: { fontSize: 96, lineHeight: 108, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'] },
-  total: { fontSize: 32, fontWeight: '300', color: colors.textMuted },
+  count: { fontSize: 96, lineHeight: 108, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'] },
+  total: { fontSize: 32, fontFamily: FONT.light, color: colors.textMuted },
   bottom: { gap: space.md },
   hint: { textAlign: 'center' },
 });

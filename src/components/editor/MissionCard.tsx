@@ -7,7 +7,7 @@ import { Sheet } from '@/components/Sheet';
 import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
 import { BODY, BRAIN, LEVEL_NAMES, MAX_MISSIONS, MISSIONS, defaultMission, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
 import { MISSION_ICONS } from '@/missions/common';
-import { colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 
 interface Props {
   missions: Mission[];
@@ -146,7 +146,7 @@ const SLOT = 74;
 const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: space.xs },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 19, lineHeight: 24, fontWeight: '600', color: colors.text },
+  title: { fontSize: 19, lineHeight: 24, fontFamily: FONT.medium, color: colors.text },
   count: { color: colors.textMuted },
   slotScroll: { marginHorizontal: -space.xl, marginTop: space.lg, marginBottom: space.xs },
   // Room above for the remove badges, which sit outside the slots.
@@ -155,15 +155,15 @@ const styles = StyleSheet.create({
   slotOn: { backgroundColor: colors.accent },
   slotNext: { backgroundColor: colors.surfaceRaised },
   slotEmpty: { backgroundColor: colors.surfaceRaised, opacity: 0.6 },
-  slotLabel: { fontSize: 14, lineHeight: 18, fontWeight: '600', color: colors.onAccent, paddingHorizontal: 6 },
+  slotLabel: { fontSize: 14, lineHeight: 18, fontFamily: FONT.medium, color: colors.onAccent, paddingHorizontal: 6 },
   remove: { position: 'absolute', top: -10, right: -10, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   group: { marginBottom: space.lg },
   groupTitle: { marginBottom: space.sm },
   pickRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, minHeight: 60 },
   pressed: { opacity: 0.6 },
   pickIcon: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  pickTitle: { flex: 1, fontSize: 19, lineHeight: 24, fontWeight: '500', color: colors.text },
-  pickTaken: { fontWeight: '700' },
+  pickTitle: { flex: 1, fontSize: 19, lineHeight: 24, fontFamily: FONT.regular, color: colors.text },
+  pickTaken: { fontFamily: FONT.semibold },
   flex: { flex: 1 },
   sheetActions: { flexDirection: 'row', gap: space.md, marginTop: space.sm },
 });

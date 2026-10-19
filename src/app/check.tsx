@@ -9,7 +9,7 @@ import { formatClockText } from '@/core/time';
 import { clearDelivered } from '@/services/notifications';
 import { useScreenAwake } from '@/state/useScreenAwake';
 import { useStore } from '@/state/store';
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 
 export default function AwakeCheck() {
   const { data, update } = useStore();
@@ -58,7 +58,7 @@ export default function AwakeCheck() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: space.xl, justifyContent: 'space-between' },
   top: { gap: space.md, alignItems: 'center' },
-  question: { fontSize: 40, lineHeight: 48, fontWeight: '700', color: colors.text, textAlign: 'center', letterSpacing: -1 },
+  question: { fontSize: 40, lineHeight: 48, fontFamily: FONT.semibold, color: colors.text, textAlign: 'center', letterSpacing: -1 },
   center: { textAlign: 'center' },
   button: { height: 64 },
 });

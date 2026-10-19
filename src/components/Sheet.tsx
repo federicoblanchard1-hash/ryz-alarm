@@ -4,7 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeIn, SlideInDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 import { Txt } from './ui';
 
 // The iOS sheet curve (animate-expo skill). Module scope: layout-animation builders shouldn't be rebuilt per render.
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   },
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: colors.borderStrong, marginTop: space.sm },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: space.md, paddingHorizontal: space.xl },
-  title: { fontSize: 20, lineHeight: 26, fontWeight: '700', color: colors.text },
+  title: { fontSize: 20, lineHeight: 26, fontFamily: FONT.semibold, color: colors.text },
   close: { position: 'absolute', right: space.lg, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   content: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.md },
   footer: { paddingHorizontal: space.xl, paddingTop: space.sm },

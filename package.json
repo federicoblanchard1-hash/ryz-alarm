@@ -12,7 +12,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "sounds": "node scripts/generate-sounds.mjs"
+    "sounds": "node scripts/generate-sounds.mjs",
+    "skies": "python3 scripts/generate-skies.py"
   },
   "jest": {
     "preset": "jest-expo",
@@ -21,6 +22,7 @@
     }
   },
   "dependencies": {
+    "@expo-google-fonts/outfit": "^0.4.3",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.0",

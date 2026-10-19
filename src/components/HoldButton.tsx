@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { colors, radius } from '@/theme';
+import { FONT, colors, radius } from '@/theme';
 
 /**
  * Stop for deep sleepers: hold for `holdMs`. A half-awake tap can't turn the
@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden', backgroundColor: colors.accent },
   labelWrap: { alignItems: 'center' },
   inner: { position: 'absolute', left: 0, top: 0, bottom: 0, justifyContent: 'center' },
-  label: { fontSize: 18, fontWeight: '700', color: colors.text },
+  label: { fontSize: 18, fontFamily: FONT.semibold, color: colors.text },
   labelOn: { color: colors.onAccent },
 });

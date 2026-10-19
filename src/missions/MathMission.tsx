@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptic, Txt } from '@/components/ui';
 import { makeSum } from '@/core/missions';
-import { colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 import { Progress, type MissionProps } from './common';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'space-between', gap: space.lg },
   top: { gap: space.sm },
   problem: { alignItems: 'center', gap: space.md },
-  sum: { fontSize: 52, lineHeight: 62, fontWeight: '300', color: colors.text, fontVariant: ['tabular-nums'] },
+  sum: { fontSize: 52, lineHeight: 62, fontFamily: FONT.light, color: colors.text, fontVariant: ['tabular-nums'] },
   answer: {
     minWidth: 140,
     height: 64,
@@ -94,11 +94,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   answerWrong: { borderColor: colors.danger },
-  answerText: { fontSize: 34, lineHeight: 40, fontWeight: '600', color: colors.text, fontVariant: ['tabular-nums'] },
+  answerText: { fontSize: 34, lineHeight: 40, fontFamily: FONT.medium, color: colors.text, fontVariant: ['tabular-nums'] },
   placeholder: { color: colors.textFaint },
   pad: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: space.sm },
   key: { width: '31.5%', height: 64, borderRadius: radius.md, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
   keyPressed: { backgroundColor: colors.borderStrong },
   keyBlank: { width: '31.5%', height: 64 },
-  keyText: { fontSize: 28, lineHeight: 34, fontWeight: '500', color: colors.text },
+  keyText: { fontSize: 28, lineHeight: 34, fontFamily: FONT.regular, color: colors.text },
 });

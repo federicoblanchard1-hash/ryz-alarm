@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 import { haptic } from './ui';
 
 // A wheel like Alarmy's: three rows showing, the middle one on a grey band.
@@ -143,6 +143,6 @@ const styles = StyleSheet.create({
   wheel: { width: 92, height: ITEM * 3 },
   content: { paddingVertical: ITEM },
   item: { height: ITEM, alignItems: 'center', justifyContent: 'center' },
-  text: { fontSize: 31, lineHeight: 38, fontWeight: '600', color: colors.textFaint, fontVariant: ['tabular-nums'] },
-  selected: { fontSize: 35, lineHeight: 42, color: colors.text },
+  text: { fontSize: 31, lineHeight: 38, fontFamily: FONT.medium, color: colors.textFaint, fontVariant: ['tabular-nums'] },
+  selected: { fontSize: 35, fontFamily: FONT.light, lineHeight: 42, color: colors.text },
 });

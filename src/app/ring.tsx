@@ -16,7 +16,7 @@ import { clearDelivered } from '@/services/notifications';
 import { useRingSound } from '@/services/sound';
 import { useScreenAwake } from '@/state/useScreenAwake';
 import { useStore } from '@/state/store';
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 
 type Ring = Extract<ActiveRing, { type: 'ring' }>;
 
@@ -181,9 +181,9 @@ const styles = StyleSheet.create({
   pulseBox: { width: 340, height: 340, alignItems: 'center', justifyContent: 'center' },
   pulse: { position: 'absolute', width: 340, height: 340, borderRadius: 170, borderWidth: 1.5, borderColor: colors.text },
   stack: { alignItems: 'center' },
-  digits: { fontSize: 112, lineHeight: 112, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -4 },
+  digits: { fontSize: 112, lineHeight: 112, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -4 },
   minutes: { color: colors.textMuted },
-  period: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.textMuted, letterSpacing: 2, marginTop: space.xs },
+  period: { fontSize: 15, lineHeight: 20, fontFamily: FONT.medium, color: colors.textMuted, letterSpacing: 2, marginTop: space.xs },
   center: { textAlign: 'center' },
   actions: { gap: space.md },
   big: { height: 64 },

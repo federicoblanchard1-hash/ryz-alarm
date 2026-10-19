@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { haptic, Txt } from '@/components/ui';
 import { pickSentences, sameWords } from '@/core/missions';
-import { colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 import { Progress, type MissionProps } from './common';
 
 /** Type a sentence word for word. Case, spacing and punctuation don't count. */
@@ -53,9 +53,10 @@ const styles = StyleSheet.create({
   wrap: { flex: 1, gap: space.xl },
   top: { gap: space.sm },
   flex: { flex: 1 },
-  sentence: { fontSize: 28, lineHeight: 36, fontWeight: '600', color: colors.text, letterSpacing: -0.3 },
+  sentence: { fontSize: 28, lineHeight: 36, fontFamily: FONT.medium, color: colors.text, letterSpacing: -0.3 },
   input: {
     fontSize: 18,
+    fontFamily: FONT.light,
     color: colors.text,
     minHeight: 56,
     paddingHorizontal: space.lg,

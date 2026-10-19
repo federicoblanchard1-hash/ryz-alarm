@@ -5,7 +5,7 @@ import { MISSIONS } from '@/core/missions';
 import { SOUNDS, type SoundCategory } from '@/core/sounds';
 import type { Alarm } from '@/core/types';
 import { MISSION_ICONS } from '@/missions/common';
-import { colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 import { Txt, type IconName } from './ui';
 
 export const CATEGORY_ICON: Record<SoundCategory, IconName> = { science: 'flask-outline', loud: 'megaphone-outline', calm: 'leaf-outline' };
@@ -47,6 +47,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderStrong,
   },
-  text: { fontSize: 12, lineHeight: 16, fontWeight: '600', color: colors.text },
+  text: { fontSize: 12, lineHeight: 16, fontFamily: FONT.medium, color: colors.text },
   icon: { width: 26, height: 26, borderRadius: 13, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
 });

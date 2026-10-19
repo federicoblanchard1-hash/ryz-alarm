@@ -1,6 +1,6 @@
 import { cubicBezier } from 'react-native-reanimated';
 
-// Black and white. The only colour in the app is red, for errors and Delete.
+// Black and white. The colour comes from the weather sky on Morning, and red for errors and Delete.
 export const colors = {
   bg: '#000000',
   // Cards and controls in iOS's dark greys, like Alarmy's layout.
@@ -18,6 +18,18 @@ export const colors = {
   /** Panels laid over the weather scene. */
   glass: 'rgba(255, 255, 255, 0.08)',
   glassBorder: 'rgba(255, 255, 255, 0.14)',
+};
+
+/**
+ * Outfit, loaded in the root layout. Text sits a step lighter than usual:
+ * body text is Light, headings Medium, the big clocks ExtraLight.
+ */
+export const FONT = {
+  thin: 'Outfit_200ExtraLight',
+  light: 'Outfit_300Light',
+  regular: 'Outfit_400Regular',
+  medium: 'Outfit_500Medium',
+  semibold: 'Outfit_600SemiBold',
 };
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };

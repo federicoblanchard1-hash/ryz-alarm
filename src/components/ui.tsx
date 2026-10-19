@@ -4,22 +4,22 @@ import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View, type GestureResponderEvent, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
 import Animated, { useReducedMotion, type CSSTransitionProperties } from 'react-native-reanimated';
 
-import { EASE_OUT, colors, radius, space } from '@/theme';
+import { EASE_OUT, FONT, colors, radius, space } from '@/theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 const variants = StyleSheet.create({
-  largeTitle: { fontSize: 34, lineHeight: 40, fontWeight: '700', color: colors.text, letterSpacing: -0.8 },
-  title: { fontSize: 28, lineHeight: 34, fontWeight: '700', color: colors.text, letterSpacing: -0.5 },
-  heading: { fontSize: 17, lineHeight: 22, fontWeight: '600', color: colors.text },
-  body: { fontSize: 16, lineHeight: 22, color: colors.text },
+  largeTitle: { fontSize: 34, lineHeight: 40, fontFamily: FONT.semibold, color: colors.text, letterSpacing: -0.8 },
+  title: { fontSize: 28, lineHeight: 34, fontFamily: FONT.semibold, color: colors.text, letterSpacing: -0.5 },
+  heading: { fontSize: 17, lineHeight: 22, fontFamily: FONT.medium, color: colors.text },
+  body: { fontSize: 16, fontFamily: FONT.light, lineHeight: 22, color: colors.text },
   /** Settings rows, at Alarmy's size. */
-  row: { fontSize: 18, lineHeight: 24, color: colors.text },
+  row: { fontSize: 18, fontFamily: FONT.light, lineHeight: 24, color: colors.text },
   /** The grey title above a card ("Alarm sound"). */
-  section: { fontSize: 17, lineHeight: 22, fontWeight: '500', color: colors.textMuted },
-  muted: { fontSize: 15, lineHeight: 21, color: colors.textMuted },
-  caption: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
-  label: { fontSize: 12, lineHeight: 16, fontWeight: '600', color: colors.textFaint, letterSpacing: 1, textTransform: 'uppercase' },
+  section: { fontSize: 17, lineHeight: 22, fontFamily: FONT.regular, color: colors.textMuted },
+  muted: { fontSize: 15, fontFamily: FONT.light, lineHeight: 21, color: colors.textMuted },
+  caption: { fontSize: 13, fontFamily: FONT.light, lineHeight: 18, color: colors.textMuted },
+  label: { fontSize: 12, lineHeight: 16, fontFamily: FONT.medium, color: colors.textFaint, letterSpacing: 1, textTransform: 'uppercase' },
 });
 
 export function Txt({ variant = 'body', style, ...props }: TextProps & { variant?: keyof typeof variants }) {
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space.sm,
   },
-  buttonText: { fontSize: 17, fontWeight: '600' },
+  buttonText: { fontSize: 17, fontFamily: FONT.medium },
   iconButton: {
     width: 44,
     height: 44,
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   segmented: { flexDirection: 'row', padding: 3, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
   segment: { minWidth: 48, height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   segmentOn: { backgroundColor: colors.accent },
-  segmentText: { fontSize: 14, fontWeight: '600', color: colors.textFaint },
+  segmentText: { fontSize: 14, fontFamily: FONT.medium, color: colors.textFaint },
   segmentTextOn: { color: colors.onAccent },
   chipBlock: { paddingVertical: space.md, gap: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
@@ -366,6 +366,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { fontSize: 15, fontWeight: '500', color: colors.text },
+  chipText: { fontSize: 15, fontFamily: FONT.regular, color: colors.text },
   chipTextOn: { color: colors.onAccent },
 });

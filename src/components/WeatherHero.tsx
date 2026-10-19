@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { describe, formatTemp, type Scene, type Weather } from '@/core/weather';
 import { useStore } from '@/state/store';
 import { useWeather } from '@/state/useWeather';
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 import { Button, Txt, type IconName } from './ui';
 import { WeatherBackdrop } from './WeatherBackdrop';
 
@@ -97,7 +97,7 @@ export function WeatherHero({ children }: { children?: ReactNode }) {
             ) : (
               <>
                 <Text style={styles.place}>{"Today's weather"}</Text>
-                <Txt variant="muted">
+                <Txt variant="muted" style={styles.emptyText}>
                   {status === 'denied'
                     ? 'Location is off for Ryz. Turn it on in Settings to see the weather where you wake up.'
                     : status === 'error'
@@ -126,19 +126,20 @@ const shadow = { textShadowColor: 'rgba(0,0,0,0.35)', textShadowOffset: { width:
 const styles = StyleSheet.create({
   content: { paddingHorizontal: space.xl },
   placeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32, alignSelf: 'flex-start', maxWidth: '90%' },
-  place: { fontSize: 21, lineHeight: 28, fontWeight: '500', color: colors.text, ...shadow },
+  place: { fontSize: 21, lineHeight: 28, fontFamily: FONT.regular, color: colors.text, ...shadow },
   main: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: space.md },
-  temp: { fontSize: 36, lineHeight: 44, fontWeight: '600', color: colors.text, ...shadow },
+  temp: { fontSize: 36, lineHeight: 44, fontFamily: FONT.medium, color: colors.text, ...shadow },
   side: { alignItems: 'flex-end', paddingTop: space.xs, flexShrink: 1 },
   conditionRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  condition: { fontSize: 19, lineHeight: 24, fontWeight: '700', color: colors.text, textAlign: 'right', ...shadow },
-  range: { fontSize: 18, lineHeight: 24, fontWeight: '700', color: colors.text, ...shadow },
+  condition: { fontSize: 19, lineHeight: 24, fontFamily: FONT.semibold, color: colors.text, textAlign: 'right', ...shadow },
+  range: { fontSize: 18, lineHeight: 24, fontFamily: FONT.semibold, color: colors.text, ...shadow },
+  emptyText: { color: colors.text, opacity: 0.85, ...shadow },
   empty: { gap: space.md, paddingBottom: space.lg, alignItems: 'flex-start' },
   loading: { alignSelf: 'flex-start', marginVertical: space.xxl },
   enable: { marginTop: space.sm },
   hourStrip: { marginTop: space.xl, marginHorizontal: -space.xl },
   hours: { paddingHorizontal: space.lg },
   hour: { width: 49, alignItems: 'center', gap: space.sm },
-  hourLabel: { fontSize: 15, lineHeight: 20, fontWeight: '600', letterSpacing: 1, color: colors.text, opacity: 0.75 },
-  hourTemp: { fontSize: 17, lineHeight: 22, fontWeight: '600', color: colors.text },
+  hourLabel: { fontSize: 15, lineHeight: 20, fontFamily: FONT.medium, letterSpacing: 1, color: colors.text, opacity: 0.75 },
+  hourTemp: { fontSize: 17, lineHeight: 22, fontFamily: FONT.medium, color: colors.text },
 });

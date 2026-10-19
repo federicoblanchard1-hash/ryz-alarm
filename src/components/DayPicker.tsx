@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DAY_LETTERS, WEEK_ORDER, formatDayList } from '@/core/time';
 import type { Weekday } from '@/core/types';
-import { colors, space } from '@/theme';
+import { FONT, colors, space } from '@/theme';
 import { Checkbox, Txt, haptic } from './ui';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   day: { width: 42, height: 42, borderRadius: 12, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   on: { backgroundColor: colors.accent },
-  letter: { fontSize: 17, fontWeight: '600', color: colors.textFaint },
+  letter: { fontSize: 17, fontFamily: FONT.medium, color: colors.textFaint },
   letterOn: { color: colors.onAccent },
 });

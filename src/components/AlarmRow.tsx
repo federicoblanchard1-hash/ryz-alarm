@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { formatClock, formatDays } from '@/core/time';
 import type { Alarm } from '@/core/types';
-import { colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 import { AlarmTags } from './ModeBadge';
 import { PressableScale, ThemedSwitch, Txt } from './ui';
 
@@ -45,6 +45,6 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: space.xs },
   off: { opacity: 0.4 },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  clock: { fontSize: 48, lineHeight: 56, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -1.5 },
-  period: { fontSize: 16, lineHeight: 22, fontWeight: '500', color: colors.textMuted },
+  clock: { fontSize: 48, lineHeight: 56, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -1.5 },
+  period: { fontSize: 16, lineHeight: 22, fontFamily: FONT.regular, color: colors.textMuted },
 });

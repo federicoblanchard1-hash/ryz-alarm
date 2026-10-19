@@ -22,7 +22,7 @@ import { usePreview } from '@/services/sound';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 
 const soundTitle = (id: AlarmSoundId) => (SOUNDS[id] ?? SOUNDS.gentle).title;
 const minutes = (values: number[]) => values.map((v) => ({ value: v, label: `${v} min` }));
@@ -263,11 +263,11 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingBottom: space.sm },
   headerSide: { width: 44, height: 44, justifyContent: 'center' },
   right: { alignItems: 'flex-end' },
-  title: { fontSize: 20, lineHeight: 26, fontWeight: '700', color: colors.text },
+  title: { fontSize: 20, lineHeight: 26, fontFamily: FONT.semibold, color: colors.text },
   content: { paddingHorizontal: space.lg, gap: space.lg },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, paddingHorizontal: space.sm, paddingVertical: space.lg },
-  name: { flex: 1, minWidth: 0, fontSize: 19, fontWeight: '500', color: colors.text, paddingVertical: space.sm },
-  ringIn: { fontSize: 19, lineHeight: 24, fontWeight: '500', color: colors.text, textAlign: 'center', marginTop: space.md, marginBottom: space.lg },
+  name: { flex: 1, minWidth: 0, fontSize: 19, fontFamily: FONT.regular, color: colors.text, paddingVertical: space.sm },
+  ringIn: { fontSize: 19, lineHeight: 24, fontFamily: FONT.regular, color: colors.text, textAlign: 'center', marginTop: space.md, marginBottom: space.lg },
   days: { marginTop: space.xl, marginBottom: space.md },
   sectionLabel: { marginLeft: space.sm, marginTop: space.lg, marginBottom: -space.xs },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, paddingHorizontal: space.xl, paddingVertical: space.sm },
@@ -275,22 +275,22 @@ const styles = StyleSheet.create({
   play: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
   pressed: { opacity: 0.6 },
   soundPick: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 44 },
-  soundName: { flex: 1, fontSize: 19, lineHeight: 24, fontWeight: '500', color: colors.text },
+  soundName: { flex: 1, fontSize: 19, lineHeight: 24, fontFamily: FONT.regular, color: colors.text },
   progress: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden', justifyContent: 'center', marginVertical: space.sm },
   progressFill: { height: '100%', width: '100%', backgroundColor: colors.text, transformOrigin: 'left' },
   progressDot: { width: 6, height: 6, borderRadius: 3, marginLeft: 1, backgroundColor: colors.textMuted },
   volumeRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
   delete: { alignSelf: 'center', paddingVertical: space.md, paddingHorizontal: space.xl, minHeight: 44 },
-  deleteText: { fontSize: 17, fontWeight: '600', color: colors.danger },
+  deleteText: { fontSize: 17, fontFamily: FONT.medium, color: colors.danger },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
   save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  saveText: { fontSize: 19, fontWeight: '700', color: colors.onAccent },
+  saveText: { fontSize: 19, fontFamily: FONT.semibold, color: colors.onAccent },
   soundGroup: { marginBottom: space.lg },
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   groupText: { marginTop: 2, marginBottom: space.xs },
   soundOption: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 60 },
   soundPickRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  optionTitle: { fontSize: 18, lineHeight: 24, fontWeight: '500', color: colors.text },
-  optionTitleOn: { fontWeight: '700' },
+  optionTitle: { fontSize: 18, lineHeight: 24, fontFamily: FONT.regular, color: colors.text },
+  optionTitleOn: { fontFamily: FONT.semibold },
   playSmall: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
 });
