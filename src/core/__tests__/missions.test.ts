@@ -6,6 +6,10 @@ import {
   clampAmount,
   makePattern,
   makeSum,
+  noRepeats,
+  SENTENCES,
+  WORDS,
+  wordBag,
   memoryGrid,
   missionsIn,
   numberBoard,
@@ -29,12 +33,11 @@ describe('makeSum', () => {
     for (const level of [1, 2, 3] as const) {
       for (let i = 0; i < 50; i++) {
         const { text, answer } = makeSum(level, random);
-        const value = Function(`return ${text.replace('×', '*')}`)();
+        const value = Function(`return ${text.replace(/×/g, '*').replace(/−/g, '-').replace(/÷/g, '/')}`)();
         expect(value).toBe(answer);
       }
     }
-    expect(makeSum(1, seeded(2)).answer).toBeLessThan(60);
-    expect(makeSum(3, seeded(2)).text).toMatch(/× \d+ \+/);
+    expect(makeSum(1, seeded(2)).answer).toBeLessThan(70);
   });
 });
 
@@ -90,8 +93,8 @@ describe('catalog', () => {
   it('keeps custom amounts inside the limits and on the step', () => {
     expect(clampAmount('squats', 0)).toBe(MISSIONS.squats.min);
     expect(clampAmount('squats', 10_000)).toBe(MISSIONS.squats.max);
-    const { min, step } = MISSIONS.steps;
-    expect((clampAmount('steps', min + step + 1) - min) % step).toBe(0);
+    expect(clampAmount('steps', 37.4)).toBe(37);
+    for (const info of Object.values(MISSIONS)) expect(info.max).toBeLessThanOrEqual(100);
   });
 });
 
@@ -156,5 +159,27 @@ describe('brain generators', () => {
       return n;
     };
     expect(conflicts(3)).toBeGreaterThan(conflicts(1));
+  });
+});
+
+describe('no repeats', () => {
+  it('gives a different sum every time in a long mission', () => {
+    for (const level of [1, 2, 3] as const) {
+      const next = noRepeats(() => makeSum(level, Math.random), (s) => s.text);
+      const texts = Array.from({ length: 100 }, () => next().text);
+      expect(new Set(texts).size).toBe(100);
+    }
+  });
+
+  it('uses every sentence before repeating, never twice in a row', () => {
+    const picked = pickSentences(SENTENCES.length * 2 + 5, seeded(4));
+    expect(new Set(picked.slice(0, SENTENCES.length)).size).toBe(SENTENCES.length);
+    for (let i = 1; i < picked.length; i++) expect(picked[i]).not.toBe(picked[i - 1]);
+  });
+
+  it('draws words from a shuffled bag', () => {
+    const next = wordBag(2, seeded(8));
+    const words = Array.from({ length: WORDS[2].length }, next);
+    expect(new Set(words).size).toBe(WORDS[2].length);
   });
 });

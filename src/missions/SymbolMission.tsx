@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptic, Txt } from '@/components/ui';
-import { SIGNS, symbolProblem, type Sign } from '@/core/missions';
+import { SIGNS, noRepeats, symbolProblem, type Sign } from '@/core/missions';
 import { FONT, colors, radius, space } from '@/theme';
 import { Progress, type MissionProps } from './common';
 
@@ -11,7 +11,8 @@ const SIGN_NAMES: Record<Sign, string> = { '+': 'plus', '−': 'minus', '×': 't
 /** Missing symbol: which sign makes "12 ? 4 = 48" true? */
 export function SymbolMission({ mission, onActivity, onDone }: MissionProps) {
   const [solved, setSolved] = useState(0);
-  const [problem, setProblem] = useState(() => symbolProblem(mission.level));
+  const [next] = useState(() => noRepeats(() => symbolProblem(mission.level), (p) => `${p.a}${p.sign}${p.b}`));
+  const [problem, setProblem] = useState(next);
   const [wrong, setWrong] = useState<Sign | null>(null);
 
   const pick = (sign: Sign) => {
@@ -28,7 +29,7 @@ export function SymbolMission({ mission, onActivity, onDone }: MissionProps) {
       return;
     }
     setSolved(solved + 1);
-    setProblem(symbolProblem(mission.level));
+    setProblem(next());
   };
 
   return (

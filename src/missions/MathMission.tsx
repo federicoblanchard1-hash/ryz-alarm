@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptic, Txt } from '@/components/ui';
-import { makeSum } from '@/core/missions';
+import { makeSum, noRepeats } from '@/core/missions';
 import { FONT, colors, radius, space } from '@/theme';
 import { Progress, type MissionProps } from './common';
 
@@ -12,7 +12,9 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 /** Sums on a number pad. The answer checks itself once it has enough digits. */
 export function MathMission({ mission, onActivity, onDone }: MissionProps) {
   const [solved, setSolved] = useState(0);
-  const [sum, setSum] = useState(() => makeSum(mission.level));
+  // Never the same sum twice in one mission.
+  const [nextSum] = useState(() => noRepeats(() => makeSum(mission.level), (s) => s.text));
+  const [sum, setSum] = useState(nextSum);
   const [entry, setEntry] = useState('');
   const [wrong, setWrong] = useState(false);
 
@@ -35,7 +37,7 @@ export function MathMission({ mission, onActivity, onDone }: MissionProps) {
         return;
       }
       setSolved(solved + 1);
-      setSum(makeSum(mission.level));
+      setSum(nextSum());
       setEntry('');
     } else {
       haptic('error');

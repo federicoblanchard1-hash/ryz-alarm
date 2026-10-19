@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Sheet } from '@/components/Sheet';
-import { Button, Chips, LinkRow, Stepper, Txt, haptic } from '@/components/ui';
+import { AmountPicker } from '@/components/AmountPicker';
+import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
 import { QrScanner } from '@/missions/QrScanner';
 import { LEVEL_NAMES, MAX_MISSIONS, MISSIONS, MISSION_GROUPS, clampAmount, defaultMission, missionsIn, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
 import { MISSION_ICONS } from '@/missions/common';
@@ -151,13 +152,11 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
             ) : (
               <>
                 <Txt variant="caption">How many</Txt>
-                <Stepper
-                  label={MISSIONS[edited.type].unit(2).replace(/^\d+ /, '')}
+                <AmountPicker
                   value={edited.amount}
                   min={MISSIONS[edited.type].min}
                   max={MISSIONS[edited.type].max}
-                  step={MISSIONS[edited.type].step}
-                  format={MISSIONS[edited.type].unit}
+                  unit={MISSIONS[edited.type].unit}
                   onChange={(amount) => update({ ...edited, amount: clampAmount(edited.type, amount) })}
                 />
                 <Chips value={edited.amount} onChange={(amount) => update({ ...edited, amount })} options={MISSIONS[edited.type].amounts.map((n) => ({ value: n, label: String(n) }))} />

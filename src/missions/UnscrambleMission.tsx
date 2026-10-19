@@ -3,19 +3,21 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { haptic, Txt } from '@/components/ui';
-import { pickWord, scramble } from '@/core/missions';
+import { scramble, wordBag } from '@/core/missions';
 import { FONT, colors, radius, space } from '@/theme';
 import { Progress, type MissionProps } from './common';
 
-function newRound(level: Parameters<typeof pickWord>[0]) {
-  const word = pickWord(level);
+function newRound(nextWord: () => string) {
+  const word = nextWord();
   return { word, letters: scramble(word).split('') };
 }
 
 /** Unscramble: tap the letters in the right order to spell the word. */
 export function UnscrambleMission({ mission, onActivity, onDone }: MissionProps) {
   const [solved, setSolved] = useState(0);
-  const [round, setRound] = useState(() => newRound(mission.level));
+  // Every word of the level once before any comes back.
+  const [nextWord] = useState(() => wordBag(mission.level));
+  const [round, setRound] = useState(() => newRound(nextWord));
   /** Indexes into round.letters, in the order tapped. */
   const [picked, setPicked] = useState<number[]>([]);
   const [wrong, setWrong] = useState(false);
@@ -38,7 +40,7 @@ export function UnscrambleMission({ mission, onActivity, onDone }: MissionProps)
         return;
       }
       setSolved(solved + 1);
-      setRound(newRound(mission.level));
+      setRound(newRound(nextWord));
     } else {
       haptic('error');
       setWrong(true);
