@@ -48,6 +48,8 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
     morningLight: true,
     smartwatch: false,
     goals: [],
+    goalOther: '',
+    onboarded: false,
   };
 }
 

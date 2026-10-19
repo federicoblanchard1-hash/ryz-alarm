@@ -47,16 +47,16 @@ export default function Home() {
   const advice = next && !next.snoozed ? sleepAdvice(next.at, now, sleepGoalMinutes, use24h) : null;
   const bedtime = next && next.at - now <= 24 * HOUR ? new Date(next.at - sleepGoalMinutes * MINUTE) : null;
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
-  const askTopics = ready && data.settings.newsTopics === null;
+  const askWelcome = ready && !data.settings.onboarded;
   const [pulling, setPulling] = useState(false);
   const onRefresh = () => {
     setPulling(true);
     pullToRefresh().finally(() => setPulling(false));
   };
   useEffect(() => {
-    // First launch: pick news topics (or skip). Asked once; Settings can change them later.
-    if (askTopics) router.push({ pathname: '/interests', params: { first: '1' } });
-  }, [askTopics]);
+    // First launch: welcome, account, news topics and goals. Once; Settings can change them later.
+    if (askWelcome) router.push('/welcome');
+  }, [askWelcome]);
   const needsPermission = permissions.supported && permissions.state !== null && permissions.state.notifications !== 'granted' && data.alarms.length > 0;
 
   return (

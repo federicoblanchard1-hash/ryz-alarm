@@ -114,6 +114,10 @@ export interface Settings {
   smartwatch: boolean;
   /** What you want Ryz to help with, from sign-up. */
   goals: string[];
+  /** Anything else you typed under "Other". */
+  goalOther: string;
+  /** Finished the welcome: account, news topics and goals. */
+  onboarded: boolean;
 }
 
 export type AgeGroup = 'teen' | 'young' | 'adult' | 'older';

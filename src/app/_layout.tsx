@@ -18,6 +18,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { findActive } from "@/core/ring";
 import { onNotificationActivity } from "@/services/notifications";
+import { AuthProvider } from "@/state/auth";
 import { StoreProvider, useStore } from "@/state/store";
 import { colors } from "@/theme";
 
@@ -80,57 +81,75 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StoreProvider>
-        <StatusBar style="light" />
-        <WakeRouter />
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: colors.bg },
-            headerTintColor: colors.text,
-            headerShadowVisible: false,
-            contentStyle: { backgroundColor: colors.bg },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="alarm/[id]"
-            options={{ presentation: "modal", headerShown: false }}
-          />
-          <Stack.Screen
-            name="try-mission"
-            options={{ presentation: "fullScreenModal", headerShown: false }}
-          />
-          <Stack.Screen
-            name="ring"
-            options={{
-              presentation: "fullScreenModal",
-              headerShown: false,
-              gestureEnabled: false,
-              animation: "fade",
+        <AuthProvider>
+          <StatusBar style="light" />
+          <WakeRouter />
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: colors.bg },
+              headerTintColor: colors.text,
+              headerShadowVisible: false,
+              contentStyle: { backgroundColor: colors.bg },
             }}
-          />
-          <Stack.Screen
-            name="check"
-            options={{
-              presentation: "fullScreenModal",
-              headerShown: false,
-              gestureEnabled: false,
-              animation: "fade",
-            }}
-          />
-          <Stack.Screen
-            name="morning"
-            options={{
-              presentation: "fullScreenModal",
-              headerShown: false,
-              animation: "fade",
-            }}
-          />
-          <Stack.Screen
-            name="interests"
-            options={{ presentation: "fullScreenModal", headerShown: false }}
-          />
-          <Stack.Screen name="article" options={{ headerShown: false }} />
-        </Stack>
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="alarm/[id]"
+              options={{ presentation: "modal", headerShown: false }}
+            />
+            <Stack.Screen
+              name="try-mission"
+              options={{ presentation: "fullScreenModal", headerShown: false }}
+            />
+            <Stack.Screen
+              name="ring"
+              options={{
+                presentation: "fullScreenModal",
+                headerShown: false,
+                gestureEnabled: false,
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="check"
+              options={{
+                presentation: "fullScreenModal",
+                headerShown: false,
+                gestureEnabled: false,
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="morning"
+              options={{
+                presentation: "fullScreenModal",
+                headerShown: false,
+                animation: "fade",
+              }}
+            />
+            <Stack.Screen
+              name="interests"
+              options={{ presentation: "fullScreenModal", headerShown: false }}
+            />
+            <Stack.Screen name="article" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="welcome"
+              options={{
+                presentation: "fullScreenModal",
+                headerShown: false,
+                gestureEnabled: false,
+              }}
+            />
+            <Stack.Screen
+              name="account"
+              options={{ presentation: "fullScreenModal", headerShown: false }}
+            />
+            <Stack.Screen
+              name="goals"
+              options={{ presentation: "fullScreenModal", headerShown: false }}
+            />
+          </Stack>
+        </AuthProvider>
       </StoreProvider>
     </GestureHandlerRootView>
   );

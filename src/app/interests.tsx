@@ -85,7 +85,9 @@ export default function Interests() {
   const save = (topics: string[]) => {
     updateSettings({ newsTopics: topics });
     haptic('success');
-    close();
+    // During onboarding the next step is goals.
+    if (first) router.replace({ pathname: '/goals', params: { first: '1' } });
+    else close();
   };
   // Keep the catalogue's order, not the order they were tapped.
   const ordered = CATEGORIES.flatMap((c) => c.topics.map((t) => t.id)).filter((id) => selected.has(id));
@@ -100,10 +102,10 @@ export default function Interests() {
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}>
         <Text style={styles.title} accessibilityRole="header">
-          {first ? 'Welcome to Ryz' : 'Your news'}
+          {first ? 'Your morning news' : 'Your news'}
         </Text>
         <Txt variant="muted" style={styles.subtitle}>
-          {first ? 'What do you like to read in the morning? Pick topics for your news on the Morning screen. You can change them any time in Settings.' : 'Pick the topics for your morning news.'}
+          {first ? 'What do you like to read in the morning? Pick topics, and open any category for its sub-topics. You can change them any time in Settings.' : 'Pick the topics for your morning news.'}
         </Txt>
         {CATEGORIES.map((c) => (
           <CategoryCard key={c.id} category={c} selected={selected} open={open === c.id} onToggleOpen={() => setOpen((o) => (o === c.id ? null : c.id))} onChange={change} />

@@ -8,10 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
 import { AGE_GROUPS } from '@/core/defaults';
+import { GOALS } from '@/core/goals';
 import { topicById } from '@/core/news';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
+import { logOut } from '@/services/account';
+import { useAuth } from '@/state/auth';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
 import type { AgeGroup } from '@/core/types';
@@ -142,6 +145,7 @@ function useLocationPermission() {
 
 export default function SettingsScreen() {
   const { data, updateSettings, update, reset } = useStore();
+  const auth = useAuth();
   const permissions = usePermissions();
   const location = useLocationPermission();
   const insets = useSafeAreaInsets();
@@ -153,8 +157,49 @@ export default function SettingsScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Txt variant="largeTitle" style={styles.title} accessibilityRole="header">Settings</Txt>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]} keyboardShouldPersistTaps="handled">
+        <Section label="Account" footer={auth.session ? 'Your name, age, news topics and goals are saved to your account and come back when you log in on another phone.' : 'Create an account to keep your profile, news topics and goals when you change phone.'}>
+          {auth.session ? (
+            <>
+              <View style={styles.status}>
+                <Ionicons name="person-circle-outline" size={26} color={colors.text} />
+                <View style={styles.flex}>
+                  <Txt variant="body">Signed in</Txt>
+                  <Txt variant="caption">{auth.email ?? ''}</Txt>
+                </View>
+              </View>
+              <Divider />
+              <Pressable onPress={() => confirm('Log out?', 'Your alarms stay on this phone. Log in again any time.', 'Log out', () => logOut())} accessibilityRole="button" style={styles.status}>
+                <Ionicons name="log-out-outline" size={22} color={colors.text} />
+                <Txt variant="row" style={styles.flex}>Log out</Txt>
+              </Pressable>
+            </>
+          ) : (
+            <Pressable onPress={() => router.push({ pathname: '/account', params: { mode: 'login' } })} accessibilityRole="button" style={styles.status}>
+              <Ionicons name="person-circle-outline" size={26} color={colors.text} />
+              <View style={styles.flex}>
+                <Txt variant="body">Log in or create an account</Txt>
+                <Txt variant="caption">{auth.enabled ? 'Not signed in' : 'Accounts are off in this build'}</Txt>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+            </Pressable>
+          )}
+        </Section>
+
         <Section label="Profile">
           <Profile />
+        </Section>
+
+        <Section label="Your goals">
+          <Pressable onPress={() => router.push('/goals')} accessibilityRole="button" style={styles.status}>
+            <Ionicons name="flag-outline" size={22} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="body">What you want to improve</Txt>
+              <Txt variant="caption">
+                {settings.goals.length ? settings.goals.map((id) => (id === 'other' && settings.goalOther ? settings.goalOther : GOALS.find((g) => g.id === id)?.title ?? id)).join(', ') : 'Not picked yet'}
+              </Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </Pressable>
         </Section>
 
         <Section label="Missions" footer="When time runs out, the mission starts over with a new puzzle and the alarm comes back at full volume.">
@@ -264,6 +309,7 @@ export default function SettingsScreen() {
             onPress={() =>
               confirm('Erase everything?', 'This deletes all alarms, your sleep history and settings. It cannot be undone.', 'Erase', () => {
                 haptic('success');
+                logOut().catch(() => {});
                 reset();
               })
             }
