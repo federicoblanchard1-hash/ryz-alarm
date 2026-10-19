@@ -21,7 +21,7 @@ export interface MissionInfo {
   sensor?: 'accelerometer' | 'pedometer';
 }
 
-export const MAX_MISSIONS = 3;
+export const MAX_MISSIONS = 5;
 
 export const MISSIONS: Record<MissionType, MissionInfo> = {
   math: { group: 'brain', title: 'Math', description: 'Solve a few sums', amounts: [3, 5, 10], unit: (n) => `${n} sums`, hasLevels: true },

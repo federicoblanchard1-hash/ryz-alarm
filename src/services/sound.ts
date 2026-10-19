@@ -3,13 +3,24 @@ import { useEffect, useRef } from 'react';
 import { Platform, Vibration } from 'react-native';
 
 import { DEEP_RAMP_SECONDS, DEEP_START_DB, GENTLE_START_DB, fadeVolume } from '@/core/fade';
-import { soundAt } from '@/core/plan';
-import type { Alarm } from '@/core/types';
+import { phaseAt, soundAt } from '@/core/plan';
+import type { Alarm, SoundId } from '@/core/types';
 
-export const SOUND_SOURCES = {
+// Metro needs every require() spelled out.
+export const SOUND_SOURCES: Record<SoundId, number> = {
   gentle: require('../../assets/sounds/gentle_melody.wav'),
   deep: require('../../assets/sounds/deep_520hz.wav'),
   chime: require('../../assets/sounds/chime.wav'),
+  air_raid: require('../../assets/sounds/loud_air_raid.wav'),
+  yelp: require('../../assets/sounds/loud_yelp.wav'),
+  two_tone: require('../../assets/sounds/loud_two_tone.wav'),
+  buzzer: require('../../assets/sounds/loud_buzzer.wav'),
+  bell: require('../../assets/sounds/loud_bell.wav'),
+  wind_chimes: require('../../assets/sounds/calm_wind_chimes.wav'),
+  ocean: require('../../assets/sounds/calm_ocean.wav'),
+  birds: require('../../assets/sounds/calm_birds.wav'),
+  sunrise: require('../../assets/sounds/calm_sunrise.wav'),
+  music_box: require('../../assets/sounds/calm_music_box.wav'),
 };
 
 const VIBRATION = [0, 800, 600];
@@ -43,8 +54,10 @@ async function setAlarmAudioMode() {
  * it, for while you do a mission.
  */
 export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' | 'recheck' | 'test', startedAt: number, active: boolean, ducked = false) {
-  const gentle = useAudioPlayer(SOUND_SOURCES.gentle);
+  // The alarm's own sound, plus the 520 Hz tone for when a soft alarm escalates (or the melody, for a loud one).
+  const own = useAudioPlayer(SOUND_SOURCES[alarm?.sound ?? 'gentle']);
   const deep = useAudioPlayer(SOUND_SOURCES.deep);
+  const melody = useAudioPlayer(SOUND_SOURCES.gentle);
   const duckRef = useRef(ducked);
   useEffect(() => {
     duckRef.current = ducked;
@@ -55,12 +68,12 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
     let current: AudioPlayer | null = null;
     let switchedAt = 0;
     setAlarmAudioMode().catch(() => {});
-    configure(gentle, { loop: true });
-    configure(deep, { loop: true });
+    for (const p of [own, deep, melody]) configure(p, { loop: true });
+    const players: Partial<Record<SoundId, AudioPlayer>> = { gentle: melody, deep, [alarm.sound]: own };
 
     const tick = () => {
       const seconds = Math.max(0, (Date.now() - startedAt) / 1000);
-      const want = soundAt(alarm, kind, seconds) === 'deep' ? deep : gentle;
+      const want = players[soundAt(alarm, kind, seconds)] ?? own;
       if (current !== want) {
         current?.pause();
         want.seekTo(0);
@@ -70,7 +83,7 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
         switchedAt = seconds;
       }
       const volume =
-        want === gentle ? fadeVolume(seconds, alarm.fadeInSeconds, GENTLE_START_DB) : fadeVolume(seconds - switchedAt, DEEP_RAMP_SECONDS, DEEP_START_DB);
+        phaseAt(alarm, kind, seconds) === 'gentle' ? fadeVolume(seconds, alarm.fadeInSeconds, GENTLE_START_DB) : fadeVolume(seconds - switchedAt, DEEP_RAMP_SECONDS, DEEP_START_DB);
       const max = alarm.volume ?? 1;
       configure(want, { volume: (duckRef.current ? volume * DUCKED : volume) * max });
     };
@@ -79,11 +92,10 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
 
     return () => {
       clearInterval(timer);
-      safely(() => gentle.pause());
-      safely(() => deep.pause());
+      for (const p of [own, deep, melody]) safely(() => p.pause());
       if (Platform.OS === 'android') safely(() => current?.setActiveForLockScreen(false));
     };
-  }, [active, alarm, kind, startedAt, gentle, deep]);
+  }, [active, alarm, kind, startedAt, own, deep, melody]);
 
   // Vibration stops during a mission: it's distracting, and it would count as shakes and squats.
   const vibrate = Boolean(active && alarm?.vibrate && !ducked);
@@ -94,25 +106,27 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
   }, [vibrate]);
 }
 
-/** A short listen in the editor. Plays `seconds` of a sound at the alarm's volume. */
+/** A short listen in the editor. Plays `seconds` of any sound at the alarm's volume. */
 export function usePreview() {
-  const gentle = useAudioPlayer(SOUND_SOURCES.gentle);
-  const deep = useAudioPlayer(SOUND_SOURCES.deep);
+  const player = useAudioPlayer(SOUND_SOURCES.gentle);
+  const loaded = useRef<SoundId>('gentle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stop = () => {
     if (timer.current) clearTimeout(timer.current);
-    safely(() => gentle.pause());
-    safely(() => deep.pause());
+    safely(() => player.pause());
   };
 
   useEffect(() => stop, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    play(sound: 'gentle' | 'deep', seconds = 6, volume = 1) {
+    play(sound: SoundId, seconds = 6, volume = 1) {
       stop();
       setAlarmAudioMode().catch(() => {});
-      const player = sound === 'gentle' ? gentle : deep;
+      if (loaded.current !== sound) {
+        player.replace(SOUND_SOURCES[sound]);
+        loaded.current = sound;
+      }
       configure(player, { volume });
       player.seekTo(0);
       player.play();

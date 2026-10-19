@@ -8,14 +8,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DayPicker } from '@/components/DayPicker';
 import { MissionCard } from '@/components/editor/MissionCard';
-import { MODE_ICON } from '@/components/ModeBadge';
+import { CATEGORY_ICON } from '@/components/ModeBadge';
 import { Sheet } from '@/components/Sheet';
 import { TimePicker } from '@/components/TimePicker';
 import { Checkbox, Chips, LinkRow, PressableScale, Slider, Txt, haptic, ToggleRow } from '@/components/ui';
 import { newAlarm } from '@/core/defaults';
 import { makeId } from '@/core/ring';
 import { formatSpan, nextClock, nextOccurrence } from '@/core/time';
-import type { Alarm, WakeMode } from '@/core/types';
+import { SOUNDS, SOUND_CATEGORIES, soundsIn } from '@/core/sounds';
+import type { Alarm, AlarmSoundId } from '@/core/types';
 import { requestPermissions } from '@/services/notifications';
 import { usePreview } from '@/services/sound';
 import { useNow } from '@/state/useNow';
@@ -23,11 +24,7 @@ import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
 import { colors, radius, space } from '@/theme';
 
-const SOUNDS: { mode: WakeMode; title: string; text: string }[] = [
-  { mode: 'gentle', title: 'Gentle melody', text: 'Starts almost silent and slowly gets louder. For normal sleepers.' },
-  { mode: 'deep', title: 'Deep sleeper · 520 Hz', text: 'A low tone in bursts of three. It woke far more deep sleepers than high beeps in tests. Hold to stop.' },
-];
-const soundTitle = (mode: WakeMode) => SOUNDS.find((s) => s.mode === mode)!.title;
+const soundTitle = (id: AlarmSoundId) => (SOUNDS[id] ?? SOUNDS.gentle).title;
 const minutes = (values: number[]) => values.map((v) => ({ value: v, label: `${v} min` }));
 const fadeLabel = (s: number) => (s < 60 ? `${s} s` : `${s / 60} min`);
 const PREVIEW_SECONDS = 6;
@@ -45,7 +42,7 @@ export default function EditAlarm() {
   const existing = data.alarms.find((a) => a.id === id);
   const [draft, setDraft] = useState<Alarm>(() => existing ?? newAlarm(makeId()));
   const [sheet, setSheet] = useState<SheetName>(null);
-  const [playing, setPlaying] = useState<WakeMode | null>(null);
+  const [playing, setPlaying] = useState<AlarmSoundId | null>(null);
   const playTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preview = usePreview();
   const permissions = usePermissions();
@@ -57,15 +54,15 @@ export default function EditAlarm() {
     if (playTimer.current) clearTimeout(playTimer.current);
   }, []);
 
-  const togglePlay = (mode: WakeMode) => {
+  const togglePlay = (sound: AlarmSoundId) => {
     if (playTimer.current) clearTimeout(playTimer.current);
-    if (playing === mode) {
+    if (playing === sound) {
       preview.stop();
       setPlaying(null);
       return;
     }
-    preview.play(mode, PREVIEW_SECONDS, draft.volume);
-    setPlaying(mode);
+    preview.play(sound, PREVIEW_SECONDS, draft.volume);
+    setPlaying(sound);
     playTimer.current = setTimeout(() => setPlaying(null), PREVIEW_SECONDS * 1000);
   };
 
@@ -130,21 +127,21 @@ export default function EditAlarm() {
           {/* Siblings, not nested: a button inside a button isn't allowed on web and confuses screen readers. */}
           <View style={styles.soundRow}>
             <Pressable
-              onPress={() => togglePlay(draft.mode)}
+              onPress={() => togglePlay(draft.sound)}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel={playing === draft.mode ? 'Stop preview' : 'Play preview'}
+              accessibilityLabel={playing === draft.sound ? 'Stop preview' : 'Play preview'}
               style={styles.play}
             >
-              <Ionicons name={playing === draft.mode ? 'stop' : 'play'} size={18} color={colors.text} />
+              <Ionicons name={playing === draft.sound ? 'stop' : 'play'} size={18} color={colors.text} />
             </Pressable>
-            <Pressable onPress={() => setSheet('sound')} accessibilityRole="button" accessibilityLabel={`Sound: ${soundTitle(draft.mode)}. Change`} style={({ pressed }) => [styles.soundPick, pressed && styles.pressed]}>
-              <Txt style={styles.soundName} numberOfLines={1}>{soundTitle(draft.mode)}</Txt>
+            <Pressable onPress={() => setSheet('sound')} accessibilityRole="button" accessibilityLabel={`Sound: ${soundTitle(draft.sound)}. Change`} style={({ pressed }) => [styles.soundPick, pressed && styles.pressed]}>
+              <Txt style={styles.soundName} numberOfLines={1}>{soundTitle(draft.sound)}</Txt>
               <Ionicons name="chevron-forward" size={24} color={colors.text} />
             </Pressable>
           </View>
           <View style={styles.progress} accessible={false}>
-            {playing === draft.mode ? <Animated.View key={String(playing)} style={[styles.progressFill, PREVIEW_PROGRESS]} /> : <View style={styles.progressDot} />}
+            {playing === draft.sound ? <Animated.View key={String(playing)} style={[styles.progressFill, PREVIEW_PROGRESS]} /> : <View style={styles.progressDot} />}
           </View>
           <View style={styles.volumeRow}>
             <Ionicons name="volume-medium" size={26} color={colors.text} />
@@ -182,32 +179,41 @@ export default function EditAlarm() {
       </View>
 
       <Sheet visible={sheet === 'sound'} onClose={() => setSheet(null)} title="Alarm sound">
-        {SOUNDS.map((s) => {
-          const on = draft.mode === s.mode;
-          return (
-            <View key={s.mode}>
-              <Pressable
-                onPress={() => {
-                  if (!on) haptic('select');
-                  set({ mode: s.mode });
-                }}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={`${s.title}. ${s.text}`}
-                style={[styles.option, on && styles.optionOn]}
-              >
-                <View style={styles.optionTop}>
-                  <Ionicons name={MODE_ICON[s.mode]} size={22} color={colors.text} />
-                  <Txt variant="heading" style={styles.flex}>{s.title}</Txt>
-                </View>
-                <Txt variant="caption">{s.text}</Txt>
-              </Pressable>
-              <Pressable onPress={() => togglePlay(s.mode)} hitSlop={8} accessibilityRole="button" accessibilityLabel={playing === s.mode ? 'Stop preview' : `Play ${s.title}`} style={styles.playSmall}>
-                <Ionicons name={playing === s.mode ? 'stop' : 'play'} size={16} color={colors.text} />
-              </Pressable>
+        {SOUND_CATEGORIES.map((category) => (
+          <View key={category.id} style={styles.soundGroup}>
+            <View style={styles.groupHead}>
+              <Ionicons name={CATEGORY_ICON[category.id]} size={18} color={colors.textMuted} />
+              <Txt variant="section">{category.title}</Txt>
             </View>
-          );
-        })}
+            <Txt variant="caption" style={styles.groupText}>{category.description}</Txt>
+            {soundsIn(category.id).map((id) => {
+              const on = draft.sound === id;
+              return (
+                <View key={id} style={styles.soundOption}>
+                  <Pressable onPress={() => togglePlay(id)} hitSlop={6} accessibilityRole="button" accessibilityLabel={playing === id ? 'Stop preview' : `Play ${SOUNDS[id].title}`} style={styles.playSmall}>
+                    <Ionicons name={playing === id ? 'stop' : 'play'} size={16} color={colors.text} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      if (!on) haptic('select');
+                      set({ sound: id, mode: SOUNDS[id].mode });
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: on }}
+                    accessibilityLabel={SOUNDS[id].description ? `${SOUNDS[id].title}. ${SOUNDS[id].description}` : SOUNDS[id].title}
+                    style={({ pressed }) => [styles.soundPickRow, pressed && styles.pressed]}
+                  >
+                    <View style={styles.flex}>
+                      <Txt style={[styles.optionTitle, on && styles.optionTitleOn]}>{SOUNDS[id].title}</Txt>
+                      {SOUNDS[id].description ? <Txt variant="caption">{SOUNDS[id].description}</Txt> : null}
+                    </View>
+                    {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : null}
+                  </Pressable>
+                </View>
+              );
+            })}
+          </View>
+        ))}
       </Sheet>
 
       <Sheet visible={sheet === 'gentle'} onClose={() => setSheet(null)} title="Gentle wake-up">
@@ -279,8 +285,12 @@ const styles = StyleSheet.create({
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
   save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   saveText: { fontSize: 19, fontWeight: '700', color: colors.onAccent },
-  option: { gap: space.sm, padding: space.lg, borderRadius: radius.md + 6, borderWidth: 1.5, borderColor: colors.surfaceRaised, backgroundColor: colors.surfaceRaised },
-  optionOn: { borderColor: colors.text },
-  optionTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: 44 },
-  playSmall: { position: 'absolute', top: space.md, right: space.md, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  soundGroup: { marginBottom: space.lg },
+  groupHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  groupText: { marginTop: 2, marginBottom: space.xs },
+  soundOption: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 60 },
+  soundPickRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  optionTitle: { fontSize: 18, lineHeight: 24, fontWeight: '500', color: colors.text },
+  optionTitleOn: { fontWeight: '700' },
+  playSmall: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center', paddingLeft: 2 },
 });

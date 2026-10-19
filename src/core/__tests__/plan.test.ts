@@ -1,5 +1,5 @@
 import { emptyData, newAlarm } from '../defaults';
-import { FOLLOW_UP_SECONDS, NOTIFICATION_LIMIT, buildPlan } from '../plan';
+import { FOLLOW_UP_SECONDS, NOTIFICATION_LIMIT, buildPlan, phaseAt, soundAt } from '../plan';
 import type { Alarm, AppData } from '../types';
 
 const at = (day: number, h: number, m = 0) => new Date(2026, 9, day, h, m).getTime();
@@ -84,5 +84,28 @@ describe('buildPlan', () => {
     expect(plan.find((p) => p.id === 'event:s')?.kind).toBe('snooze');
     expect(plan.find((p) => p.id === 'event:c')?.sound).toBe('chime');
     expect(plan.some((p) => p.id.startsWith('followup:event:s:'))).toBe(true);
+  });
+});
+
+describe('soundAt', () => {
+  it('plays a calm sound, then switches to the 520 Hz tone when it escalates', () => {
+    const alarm = { ...newAlarm('a'), sound: 'ocean' as const, mode: 'gentle' as const, escalate: true, escalateAfterMinutes: 2 };
+    expect(soundAt(alarm, 'alarm', 30)).toBe('ocean');
+    expect(soundAt(alarm, 'alarm', 121)).toBe('deep');
+  });
+
+  it('plays a loud sound from the start', () => {
+    const alarm = { ...newAlarm('a'), sound: 'air_raid' as const, mode: 'deep' as const };
+    expect(soundAt(alarm, 'alarm', 0)).toBe('air_raid');
+    expect(phaseAt(alarm, 'alarm', 0)).toBe('deep');
+  });
+
+  it('keeps alarms saved before sounds existed on their old tone', () => {
+    expect(soundAt({ ...newAlarm('a'), mode: 'deep' }, 'alarm', 0)).toBe('deep');
+    expect(soundAt(newAlarm('a'), 'alarm', 0)).toBe('gentle');
+  });
+
+  it('rings the 520 Hz tone when you miss the awake check', () => {
+    expect(soundAt({ ...newAlarm('a'), sound: 'birds' as const }, 'recheck', 0)).toBe('deep');
   });
 });

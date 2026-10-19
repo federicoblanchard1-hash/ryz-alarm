@@ -3,14 +3,14 @@ import { AndroidAudioContentType, AndroidAudioUsage, AndroidImportance, AndroidN
 import { Platform } from 'react-native';
 
 import type { PlannedNotification, PlannedTrigger } from '@/core/plan';
-import type { SoundId } from '@/core/types';
+import { ALARM_SOUNDS, SOUNDS } from '@/core/sounds';
+import type { AlarmSoundId, SoundId } from '@/core/types';
 
 /** Scheduling only exists on phones; the web build is a preview. */
 export const canSchedule = Platform.OS === 'ios' || Platform.OS === 'android';
 
 const SOUND_FILE: Record<SoundId, string> = {
-  gentle: 'gentle_melody.wav',
-  deep: 'deep_520hz.wav',
+  ...(Object.fromEntries(ALARM_SOUNDS.map((id) => [id, SOUNDS[id].file])) as Record<AlarmSoundId, string>),
   chime: 'chime.wav',
 };
 
@@ -47,10 +47,7 @@ export async function setupNotifications(): Promise<void> {
       lockscreenVisibility: AndroidNotificationVisibility.PUBLIC,
     });
   await Promise.all([
-    alarmChannel('gentle', true, 'Alarm · gentle'),
-    alarmChannel('gentle', false, 'Alarm · gentle, no vibration'),
-    alarmChannel('deep', true, 'Alarm · deep sleeper'),
-    alarmChannel('deep', false, 'Alarm · deep sleeper, no vibration'),
+    ...ALARM_SOUNDS.flatMap((id) => [alarmChannel(id, true, `Alarm · ${SOUNDS[id].title}`), alarmChannel(id, false, `Alarm · ${SOUNDS[id].title}, no vibration`)]),
     Notifications.setNotificationChannelAsync(channelId('chime', true), {
       name: 'Reminders',
       importance: AndroidImportance.HIGH,

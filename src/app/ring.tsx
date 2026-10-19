@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HoldButton } from '@/components/HoldButton';
 import { Button, Txt, haptic } from '@/components/ui';
 import { MISSIONS } from '@/core/missions';
-import { soundAt } from '@/core/plan';
+import { phaseAt } from '@/core/plan';
 import { canSnooze, defaultAlarmFor, findActive, snooze, stop } from '@/core/ring';
 import { MINUTE, formatClock, formatClockText } from '@/core/time';
 import type { ActiveRing } from '@/core/types';
@@ -121,7 +121,7 @@ export default function RingScreen() {
     );
   }
 
-  const deepNow = soundAt(alarm, ring.source, (now - ring.at) / 1000) === 'deep';
+  const deepNow = phaseAt(alarm, ring.source, (now - ring.at) / 1000) === 'deep';
   const snoozesLeft = alarm.snooze.limit - ring.snoozesUsed;
   const subtitle =
     ring.source === 'recheck' ? "You didn't answer — time to get up" : ring.source === 'snooze' ? 'Snooze is over' : alarm.label || 'Good morning';

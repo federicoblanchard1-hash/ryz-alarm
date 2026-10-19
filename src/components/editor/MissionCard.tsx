@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Sheet } from '@/components/Sheet';
 import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
@@ -68,7 +68,8 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
         <Txt style={styles.title}>Mission</Txt>
         <Txt variant="row" style={styles.count}>{`${missions.length}/${MAX_MISSIONS}`}</Txt>
       </View>
-      <View style={styles.slots}>
+      {/* Five slots don't fit across a phone, so they scroll sideways like Alarmy's. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.slotScroll} contentContainerStyle={styles.slots}>
         {Array.from({ length: MAX_MISSIONS }, (_, i) => {
           const m = missions[i];
           if (m) {
@@ -93,7 +94,7 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
             </View>
           );
         })}
-      </View>
+      </ScrollView>
       <LinkRow title="Wake up check" value={awakeCheckLabel} onPress={onAwakeCheck} />
 
       <Sheet visible={picking} onClose={() => setPicking(false)} title="Mission">
@@ -147,7 +148,9 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 19, lineHeight: 24, fontWeight: '600', color: colors.text },
   count: { color: colors.textMuted },
-  slots: { flexDirection: 'row', gap: space.md, marginTop: space.xl, marginBottom: space.sm },
+  slotScroll: { marginHorizontal: -space.xl, marginTop: space.lg, marginBottom: space.xs },
+  // Room above for the remove badges, which sit outside the slots.
+  slots: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingTop: space.md, paddingBottom: space.sm },
   slot: { width: SLOT, height: SLOT, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 4 },
   slotOn: { backgroundColor: colors.accent },
   slotNext: { backgroundColor: colors.surfaceRaised },

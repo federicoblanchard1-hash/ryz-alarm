@@ -1,6 +1,7 @@
 import { defaultAlarmFor } from './ring';
 import { MINUTE, formatClockText, formatHours, nextOccurrence } from './time';
-import type { Alarm, AppData, SoundId, Weekday } from './types';
+import { SOUNDS } from './sounds';
+import type { Alarm, AppData, SoundId, WakeMode, Weekday } from './types';
 
 export type PlannedTrigger =
   | { type: 'date'; date: number }
@@ -35,9 +36,21 @@ interface Ring {
 }
 
 /** The sound a ring makes `seconds` after it started. */
-export function soundAt(alarm: Alarm, kind: Ring['kind'], seconds: number): SoundId {
+/** Whether a ring is in its soft, fading phase or its loud one at `seconds` in. */
+export function phaseAt(alarm: Alarm, kind: Ring['kind'], seconds: number): WakeMode {
   if (alarm.mode === 'deep' || kind === 'recheck') return 'deep';
   return alarm.escalate && seconds >= alarm.escalateAfterMinutes * 60 ? 'deep' : 'gentle';
+}
+
+/**
+ * The sound playing at `seconds` in: the alarm's own sound in the phase it
+ * belongs to, otherwise the melody (soft) or the 520 Hz tone (loud).
+ */
+export function soundAt(alarm: Alarm, kind: Ring['kind'], seconds: number): SoundId {
+  const phase = phaseAt(alarm, kind, seconds);
+  const own = SOUNDS[alarm.sound] ?? SOUNDS.gentle;
+  if (own.mode === phase) return alarm.sound;
+  return phase === 'deep' ? 'deep' : 'gentle';
 }
 
 function title(alarm: Alarm): string {

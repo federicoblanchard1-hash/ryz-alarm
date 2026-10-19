@@ -9,7 +9,11 @@ export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
  */
 export type WakeMode = 'gentle' | 'deep';
 
-export type SoundId = 'gentle' | 'deep' | 'chime';
+/** The sounds an alarm can ring with; see core/sounds.ts. */
+export type AlarmSoundId = 'gentle' | 'deep' | 'air_raid' | 'yelp' | 'two_tone' | 'buzzer' | 'bell' | 'wind_chimes' | 'ocean' | 'birds' | 'sunrise' | 'music_box';
+
+/** Every sound file, including the reminder chime. */
+export type SoundId = AlarmSoundId | 'chime';
 
 export interface Alarm {
   id: string;
@@ -22,6 +26,8 @@ export interface Alarm {
   label: string;
   enabled: boolean;
   mode: WakeMode;
+  /** What it rings with. Its category sets `mode`: calm sounds fade in, loud ones need a hold to stop. */
+  sound: AlarmSoundId;
   /** Gentle mode: seconds the melody takes to reach full volume. */
   fadeInSeconds: number;
   /** Gentle mode: switch to the deep tone if still ringing after `escalateAfterMinutes`. */

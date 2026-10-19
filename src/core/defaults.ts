@@ -11,6 +11,7 @@ export function newAlarm(id: string): Alarm {
     label: '',
     enabled: true,
     mode: 'gentle',
+    sound: 'gentle',
     fadeInSeconds: 60,
     escalate: true,
     escalateAfterMinutes: 2,
@@ -26,7 +27,7 @@ export function newAlarm(id: string): Alarm {
 
 /** The alarm a test ring uses: the deep tone, so you hear the loudest case. */
 export function testAlarm(): Alarm {
-  return { ...newAlarm(TEST_ALARM_ID), label: 'Test alarm', days: [], mode: 'deep', ringMinutes: 2, snooze: { enabled: false, minutes: 9, limit: 0 } };
+  return { ...newAlarm(TEST_ALARM_ID), label: 'Test alarm', days: [], mode: 'deep', sound: 'deep', ringMinutes: 2, snooze: { enabled: false, minutes: 9, limit: 0 } };
 }
 
 export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): Settings {

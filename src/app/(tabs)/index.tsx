@@ -111,11 +111,16 @@ export default function Home() {
             ) : null}
           </PressableScale>
         ) : ready ? (
-          <Card style={styles.emptyCard}>
-            <Txt variant="heading">No alarm set</Txt>
-            <Txt variant="muted">Pick how you want to wake up, and add a mission to make sure you do.</Txt>
-            <Button title="Set an alarm" icon="add" onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: 'new' } })} style={styles.emptyButton} />
-          </Card>
+          <PressableScale onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: 'new' } })} style={styles.emptyCard} accessibilityLabel="No alarm set. Set an alarm">
+            <View style={styles.emptyIcon}>
+              <Ionicons name="add" size={22} color={colors.onAccent} />
+            </View>
+            <View style={styles.flex}>
+              <Txt variant="heading">No alarm set</Txt>
+              <Txt variant="caption">Tap to set one</Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </PressableScale>
         ) : null}
 
         {awakeCheck ? (
@@ -158,8 +163,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
-  emptyCard: { padding: space.xl, gap: space.sm },
-  emptyButton: { marginTop: space.sm },
+  emptyCard: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md + 4, backgroundColor: colors.surface },
+  emptyIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   tiles: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: space.sm, paddingTop: space.xxl, paddingBottom: space.xl },
   tileWrap: { width: 84, alignItems: 'center', gap: space.sm },
   tile: { width: 68, height: 68, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },

@@ -53,7 +53,17 @@
           "sounds": [
             "./assets/sounds/deep_520hz.wav",
             "./assets/sounds/gentle_melody.wav",
-            "./assets/sounds/chime.wav"
+            "./assets/sounds/chime.wav",
+            "./assets/sounds/loud_air_raid.wav",
+            "./assets/sounds/loud_yelp.wav",
+            "./assets/sounds/loud_two_tone.wav",
+            "./assets/sounds/loud_buzzer.wav",
+            "./assets/sounds/loud_bell.wav",
+            "./assets/sounds/calm_wind_chimes.wav",
+            "./assets/sounds/calm_ocean.wav",
+            "./assets/sounds/calm_birds.wav",
+            "./assets/sounds/calm_sunrise.wav",
+            "./assets/sounds/calm_music_box.wav"
           ]
         }
       ],
