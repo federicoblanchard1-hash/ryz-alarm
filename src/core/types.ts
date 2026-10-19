@@ -110,6 +110,10 @@ export interface Settings {
   brightScreen: boolean;
   /** On the morning screen, a reminder to get daylight soon after waking. */
   morningLight: boolean;
+  /** Sleep comes in automatically from a smartwatch (Apple Health / Health Connect) instead of the button. */
+  smartwatch: boolean;
+  /** What you want Ryz to help with, from sign-up. */
+  goals: string[];
 }
 
 export type AgeGroup = 'teen' | 'young' | 'adult' | 'older';
@@ -134,6 +138,8 @@ export interface SleepRecord {
   end: number;
   /** How rested you felt, 1 (awful) to 5 (great). */
   rating?: 1 | 2 | 3 | 4 | 5;
+  /** Where it came from: the Start sleep button (default), typed in, or a smartwatch via Apple Health / Health Connect. */
+  source?: 'button' | 'manual' | 'watch';
 }
 
 export interface AppData {

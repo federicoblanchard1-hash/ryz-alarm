@@ -42,7 +42,7 @@ export function endSleep(data: AppData, now: number): { data: AppData; record: S
   const start = data.sleepingSince;
   const end = Math.min(now, start + MAX_SLEEP_MS);
   if (end - start < MIN_SLEEP_MS) return { data: { ...data, sleepingSince: null }, record: null };
-  const record: SleepRecord = { id: String(start), start, end };
+  const record: SleepRecord = { id: String(start), start, end, source: 'button' };
   return { data: { ...data, sleepingSince: null, sleep: addRecord(data.sleep, record) }, record };
 }
 
@@ -66,7 +66,7 @@ export function manualRecord(wakeDay: number, bed: { hour: number; minute: numbe
   if (start.getTime() >= end.getTime()) start.setDate(start.getDate() - 1);
   const ms = end.getTime() - start.getTime();
   if (ms < MIN_SLEEP_MS || ms > MAX_SLEEP_MS) return null;
-  return { id: `m${start.getTime()}`, start: start.getTime(), end: end.getTime() };
+  return { id: `m${start.getTime()}`, start: start.getTime(), end: end.getTime(), source: 'manual' };
 }
 
 /** Minutes after noon, so bedtimes either side of midnight average sensibly. */
@@ -143,3 +143,129 @@ export const RATINGS: { value: NonNullable<SleepRecord['rating']>; label: string
   { value: 4, label: 'Good' },
   { value: 5, label: 'Great' },
 ];
+
+// ---- Smartwatch nights
+
+/** Pieces of sleep this close together belong to the same night. */
+const SAME_NIGHT_GAP = 90 * MIN;
+
+/**
+ * Turns the asleep intervals a watch reports (often many short pieces, split
+ * by awakenings or sleep stages) into nights: from falling asleep to the
+ * last wake-up, keeping only real nights.
+ */
+export function nightsFromIntervals(intervals: { start: number; end: number }[]): SleepRecord[] {
+  const sorted = intervals.filter((i) => i.end > i.start).sort((a, b) => a.start - b.start);
+  const nights: SleepRecord[] = [];
+  let current: { start: number; end: number } | null = null;
+  const flush = () => {
+    if (current && current.end - current.start >= 2 * 60 * MIN) {
+      const end = Math.min(current.end, current.start + MAX_SLEEP_MS);
+      nights.push({ id: `w${current.start}`, start: current.start, end, source: 'watch' });
+    }
+  };
+  for (const i of sorted) {
+    if (current && i.start - current.end <= SAME_NIGHT_GAP) current.end = Math.max(current.end, i.end);
+    else {
+      flush();
+      current = { ...i };
+    }
+  }
+  flush();
+  return nights;
+}
+
+/** Adds nights from a watch; a night logged by hand or button that day keeps its rating. */
+export function mergeWatchNights(list: SleepRecord[], nights: SleepRecord[]): SleepRecord[] {
+  let out = list;
+  for (const n of nights) {
+    const same = out.find((r) => nightKey(r) === nightKey(n));
+    if (same?.source === 'watch' && same.start === n.start && same.end === n.end) continue;
+    // The watch measured it, so it replaces a guess, keeping how you said you felt.
+    out = [...out.filter((r) => r !== same), { ...n, rating: same?.rating }].sort((a, b) => a.end - b.end).slice(-KEEP_NIGHTS);
+  }
+  return out;
+}
+
+// ---- Ranges and grouping for the chart
+
+export interface Bucket {
+  /** Start of the bucket (ms), also its key. */
+  start: number;
+  /** One night, a week or a month. */
+  size: 'night' | 'week' | 'month';
+  /** Average minutes asleep over the logged nights in it; null if none. */
+  minutes: number | null;
+  nights: SleepRecord[];
+}
+
+const startOfDay = (ms: number) => {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+};
+
+/** Records whose morning falls between two days (inclusive). */
+export function between(list: SleepRecord[], fromDay: number, toDay: number): SleepRecord[] {
+  const from = startOfDay(fromDay);
+  const to = startOfDay(toDay) + DAY;
+  return list.filter((r) => r.end >= from && r.end < to);
+}
+
+/**
+ * Chart columns for a range: one per night up to a month, one per week up to
+ * about four months, and one per month beyond, each the average of its nights.
+ */
+export function buckets(list: SleepRecord[], fromDay: number, toDay: number): Bucket[] {
+  const from = startOfDay(fromDay);
+  const to = startOfDay(toDay);
+  const days = Math.round((to - from) / DAY) + 1;
+  const size: Bucket['size'] = days <= 31 ? 'night' : days <= 120 ? 'week' : 'month';
+  const starts: number[] = [];
+  if (size === 'night') for (let d = new Date(from); d.getTime() <= to; d.setDate(d.getDate() + 1)) starts.push(d.getTime());
+  else if (size === 'week') {
+    const d = new Date(from);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    for (; d.getTime() <= to; d.setDate(d.getDate() + 7)) starts.push(d.getTime());
+  } else {
+    const d = new Date(from);
+    d.setDate(1);
+    for (; d.getTime() <= to; d.setMonth(d.getMonth() + 1)) starts.push(d.getTime());
+  }
+  return starts.map((start, i) => {
+    const end = i + 1 < starts.length ? starts[i + 1] : to + DAY;
+    const nights = list.filter((r) => r.end >= Math.max(start, from) && r.end < end);
+    return { start, size, minutes: nights.length ? mean(nights.map(minutesAsleep)) : null, nights };
+  });
+}
+
+export interface MoreStats {
+  longest: SleepRecord;
+  shortest: SleepRecord;
+  /** Share of nights that reached the goal, 0–1. */
+  onGoal: number;
+  /** Bedtime spread (standard deviation), minutes. */
+  bedSpread: number;
+  /**
+   * Social jet lag: how much later the middle of your sleep falls on
+   * weekends than on weekdays, in minutes (Wittmann et al., 2006). Null
+   * without both kinds of nights.
+   */
+  socialJetLag: number | null;
+}
+
+export function moreStats(list: SleepRecord[], goalMinutes: number): MoreStats | null {
+  if (list.length === 0) return null;
+  const byLength = [...list].sort((a, b) => minutesAsleep(b) - minutesAsleep(a));
+  const mid = (r: SleepRecord) => clockFromNoon(r.start + (r.end - r.start) / 2);
+  // A night "is" a weekend night when the morning after is Saturday or Sunday.
+  const weekend = list.filter((r) => [0, 6].includes(new Date(r.end).getDay()));
+  const weekdays = list.filter((r) => ![0, 6].includes(new Date(r.end).getDay()));
+  return {
+    longest: byLength[0],
+    shortest: byLength[byLength.length - 1],
+    onGoal: list.filter((r) => minutesAsleep(r) >= goalMinutes - 10).length / list.length,
+    bedSpread: list.length > 1 ? spread(list.map((r) => clockFromNoon(r.start))) : 0,
+    socialJetLag: weekend.length && weekdays.length ? mean(weekend.map(mid)) - mean(weekdays.map(mid)) : null,
+  };
+}

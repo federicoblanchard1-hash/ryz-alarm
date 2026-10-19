@@ -30,7 +30,8 @@
         "android.permission.USE_EXACT_ALARM",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.VIBRATE",
-        "android.permission.ACTIVITY_RECOGNITION"
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.health.READ_SLEEP"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -115,6 +116,23 @@
         {
           "cameraPermission": "Ryz uses the camera to scan the QR code or barcode you chose for a wake-up mission, so you have to get out of bed to stop the alarm.",
           "recordAudioAndroid": false
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Ryz reads the sleep your watch records, so your nights appear in the sleep tracker without pressing a button.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
         }
       ]
     ]

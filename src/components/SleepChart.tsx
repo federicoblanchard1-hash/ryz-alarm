@@ -1,39 +1,50 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { formatDuration, minutesAsleep } from '@/core/sleep';
-import type { SleepRecord } from '@/core/types';
+import { formatDuration, type Bucket } from '@/core/sleep';
 import { FONT, colors, space } from '@/theme';
 
 const HEIGHT = 168;
 const AXIS = 34;
 
-interface Slot {
-  day: number;
-  record: SleepRecord | null;
+const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' });
+const DAY_NUM = new Intl.DateTimeFormat(undefined, { day: 'numeric' });
+const MONTH = new Intl.DateTimeFormat(undefined, { month: 'narrow' });
+const SHORT = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+const WEEK = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const MONTH_LONG = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
+
+export function bucketLabel(b: Bucket): string {
+  if (b.size === 'night') return SHORT.format(b.start);
+  if (b.size === 'week') return `Week of ${WEEK.format(b.start)}`;
+  return MONTH_LONG.format(b.start);
 }
 
-const WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: 'narrow' });
-const SHORT = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+function tickLabel(b: Bucket, i: number, count: number): string {
+  if (b.size === 'month') return MONTH.format(b.start);
+  if (b.size === 'week') return i % 2 === 0 ? WEEK.format(b.start).split(' ')[0] : '';
+  if (count <= 14) return WEEKDAY.format(b.start);
+  return (count - 1 - i) % 7 === 0 ? DAY_NUM.format(b.start) : '';
+}
 
 /**
- * Hours slept per night as columns from one baseline, with the sleep goal
- * as a labelled line. One series, so no legend: the title names it. Tap a
- * night to read it exactly; `onSelect` gets it so the screen can show details.
+ * Hours slept as columns from one baseline, with the sleep goal as a
+ * labelled line: one per night, or the average per week or month for long
+ * ranges. One series, so no legend: the title names it. Tap a column to
+ * read it exactly; `onSelect` gets it so the screen can show details.
  */
-export function SleepChart({ slots, goalMinutes, selected, onSelect }: { slots: Slot[]; goalMinutes: number; selected: number | null; onSelect: (day: number | null) => void }) {
+export function SleepChart({ buckets, goalMinutes, selected, onSelect }: { buckets: Bucket[]; goalMinutes: number; selected: number | null; onSelect: (start: number | null) => void }) {
   const [width, setWidth] = useState(0);
-  const most = Math.max(goalMinutes, ...slots.map((s) => (s.record ? minutesAsleep(s.record) : 0)));
+  const most = Math.max(goalMinutes, ...buckets.map((b) => b.minutes ?? 0));
   // A clean top: the next even hour above the longest night or the goal.
   const topHours = Math.max(10, Math.ceil(most / 60 / 2) * 2);
   const ticks = [0, topHours / 2, topHours];
   const y = (minutes: number) => (minutes / 60 / topHours) * HEIGHT;
-  const slot = width > 0 ? (width - AXIS) / slots.length : 0;
-  const bar = Math.max(4, Math.min(24, slot - 6));
-  const labelEvery = slots.length > 14 ? 7 : 1;
+  const slot = width > 0 ? (width - AXIS) / Math.max(1, buckets.length) : 0;
+  const bar = Math.max(3, Math.min(24, slot - (slot > 10 ? 6 : 2)));
 
   return (
-    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} accessibilityLabel="Hours slept each night" accessible={false}>
+    <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <View style={{ height: HEIGHT }}>
         {ticks.map((h) => (
           <View key={h} style={[styles.grid, { bottom: y(h * 60) }]} pointerEvents="none">
@@ -44,23 +55,22 @@ export function SleepChart({ slots, goalMinutes, selected, onSelect }: { slots: 
           <Text style={styles.goalLabel}>{`Goal ${formatDuration(goalMinutes)}`}</Text>
         </View>
         <View style={[styles.columns, { left: AXIS }]}>
-          {slots.map((s) => {
-            const minutes = s.record ? minutesAsleep(s.record) : 0;
-            const on = selected === s.day;
+          {buckets.map((b) => {
+            const on = selected === b.start;
             const dim = selected !== null && !on;
-            const date = SHORT.format(s.day);
+            const label = bucketLabel(b);
             return (
               <Pressable
-                key={s.day}
-                onPress={() => s.record && onSelect(on ? null : s.day)}
-                disabled={!s.record}
+                key={b.start}
+                onPress={() => b.minutes !== null && onSelect(on ? null : b.start)}
+                disabled={b.minutes === null}
                 accessibilityRole="button"
-                accessibilityLabel={s.record ? `${date}: ${formatDuration(minutes)}` : `${date}: not logged`}
+                accessibilityLabel={b.minutes !== null ? `${label}: ${formatDuration(b.minutes)}` : `${label}: not logged`}
                 accessibilityState={{ selected: on }}
                 style={[styles.slot, { width: slot }]}
               >
-                {s.record ? (
-                  <View style={[styles.bar, { width: bar, height: Math.max(4, y(minutes)) }, dim && styles.dim]} />
+                {b.minutes !== null ? (
+                  <View style={[styles.bar, { width: bar, height: Math.max(4, y(b.minutes)) }, dim && styles.dim]} />
                 ) : (
                   <View style={[styles.empty, { width: bar }]} />
                 )}
@@ -70,9 +80,9 @@ export function SleepChart({ slots, goalMinutes, selected, onSelect }: { slots: 
         </View>
       </View>
       <View style={[styles.days, { paddingLeft: AXIS }]}>
-        {slots.map((s, i) => (
-          <Text key={s.day} style={[styles.day, { width: slot }, selected === s.day && styles.dayOn]}>
-            {(slots.length - 1 - i) % labelEvery === 0 ? WEEKDAY.format(s.day) : ''}
+        {buckets.map((b, i) => (
+          <Text key={b.start} numberOfLines={1} style={[styles.day, { width: slot }, selected === b.start && styles.dayOn]}>
+            {tickLabel(b, i, buckets.length)}
           </Text>
         ))}
       </View>

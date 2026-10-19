@@ -46,6 +46,8 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
     quietDuringMissions: true,
     brightScreen: true,
     morningLight: true,
+    smartwatch: false,
+    goals: [],
   };
 }
 

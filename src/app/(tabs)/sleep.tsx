@@ -1,27 +1,47 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RangeCalendar } from '@/components/RangeCalendar';
 import { Sheet } from '@/components/Sheet';
-import { SleepChart } from '@/components/SleepChart';
+import { SleepChart, bucketLabel } from '@/components/SleepChart';
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { TimePicker } from '@/components/TimePicker';
-import { Button, Chips, Segmented, Txt, haptic } from '@/components/ui';
+import { Button, Chips, Segmented, ThemedSwitch, Txt, haptic } from '@/components/ui';
 import { nextRing, sleepAdvice } from '@/core/next';
-import { RATINGS, addRecord, endSleep, formatDuration, lastNights, manualRecord, minutesAsleep, recent, sleepStats, startSleep, wrapDay } from '@/core/sleep';
+import {
+  RATINGS,
+  addRecord,
+  between,
+  buckets as makeBuckets,
+  endSleep,
+  formatDuration,
+  manualRecord,
+  mergeWatchNights,
+  minutesAsleep,
+  moreStats,
+  sleepStats,
+  startSleep,
+  wrapDay,
+} from '@/core/sleep';
 import { formatClockText } from '@/core/time';
 import type { SleepRecord } from '@/core/types';
+import { HEALTH_APP, connectHealth, healthState, readWatchNights, type HealthState } from '@/services/health';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { FONT, colors, radius, space } from '@/theme';
 
-const RANGES = [
+type Range = 7 | 14 | 30 | 365 | 'custom';
+const RANGES: { value: Range; label: string }[] = [
   { value: 7, label: 'Week' },
-  { value: 14, label: '2 weeks' },
+  { value: 14, label: '2 wk' },
   { value: 30, label: 'Month' },
+  { value: 365, label: 'Year' },
 ];
 const DATE = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+const SHORT_DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
 const DAY = 24 * 60 * 60_000;
 
 function clock(ms: number, use24h: boolean) {
@@ -40,7 +60,7 @@ function Tile({ label, value, note }: { label: string; value: string; note?: str
 }
 
 /** What the numbers mean, from the research. One message, the most useful one. */
-function insight(stats: NonNullable<ReturnType<typeof sleepStats>>, goal: number): { title: string; text: string } {
+function insight(stats: NonNullable<ReturnType<typeof sleepStats>>, goal: number, jetLag: number | null): { title: string; text: string } {
   if (stats.averageMinutes < 7 * 60) {
     return { title: 'Under 7 hours', text: 'Adults need 7 hours or more a night (AASM & SRS, 2015). An earlier bedtime is the easiest place to find it.' };
   }
@@ -50,27 +70,77 @@ function insight(stats: NonNullable<ReturnType<typeof sleepStats>>, goal: number
       text: `Your wake-up time varies by about ${Math.round(stats.wakeSpread)} min. Regular sleep times are linked with better long-term health, even more than total sleep (Windred et al., 2024).`,
     };
   }
+  if (jetLag !== null && jetLag > 60) {
+    return { title: 'Weekend jet lag', text: `On weekends you sleep about ${formatDuration(jetLag)} later than on weekdays. That shift works like flying across time zones every week (Wittmann et al., 2006). Keep weekend wake-ups within an hour.` };
+  }
   if (stats.averageMinutes < goal - 20) {
     return { title: 'A little short of your goal', text: `You're averaging ${formatDuration(goal - stats.averageMinutes)} less than your goal. Fifteen minutes earlier each night adds up.` };
   }
   return { title: 'Steady and rested', text: 'Enough sleep at regular times: keep the same wake-up time on weekends too.' };
 }
 
+const WATCH_NOTE: Record<HealthState, string> = {
+  ready: 'Your watch records your sleep, and the nights appear here by themselves. You don’t need to press anything.',
+  'needs-build': `Automatic sleep reads ${HEALTH_APP}, which needs the full Ryz app (a store or EAS build), not Expo Go. Until then, use the button.`,
+  unavailable: `${HEALTH_APP} isn’t available on this phone${Platform.OS === 'android' ? '. Install Health Connect from the Play Store' : ''}. Until then, use the button.`,
+  denied: `Ryz isn’t allowed to read your sleep. Allow it in ${HEALTH_APP}, or use the button.`,
+};
+
+/** Reads the watch's nights when the Sleep tab opens, if smartwatch mode is on. */
+function useWatchSync(on: boolean, onNights: (nights: SleepRecord[]) => void) {
+  const [state, setState] = useState<HealthState | null>(null);
+  const [syncedAt, setSyncedAt] = useState(0);
+  const sync = useCallback(async () => {
+    if (!on) return;
+    const s = await healthState();
+    setState(s);
+    if (s !== 'ready') return;
+    try {
+      const nights = await readWatchNights(Date.now() - 30 * DAY, Date.now());
+      onNights(nights);
+      setSyncedAt(Date.now());
+    } catch {
+      setState('denied');
+    }
+  }, [on, onNights]);
+  useFocusEffect(
+    useCallback(() => {
+      sync();
+    }, [sync]),
+  );
+  const connect = useCallback(async () => {
+    const s = await connectHealth();
+    setState(s);
+    if (s === 'ready') sync();
+  }, [sync]);
+  return { state, syncedAt, connect };
+}
+
 export default function SleepScreen() {
-  const { data, update } = useStore();
+  const { data, update, updateSettings } = useStore();
   const insets = useSafeAreaInsets();
   const tabSpace = useTabBarSpace();
   const now = useNow(30_000);
-  const [range, setRange] = useState(7);
+  const [range, setRange] = useState<Range>(7);
+  const [custom, setCustom] = useState<{ from: number | null; to: number | null }>({ from: null, to: null });
+  const [picking, setPicking] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const { use24h, sleepGoalMinutes: goal } = data.settings;
+  const { use24h, sleepGoalMinutes: goal, smartwatch } = data.settings;
 
-  const shown = recent(data.sleep, now, range);
+  const onNights = useCallback((nights: SleepRecord[]) => update((d) => ({ ...d, sleep: mergeWatchNights(d.sleep, nights) })), [update]);
+  const watch = useWatchSync(smartwatch, onNights);
+  const automatic = smartwatch && watch.state === 'ready';
+
+  const toDay = range === 'custom' ? (custom.to ?? custom.from ?? now) : now;
+  const fromDay = range === 'custom' ? (custom.from ?? now) : now - (range - 1) * DAY;
+  const shown = between(data.sleep, fromDay, toDay);
   const stats = sleepStats(shown, goal);
-  const slots = lastNights(data.sleep, now, range);
-  const picked = slots.find((s) => s.day === selected)?.record ?? null;
+  const more = moreStats(shown, goal);
+  const columns = makeBuckets(data.sleep, fromDay, toDay);
+  const picked = columns.find((b) => b.start === selected) ?? null;
   const next = nextRing(data, now);
   const advice = next ? sleepAdvice(next.at, now, goal, use24h) : null;
   const sleeping = data.sleepingSince !== null;
@@ -92,10 +162,17 @@ export default function SleepScreen() {
       if (globalThis.confirm?.('Delete this night?')) go();
     } else Alert.alert('Delete this night?', `${DATE.format(r.end)} · ${formatDuration(minutesAsleep(r))}`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: go }]);
   };
+  const toggleWatch = (on: boolean) => {
+    haptic('select');
+    updateSettings({ smartwatch: on });
+    if (on) watch.connect();
+  };
 
   const avgBed = stats ? wrapDay(stats.averageBed) : null;
   const avgWake = stats ? wrapDay(stats.averageWake) : null;
-  const tip = stats ? insight(stats, goal) : null;
+  const tip = stats ? insight(stats, goal, more?.socialJetLag ?? null) : null;
+  const nights = [...shown].reverse();
+  const rangeLabel = range === 'custom' && custom.from !== null ? `${SHORT_DATE.format(custom.from)} – ${SHORT_DATE.format(custom.to ?? custom.from)}` : null;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -108,7 +185,24 @@ export default function SleepScreen() {
         </View>
 
         <View style={[styles.session, sleeping && styles.sessionOn]}>
-          <Ionicons name={sleeping ? 'moon' : 'moon-outline'} size={28} color={colors.text} />
+          <View style={styles.watchRow}>
+            <Ionicons name="watch-outline" size={22} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="heading">Smartwatch</Txt>
+              <Txt variant="caption">{smartwatch ? `Automatic from ${HEALTH_APP}` : 'Off: use the button below'}</Txt>
+            </View>
+            <ThemedSwitch value={smartwatch} onChange={toggleWatch} label="I sleep with a smartwatch" />
+          </View>
+          <View style={styles.divider} />
+
+          {smartwatch ? (
+            <View style={styles.watchNote}>
+              <Txt variant="muted">{WATCH_NOTE[watch.state ?? 'ready']}</Txt>
+              {watch.state === 'denied' ? <Button title="Open settings" variant="secondary" icon="settings-outline" onPress={() => Linking.openSettings()} /> : null}
+              {automatic && watch.syncedAt > 0 ? <Txt variant="caption">{`Synced at ${clock(watch.syncedAt, use24h)}`}</Txt> : null}
+            </View>
+          ) : null}
+
           {sleeping && data.sleepingSince !== null ? (
             <>
               <Text style={styles.elapsed}>{formatDuration((now - data.sleepingSince) / 60_000)}</Text>
@@ -117,15 +211,38 @@ export default function SleepScreen() {
             </>
           ) : (
             <>
-              <Txt variant="heading">Going to bed?</Txt>
-              <Txt variant="muted">{advice ?? 'Start tracking when you lie down. Ryz ends it when you stop your alarm.'}</Txt>
-              <Button title="Start sleep" icon="bed-outline" onPress={start} />
+              {!automatic ? <Txt variant="heading">Going to bed?</Txt> : null}
+              {!automatic ? <Txt variant="muted">{advice ?? 'Tap Start sleep when you lie down. Ryz ends it when you stop your alarm.'}</Txt> : null}
+              <Button title="Start sleep" icon="bed-outline" onPress={start} disabled={automatic} variant={automatic ? 'secondary' : 'primary'} />
+              {automatic ? <Txt variant="caption" style={styles.center}>Not wearing your watch tonight? Turn Smartwatch off to use the button.</Txt> : null}
               {note ? <Txt variant="caption">{note}</Txt> : null}
             </>
           )}
         </View>
 
-        <Segmented label="Range" value={range} onChange={(v) => { setRange(v); setSelected(null); }} options={RANGES} />
+        <View style={styles.rangeRow}>
+          <View style={styles.flex}>
+            <Segmented
+              label="Range"
+              value={range === 'custom' ? 0 : range}
+              onChange={(v) => {
+                setRange(v as Range);
+                setSelected(null);
+                setShowAll(false);
+              }}
+              options={RANGES.map((r) => ({ value: r.value as number, label: r.label }))}
+            />
+          </View>
+          <Pressable onPress={() => setPicking(true)} accessibilityRole="button" accessibilityLabel="Pick dates" style={[styles.calendarButton, range === 'custom' && styles.calendarOn]}>
+            <Ionicons name="calendar-outline" size={20} color={range === 'custom' ? colors.onAccent : colors.text} />
+          </Pressable>
+        </View>
+        {rangeLabel ? (
+          <Pressable onPress={() => setRange(7)} accessibilityRole="button" accessibilityLabel={`${rangeLabel}. Clear dates`} style={styles.rangeChip}>
+            <Txt variant="caption" style={styles.rangeChipText}>{rangeLabel}</Txt>
+            <Ionicons name="close" size={14} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
 
         {stats ? (
           <>
@@ -143,26 +260,27 @@ export default function SleepScreen() {
 
             <View style={styles.chartCard}>
               <Txt variant="caption" style={styles.detail} accessibilityLiveRegion="polite">
-                {picked
-                  ? `${DATE.format(picked.end)} · ${formatDuration(minutesAsleep(picked))} · ${clock(picked.start, use24h)} – ${clock(picked.end, use24h)}${picked.rating ? ` · ${RATINGS[picked.rating - 1].label}` : ''}`
-                  : 'Hours slept each night. Tap one for details.'}
+                {picked && picked.minutes !== null
+                  ? picked.size === 'night' && picked.nights[0]
+                    ? `${bucketLabel(picked)} · ${formatDuration(picked.minutes)} · ${clock(picked.nights[0].start, use24h)} – ${clock(picked.nights[0].end, use24h)}${picked.nights[0].rating ? ` · ${RATINGS[picked.nights[0].rating - 1].label}` : ''}`
+                    : `${bucketLabel(picked)} · ${formatDuration(picked.minutes)} average · ${picked.nights.length} ${picked.nights.length === 1 ? 'night' : 'nights'}`
+                  : columns[0]?.size === 'night'
+                    ? 'Hours slept each night. Tap one for details.'
+                    : `Average a night, by ${columns[0]?.size}. Tap one for details.`}
               </Txt>
-              <SleepChart slots={slots} goalMinutes={goal} selected={selected} onSelect={setSelected} />
+              <SleepChart buckets={columns} goalMinutes={goal} selected={selected} onSelect={setSelected} />
             </View>
 
             <View style={styles.tiles}>
-              <Tile label="Bedtime" value={avgBed ? formatClockText(avgBed.hour, avgBed.minute, use24h) : '–'} note="on average" />
-              <Tile label="Wake-up" value={avgWake ? formatClockText(avgWake.hour, avgWake.minute, use24h) : '–'} note="on average" />
-              <Tile
-                label="Regularity"
-                value={stats.nights < 3 ? '–' : `±${Math.round(stats.wakeSpread)} min`}
-                note={stats.nights < 3 ? 'after 3 nights' : stats.wakeSpread <= 30 ? 'steady mornings' : 'mornings vary'}
-              />
-              <Tile
-                label={stats.debtMinutes > 0 ? 'Sleep debt' : 'Extra sleep'}
-                value={formatDuration(Math.abs(stats.debtMinutes))}
-                note={stats.rating ? `felt ${RATINGS[Math.round(stats.rating) - 1].label.toLowerCase()}` : 'vs your goal'}
-              />
+              <Tile label="Bedtime" value={avgBed ? formatClockText(avgBed.hour, avgBed.minute, use24h) : '–'} note={more && stats.nights > 2 ? `±${Math.round(more.bedSpread)} min` : 'on average'} />
+              <Tile label="Wake-up" value={avgWake ? formatClockText(avgWake.hour, avgWake.minute, use24h) : '–'} note={stats.nights > 2 ? `±${Math.round(stats.wakeSpread)} min` : 'on average'} />
+              <Tile label="Regularity" value={stats.nights < 3 ? '–' : stats.wakeSpread <= 30 ? 'Steady' : stats.wakeSpread <= 60 ? 'Fair' : 'Irregular'} note={stats.nights < 3 ? 'after 3 nights' : 'how much wake time moves'} />
+              <Tile label={stats.debtMinutes > 0 ? 'Sleep debt' : 'Extra sleep'} value={formatDuration(Math.abs(stats.debtMinutes))} note="vs your goal" />
+              {more ? <Tile label="Nights on goal" value={`${Math.round(more.onGoal * 100)}%`} note={`${Math.round(more.onGoal * stats.nights)} of ${stats.nights}`} /> : null}
+              {more ? <Tile label="Weekend shift" value={more.socialJetLag === null ? '–' : `${more.socialJetLag >= 0 ? '+' : '−'}${formatDuration(Math.abs(more.socialJetLag))}`} note={more.socialJetLag === null ? 'needs weekdays and weekends' : 'social jet lag'} /> : null}
+              {more ? <Tile label="Longest" value={formatDuration(minutesAsleep(more.longest))} note={SHORT_DATE.format(more.longest.end)} /> : null}
+              {more ? <Tile label="Shortest" value={formatDuration(minutesAsleep(more.shortest))} note={SHORT_DATE.format(more.shortest.end)} /> : null}
+              {stats.rating ? <Tile label="Felt" value={RATINGS[Math.round(stats.rating) - 1].label} note={`${stats.rating.toFixed(1)} out of 5`} /> : null}
             </View>
 
             {tip ? (
@@ -177,26 +295,50 @@ export default function SleepScreen() {
 
             <Txt variant="section" style={styles.listTitle}>Nights</Txt>
             <View style={styles.list}>
-              {[...shown].reverse().map((r, i) => (
+              {(showAll ? nights : nights.slice(0, 14)).map((r, i) => (
                 <Pressable key={r.id} onLongPress={() => remove(r)} accessibilityHint="Long press to delete" style={[styles.night, i > 0 && styles.nightBorder]}>
                   <View style={styles.flex}>
                     <Txt variant="row">{DATE.format(r.end)}</Txt>
                     <Txt variant="caption">{`${clock(r.start, use24h)} – ${clock(r.end, use24h)}${r.rating ? ` · ${RATINGS[r.rating - 1].label}` : ''}`}</Txt>
                   </View>
+                  {r.source === 'watch' ? <Ionicons name="watch-outline" size={16} color={colors.textMuted} accessibilityLabel="From your watch" /> : null}
                   <Text style={styles.nightValue}>{formatDuration(minutesAsleep(r))}</Text>
                 </Pressable>
               ))}
             </View>
+            {nights.length > 14 && !showAll ? <Button title={`Show all ${nights.length} nights`} variant="secondary" onPress={() => setShowAll(true)} /> : null}
             <Txt variant="caption" style={styles.center}>Long press a night to delete it.</Txt>
           </>
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="analytics-outline" size={32} color={colors.textMuted} />
-            <Txt variant="heading">No nights yet</Txt>
-            <Txt variant="muted" style={styles.center}>Tap Start sleep tonight, or add last night with +. Your averages, regularity and sleep debt show up here.</Txt>
+            <Txt variant="heading">{data.sleep.length ? 'No nights in these dates' : 'No nights yet'}</Txt>
+            <Txt variant="muted" style={styles.center}>
+              {data.sleep.length ? 'Pick other dates, or add a night with +.' : 'Tap Start sleep tonight, turn on Smartwatch, or add last night with +. Averages, regularity and sleep debt show up here.'}
+            </Txt>
           </View>
         )}
       </ScrollView>
+
+      <Sheet
+        visible={picking}
+        onClose={() => setPicking(false)}
+        title="Pick dates"
+        footer={
+          <Button
+            title={custom.from !== null ? 'Show these dates' : 'Pick a first day'}
+            disabled={custom.from === null}
+            onPress={() => {
+              setRange('custom');
+              setSelected(null);
+              setShowAll(false);
+              setPicking(false);
+            }}
+          />
+        }
+      >
+        <RangeCalendar from={custom.from} to={custom.to} max={now} onChange={(from, to) => setCustom({ from, to })} />
+      </Sheet>
 
       <AddNight visible={adding} onClose={() => setAdding(false)} use24h={use24h} onSave={(r) => update((d) => ({ ...d, sleep: addRecord(d.sleep.filter((x) => x.id !== r.id), r) }))} />
     </View>
@@ -251,6 +393,14 @@ const styles = StyleSheet.create({
   add: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, gap: 2 },
   center: { textAlign: 'center' },
+  watchRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  watchNote: { gap: space.sm },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: space.xs },
+  rangeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  calendarButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  calendarOn: { backgroundColor: colors.accent },
+  rangeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: space.md, height: 30, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, marginTop: -space.sm },
+  rangeChipText: { color: colors.text },
   session: { gap: space.sm, padding: space.xl, borderRadius: radius.lg, backgroundColor: colors.surface },
   sessionOn: { borderWidth: 1, borderColor: colors.borderStrong },
   elapsed: { fontSize: 44, lineHeight: 50, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'] },
