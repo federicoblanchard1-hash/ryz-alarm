@@ -109,7 +109,7 @@ export default function Interests() {
           <CategoryCard key={c.id} category={c} selected={selected} open={open === c.id} onToggleOpen={() => setOpen((o) => (o === c.id ? null : c.id))} onChange={change} />
         ))}
         <Txt variant="caption" style={styles.sources}>
-          Stories come from BBC, The Guardian and Ars Technica, and open inside Ryz in a clean reader view.
+          Stories come from over 50 free publishers (BBC, The Guardian, The New York Times, Sky, France 24, Euronews, Wired, The Verge, ESPN, Variety…), mixed evenly, and open inside Ryz in a clean reader view.
         </Txt>
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>

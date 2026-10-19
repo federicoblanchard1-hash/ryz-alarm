@@ -2,11 +2,64 @@
 // reader view that pulls an article's text out of its page so it can be shown
 // in Ryz, without the site's pop-ups, cookie banners or sign-up walls.
 //
-// Sources are BBC and The Guardian (plus Ars Technica for gadgets): free to
-// read, no paywall, available in Switzerland, and every story has a picture.
+// Each topic reads several publishers (BBC, The Guardian, NYT, Sky, France 24,
+// Euronews, Wired, The Verge, ESPN, Autosport, Variety…), all free RSS feeds
+// that were checked to return stories, and the feed mixes them evenly.
 
 const BBC = 'https://feeds.bbci.co.uk';
 const GUARDIAN = 'https://www.theguardian.com';
+const ESPN = 'https://www.espn.com/espn/rss';
+const F = {
+  nytWorld: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
+  sky: 'https://feeds.skynews.com/feeds/rss/world.xml',
+  france24: 'https://www.france24.com/en/rss',
+  euronews: 'https://www.euronews.com/rss?format=mrss&level=theme&name=news',
+  abc: 'https://feeds.abcnews.com/abcnews/internationalheadlines',
+  aljazeera: 'https://www.aljazeera.com/xml/rss/all.xml',
+  dw: 'https://rss.dw.com/xml/rss-en-all',
+  lemonde: 'https://www.lemonde.fr/en/rss/une.xml',
+  rts: 'https://www.rts.ch/info/?format=rss/news',
+  letemps: 'https://www.letemps.ch/articles.rss',
+  verge: 'https://www.theverge.com/rss/index.xml',
+  wired: 'https://www.wired.com/feed/rss',
+  engadget: 'https://www.engadget.com/rss.xml',
+  techcrunch: 'https://techcrunch.com/feed/',
+  ars: 'https://arstechnica.com/feed/',
+  mac9to5: 'https://9to5mac.com/feed/',
+  mitTech: 'https://www.technologyreview.com/feed/',
+  ign: 'https://feeds.feedburner.com/ign/all',
+  polygon: 'https://www.polygon.com/rss/index.xml',
+  kotaku: 'https://kotaku.com/rss',
+  fortune: 'https://fortune.com/feed/',
+  inc: 'https://www.inc.com/rss/',
+  fastco: 'https://www.fastcompany.com/latest/rss',
+  marketwatch: 'https://feeds.marketwatch.com/marketwatch/topstories/',
+  coindesk: 'https://www.coindesk.com/arc/outboundfeeds/rss/',
+  sciencedaily: 'https://www.sciencedaily.com/rss/all.xml',
+  sdHealth: 'https://www.sciencedaily.com/rss/health_medicine.xml',
+  phys: 'https://phys.org/rss-feed/',
+  livescience: 'https://www.livescience.com/feeds/all',
+  smithsonian: 'https://www.smithsonianmag.com/rss/latest_articles/',
+  nature: 'https://www.nature.com/nature.rss',
+  space: 'https://www.space.com/feeds/all',
+  nasa: 'https://www.nasa.gov/feed/',
+  psychToday: 'https://www.psychologytoday.com/us/front/feed',
+  carbonBrief: 'https://www.carbonbrief.org/feed/',
+  insideClimate: 'https://insideclimatenews.org/feed/',
+  runnersWorld: 'https://www.runnersworld.com/rss/all.xml/',
+  mensHealth: 'https://www.menshealth.com/rss/all.xml/',
+  skyFootball: 'https://www.skysports.com/rss/12040',
+  autosport: 'https://www.autosport.com/rss/f1/news/',
+  motorsport: 'https://www.motorsport.com/rss/f1/news/',
+  cyclingnews: 'https://www.cyclingnews.com/rss/',
+  variety: 'https://variety.com/feed/',
+  thr: 'https://www.hollywoodreporter.com/feed/',
+  pitchfork: 'https://pitchfork.com/rss/news/',
+  rollingStone: 'https://www.rollingstone.com/feed/',
+  vogue: 'https://www.vogue.com/feed/rss',
+  bonappetit: 'https://www.bonappetit.com/feed/rss',
+  dezeen: 'https://www.dezeen.com/feed/',
+};
 
 export interface Topic {
   /** "category.topic", stored in settings. */
@@ -33,13 +86,14 @@ export const CATEGORIES: Category[] = [
     title: 'World',
     icon: 'earth-outline',
     topics: topics('world', [
-      ['switzerland', 'Switzerland', `${GUARDIAN}/world/switzerland/rss`],
-      ['europe', 'Europe', `${BBC}/news/world/europe/rss.xml`],
-      ['us', 'US & Canada', `${BBC}/news/world/us_and_canada/rss.xml`],
+      ['switzerland', 'Switzerland', `${GUARDIAN}/world/switzerland/rss`, F.rts, F.letemps],
+      ['europe', 'Europe', `${BBC}/news/world/europe/rss.xml`, F.euronews, F.france24, F.dw],
+      ['us', 'US & Canada', `${BBC}/news/world/us_and_canada/rss.xml`, F.abc],
       ['asia', 'Asia', `${BBC}/news/world/asia/rss.xml`],
       ['africa', 'Africa', `${BBC}/news/world/africa/rss.xml`],
-      ['middle_east', 'Middle East', `${BBC}/news/world/middle_east/rss.xml`],
+      ['middle_east', 'Middle East', `${BBC}/news/world/middle_east/rss.xml`, F.aljazeera],
       ['latin_america', 'Latin America', `${BBC}/news/world/latin_america/rss.xml`],
+      ['top', 'Top stories', F.nytWorld, `${BBC}/news/world/rss.xml`, F.sky, F.france24, `${GUARDIAN}/world/rss`, F.euronews, F.abc, F.aljazeera, F.lemonde],
       ['ukraine', 'Ukraine', `${GUARDIAN}/world/ukraine/rss`],
       ['good_news', 'Good news', `${GUARDIAN}/world/series/the-upside/rss`],
     ]),
@@ -50,8 +104,8 @@ export const CATEGORIES: Category[] = [
     icon: 'flag-outline',
     topics: topics('countries', [
       ['uk', 'United Kingdom', `${BBC}/news/uk/rss.xml`],
-      ['france', 'France', `${GUARDIAN}/world/france/rss`],
-      ['germany', 'Germany', `${GUARDIAN}/world/germany/rss`],
+      ['france', 'France', `${GUARDIAN}/world/france/rss`, F.lemonde, F.france24],
+      ['germany', 'Germany', `${GUARDIAN}/world/germany/rss`, F.dw],
       ['italy', 'Italy', `${GUARDIAN}/world/italy/rss`],
       ['spain', 'Spain', `${GUARDIAN}/world/spain/rss`],
       ['portugal', 'Portugal', `${GUARDIAN}/world/portugal/rss`],
@@ -98,11 +152,11 @@ export const CATEGORIES: Category[] = [
     title: 'Business & money',
     icon: 'trending-up-outline',
     topics: topics('business', [
-      ['business', 'Business', `${BBC}/news/business/rss.xml`],
+      ['business', 'Business', `${BBC}/news/business/rss.xml`, F.fortune, F.inc, F.fastco],
       ['economy', 'Economy', `${GUARDIAN}/business/economics/rss`],
-      ['markets', 'Markets', `${GUARDIAN}/business/stock-markets/rss`],
+      ['markets', 'Markets', `${GUARDIAN}/business/stock-markets/rss`, F.marketwatch],
       ['money', 'Personal finance', `${GUARDIAN}/money/rss`],
-      ['crypto', 'Crypto', `${GUARDIAN}/technology/cryptocurrencies/rss`],
+      ['crypto', 'Crypto', `${GUARDIAN}/technology/cryptocurrencies/rss`, F.coindesk],
       ['tech_business', 'Tech business', `${GUARDIAN}/business/technology/rss`],
       ['energy', 'Energy', `${GUARDIAN}/business/energy-industry/rss`],
       ['retail', 'Retail', `${GUARDIAN}/business/retail/rss`],
@@ -115,15 +169,15 @@ export const CATEGORIES: Category[] = [
     title: 'Technology',
     icon: 'hardware-chip-outline',
     topics: topics('tech', [
-      ['tech', 'Tech news', `${BBC}/news/technology/rss.xml`, `${GUARDIAN}/technology/rss`],
-      ['ai', 'Artificial intelligence', `${GUARDIAN}/technology/artificialintelligenceai/rss`],
-      ['gadgets', 'Gadgets', 'https://feeds.arstechnica.com/arstechnica/gadgets'],
-      ['apple', 'Apple', `${GUARDIAN}/technology/apple/rss`],
+      ['tech', 'Tech news', `${BBC}/news/technology/rss.xml`, F.verge, F.wired, `${GUARDIAN}/technology/rss`, F.techcrunch, F.ars],
+      ['ai', 'Artificial intelligence', `${GUARDIAN}/technology/artificialintelligenceai/rss`, F.mitTech],
+      ['gadgets', 'Gadgets', 'https://feeds.arstechnica.com/arstechnica/gadgets', F.engadget],
+      ['apple', 'Apple', `${GUARDIAN}/technology/apple/rss`, F.mac9to5],
       ['google', 'Google', `${GUARDIAN}/technology/google/rss`],
       ['computing', 'Computing', `${GUARDIAN}/technology/computing/rss`],
       ['robots', 'Robots', `${GUARDIAN}/technology/robots/rss`],
       ['policy', 'Tech policy', 'https://feeds.arstechnica.com/arstechnica/tech-policy'],
-      ['games', 'Video games', `${GUARDIAN}/games/rss`],
+      ['games', 'Video games', `${GUARDIAN}/games/rss`, F.ign, F.polygon, F.kotaku],
       ['nintendo', 'Nintendo', `${GUARDIAN}/games/nintendo/rss`],
       ['cars', 'Cars', `${GUARDIAN}/technology/motoring/rss`],
     ]),
@@ -133,18 +187,18 @@ export const CATEGORIES: Category[] = [
     title: 'Science & health',
     icon: 'flask-outline',
     topics: topics('science', [
-      ['science', 'Science', `${GUARDIAN}/science/rss`, 'https://feeds.arstechnica.com/arstechnica/science'],
-      ['space', 'Space', `${GUARDIAN}/science/space/rss`],
-      ['physics', 'Physics', `${GUARDIAN}/science/physics/rss`],
+      ['science', 'Science', `${GUARDIAN}/science/rss`, F.livescience, F.sciencedaily, 'https://feeds.arstechnica.com/arstechnica/science', F.smithsonian, F.nature],
+      ['space', 'Space', `${GUARDIAN}/science/space/rss`, F.space, F.nasa],
+      ['physics', 'Physics', `${GUARDIAN}/science/physics/rss`, F.phys],
       ['biology', 'Biology', `${GUARDIAN}/science/biology/rss`],
       ['neuroscience', 'Brain & neuroscience', `${GUARDIAN}/science/neuroscience/rss`],
-      ['psychology', 'Psychology', `${GUARDIAN}/science/psychology/rss`],
+      ['psychology', 'Psychology', `${GUARDIAN}/science/psychology/rss`, F.psychToday],
       ['medical', 'Medical research', `${GUARDIAN}/science/medical-research/rss`],
       ['archaeology', 'Archaeology', `${GUARDIAN}/science/archaeology/rss`],
       ['dinosaurs', 'Dinosaurs', `${GUARDIAN}/science/dinosaurs/rss`],
       ['wildlife', 'Wildlife', `${GUARDIAN}/environment/wildlife/rss`],
-      ['climate', 'Climate & environment', `${GUARDIAN}/environment/climate-crisis/rss`, `${GUARDIAN}/environment/rss`],
-      ['health', 'Health', `${BBC}/news/health/rss.xml`],
+      ['climate', 'Climate & environment', `${GUARDIAN}/environment/climate-crisis/rss`, F.carbonBrief, `${GUARDIAN}/environment/rss`, F.insideClimate],
+      ['health', 'Health', `${BBC}/news/health/rss.xml`, F.sdHealth],
       ['wellbeing', 'Wellbeing', `${GUARDIAN}/lifeandstyle/health-and-wellbeing/rss`],
     ]),
   },
@@ -154,8 +208,8 @@ export const CATEGORIES: Category[] = [
     icon: 'barbell-outline',
     topics: topics('fitness', [
       ['sleep', 'Sleep', `${GUARDIAN}/lifeandstyle/sleep/rss`],
-      ['fitness', 'Fitness', `${GUARDIAN}/lifeandstyle/fitness/rss`],
-      ['running', 'Running', `${GUARDIAN}/lifeandstyle/running/rss`],
+      ['fitness', 'Fitness', `${GUARDIAN}/lifeandstyle/fitness/rss`, F.mensHealth],
+      ['running', 'Running', `${GUARDIAN}/lifeandstyle/running/rss`, F.runnersWorld],
       ['yoga', 'Yoga', `${GUARDIAN}/lifeandstyle/yoga/rss`],
       ['mental_health', 'Mental health', `${GUARDIAN}/society/mental-health/rss`],
     ]),
@@ -165,7 +219,7 @@ export const CATEGORIES: Category[] = [
     title: 'Football',
     icon: 'football',
     topics: topics('football', [
-      ['premier_league', 'Premier League', `${BBC}/sport/football/premier-league/rss.xml`],
+      ['premier_league', 'Premier League', `${BBC}/sport/football/premier-league/rss.xml`, F.skyFootball],
       ['champions_league', 'Champions League', `${BBC}/sport/football/champions-league/rss.xml`],
       ['la_liga', 'La Liga', `${GUARDIAN}/football/laligafootball/rss`],
       ['serie_a', 'Serie A', `${GUARDIAN}/football/serieafootball/rss`],
@@ -182,12 +236,12 @@ export const CATEGORIES: Category[] = [
     title: 'Sport',
     icon: 'football-outline',
     topics: topics('sport', [
-      ['football', 'Football (all)', `${BBC}/sport/football/rss.xml`],
-      ['basketball', 'Basketball', `${GUARDIAN}/sport/nba/rss`, `${BBC}/sport/basketball/rss.xml`, `${GUARDIAN}/sport/wnba/rss`],
-      ['tennis', 'Tennis', `${BBC}/sport/tennis/rss.xml`],
-      ['f1', 'Formula 1', `${BBC}/sport/formula1/rss.xml`, `${GUARDIAN}/sport/formulaone/rss`],
+      ['football', 'Football (all)', `${ESPN}/soccer/news`, `${BBC}/sport/football/rss.xml`, F.skyFootball, `${GUARDIAN}/football/rss`],
+      ['basketball', 'Basketball', `${GUARDIAN}/sport/nba/rss`, `${ESPN}/nba/news`, `${BBC}/sport/basketball/rss.xml`, `${GUARDIAN}/sport/wnba/rss`],
+      ['tennis', 'Tennis', `${BBC}/sport/tennis/rss.xml`, `${ESPN}/tennis/news`],
+      ['f1', 'Formula 1', F.autosport, `${BBC}/sport/formula1/rss.xml`, F.motorsport, `${GUARDIAN}/sport/formulaone/rss`, `${ESPN}/f1/news`],
       ['motorsport', 'Motorsport', `${BBC}/sport/motorsport/rss.xml`],
-      ['cycling', 'Cycling', `${BBC}/sport/cycling/rss.xml`],
+      ['cycling', 'Cycling', F.cyclingnews, `${BBC}/sport/cycling/rss.xml`],
       ['winter', 'Winter sports', `${BBC}/sport/winter-sports/rss.xml`, `${GUARDIAN}/sport/skiing/rss`],
       ['olympics', 'Olympics', `${GUARDIAN}/sport/olympic-games/rss`],
       ['swimming', 'Swimming', `${BBC}/sport/swimming/rss.xml`],
@@ -196,9 +250,9 @@ export const CATEGORIES: Category[] = [
       ['snooker', 'Snooker', `${BBC}/sport/snooker/rss.xml`],
       ['darts', 'Darts', `${BBC}/sport/darts/rss.xml`],
       ['ice_hockey', 'Ice hockey', `${GUARDIAN}/sport/ice-hockey/rss`],
-      ['golf', 'Golf', `${BBC}/sport/golf/rss.xml`],
+      ['golf', 'Golf', `${BBC}/sport/golf/rss.xml`, `${ESPN}/golf/news`],
       ['rugby', 'Rugby', `${BBC}/sport/rugby-union/rss.xml`],
-      ['american_football', 'American football', `${BBC}/sport/american-football/rss.xml`, `${GUARDIAN}/sport/nfl/rss`],
+      ['american_football', 'American football', `${ESPN}/nfl/news`, `${BBC}/sport/american-football/rss.xml`, `${GUARDIAN}/sport/nfl/rss`],
       ['baseball', 'Baseball', `${GUARDIAN}/sport/baseball/rss`],
       ['boxing', 'Boxing', `${BBC}/sport/boxing/rss.xml`],
       ['mma', 'MMA', `${BBC}/sport/mixed-martial-arts/rss.xml`],
@@ -211,16 +265,16 @@ export const CATEGORIES: Category[] = [
     title: 'Culture',
     icon: 'film-outline',
     topics: topics('culture', [
-      ['entertainment', 'Entertainment', `${BBC}/news/entertainment_and_arts/rss.xml`],
-      ['film', 'Film', `${GUARDIAN}/film/rss`],
-      ['music', 'Music', `${GUARDIAN}/music/rss`],
+      ['entertainment', 'Entertainment', `${BBC}/news/entertainment_and_arts/rss.xml`, F.variety],
+      ['film', 'Film', `${GUARDIAN}/film/rss`, F.variety, F.thr],
+      ['music', 'Music', `${GUARDIAN}/music/rss`, F.pitchfork, F.rollingStone],
       ['tv', 'TV & streaming', `${GUARDIAN}/tv-and-radio/rss`],
       ['books', 'Books', `${GUARDIAN}/books/rss`],
       ['classical', 'Classical & opera', `${GUARDIAN}/music/classicalmusicandopera/rss`],
       ['rap', 'Hip-hop & rap', `${GUARDIAN}/music/rap/rss`],
-      ['art', 'Art & design', `${GUARDIAN}/artanddesign/rss`],
+      ['art', 'Art & design', `${GUARDIAN}/artanddesign/rss`, F.dezeen],
       ['photography', 'Photography', `${GUARDIAN}/artanddesign/photography/rss`],
-      ['architecture', 'Architecture', `${GUARDIAN}/artanddesign/architecture/rss`],
+      ['architecture', 'Architecture', `${GUARDIAN}/artanddesign/architecture/rss`, F.dezeen],
       ['stage', 'Theatre & dance', `${GUARDIAN}/stage/rss`],
       ['comedy', 'Comedy', `${GUARDIAN}/stage/comedy/rss`],
     ]),
@@ -230,11 +284,11 @@ export const CATEGORIES: Category[] = [
     title: 'Lifestyle',
     icon: 'cafe-outline',
     topics: topics('life', [
-      ['food', 'Food', `${GUARDIAN}/food/rss`],
+      ['food', 'Food', `${GUARDIAN}/food/rss`, F.bonappetit],
       ['vegan', 'Vegan food', `${GUARDIAN}/food/vegan/rss`],
       ['wine', 'Wine', `${GUARDIAN}/food/wine/rss`],
       ['travel', 'Travel', `${GUARDIAN}/travel/rss`, `${GUARDIAN}/travel/europe/rss`],
-      ['fashion', 'Fashion', `${GUARDIAN}/fashion/rss`],
+      ['fashion', 'Fashion', `${GUARDIAN}/fashion/rss`, F.vogue],
       ['beauty', 'Beauty', `${GUARDIAN}/fashion/beauty/rss`],
       ['relationships', 'Relationships', `${GUARDIAN}/lifeandstyle/relationships/rss`],
       ['family', 'Family & parenting', `${GUARDIAN}/lifeandstyle/family/rss`],
@@ -260,22 +314,30 @@ export function topicById(id: string): Topic | undefined {
   return TOPICS.get(id);
 }
 
-/** The feeds to read for these topics: one per topic first, so every interest shows up, up to `max`. */
-export function feedsFor(topicIds: string[], max = 18): { url: string; topic: string }[] {
+const host = (url: string) => url.replace(/^https?:\/\/(www\.|feeds\.|rss\.)?/, '').split('/')[0];
+
+/**
+ * The feeds to read for these topics, up to `max`: one per topic first, so
+ * every interest shows up, then more publishers per topic. Within a round,
+ * publishers used least so far come first, so no one source takes over.
+ */
+export function feedsFor(topicIds: string[], max = 24): { url: string; topic: string }[] {
   const chosen = topicIds.map(topicById).filter((t): t is Topic => Boolean(t));
   const out: { url: string; topic: string }[] = [];
   const seen = new Set<string>();
-  for (let round = 0; out.length < max; round++) {
-    let added = false;
+  const uses = new Map<string, number>();
+  const longest = Math.max(0, ...chosen.map((t) => t.feeds.length));
+  for (let round = 0; round < longest && out.length < max; round++) {
+    // In each round, a topic may pick any feed it hasn't used yet; it takes the least-used publisher.
     for (const t of chosen) {
-      const url = t.feeds[round];
-      if (url && !seen.has(url) && out.length < max) {
-        seen.add(url);
-        out.push({ url, topic: t.id });
-        added = true;
-      }
+      if (out.length >= max) break;
+      const options = t.feeds.filter((u) => !seen.has(u));
+      if (options.length === 0) continue;
+      const pick = options.reduce((best, u) => ((uses.get(host(u)) ?? 0) < (uses.get(host(best)) ?? 0) ? u : best));
+      seen.add(pick);
+      uses.set(host(pick), (uses.get(host(pick)) ?? 0) + 1);
+      out.push({ url: pick, topic: t.id });
     }
-    if (!added) break;
   }
   return out;
 }
@@ -331,10 +393,63 @@ function attr(element: string, name: string): string | undefined {
   return m ? decodeEntities(m[1]) : undefined;
 }
 
+const SOURCES: [string, string][] = [
+  ['bbc.', 'BBC'],
+  ['theguardian.com', 'The Guardian'],
+  ['arstechnica.com', 'Ars Technica'],
+  ['nytimes.com', 'The New York Times'],
+  ['news.sky.com', 'Sky News'],
+  ['skysports.com', 'Sky Sports'],
+  ['france24.com', 'France 24'],
+  ['euronews.com', 'Euronews'],
+  ['abcnews', 'ABC News'],
+  ['aljazeera.com', 'Al Jazeera'],
+  ['dw.com', 'DW'],
+  ['lemonde.fr', 'Le Monde'],
+  ['rts.ch', 'RTS'],
+  ['letemps.ch', 'Le Temps'],
+  ['theverge.com', 'The Verge'],
+  ['wired.com', 'Wired'],
+  ['engadget.com', 'Engadget'],
+  ['techcrunch.com', 'TechCrunch'],
+  ['9to5mac.com', '9to5Mac'],
+  ['technologyreview.com', 'MIT Technology Review'],
+  ['ign.com', 'IGN'],
+  ['polygon.com', 'Polygon'],
+  ['kotaku.com', 'Kotaku'],
+  ['fortune.com', 'Fortune'],
+  ['inc.com', 'Inc.'],
+  ['fastcompany.com', 'Fast Company'],
+  ['marketwatch.com', 'MarketWatch'],
+  ['coindesk.com', 'CoinDesk'],
+  ['sciencedaily.com', 'ScienceDaily'],
+  ['phys.org', 'Phys.org'],
+  ['livescience.com', 'Live Science'],
+  ['smithsonianmag.com', 'Smithsonian'],
+  ['nature.com', 'Nature'],
+  ['space.com', 'Space.com'],
+  ['nasa.gov', 'NASA'],
+  ['psychologytoday.com', 'Psychology Today'],
+  ['carbonbrief.org', 'Carbon Brief'],
+  ['insideclimatenews.org', 'Inside Climate News'],
+  ['runnersworld.com', "Runner's World"],
+  ['menshealth.com', "Men's Health"],
+  ['espn.', 'ESPN'],
+  ['autosport.com', 'Autosport'],
+  ['motorsport.com', 'Motorsport.com'],
+  ['cyclingnews.com', 'Cyclingnews'],
+  ['variety.com', 'Variety'],
+  ['hollywoodreporter.com', 'The Hollywood Reporter'],
+  ['pitchfork.com', 'Pitchfork'],
+  ['rollingstone.com', 'Rolling Stone'],
+  ['vogue.com', 'Vogue'],
+  ['bonappetit.com', 'Bon Appétit'],
+  ['dezeen.com', 'Dezeen'],
+];
+
 function sourceName(url: string): string {
-  if (url.includes('bbc.')) return 'BBC';
-  if (url.includes('theguardian.com')) return 'The Guardian';
-  if (url.includes('arstechnica.com')) return 'Ars Technica';
+  const known = SOURCES.find(([part]) => url.includes(part));
+  if (known) return known[1];
   try {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch {
@@ -355,16 +470,25 @@ function bestImage(item: string): string | undefined {
   return best.replace(/\/ace\/standard\/\d+\//, '/ace/standard/800/');
 }
 
-/** Articles in an RSS 2.0 feed, newest first. */
+/** An Atom entry's page: the alternate link, or the first one. */
+function atomLink(entry: string): string | undefined {
+  const links = [...entry.matchAll(/<link\b[^>]*>/gi)].map((m) => m[0]);
+  const page = links.find((l) => /rel="alternate"/i.test(l)) ?? links.find((l) => !/rel=/i.test(l)) ?? links[0];
+  return page ? attr(page, 'href') : undefined;
+}
+
+/** Articles in an RSS 2.0 or Atom feed, newest first. */
 export function parseFeed(xml: string, topic: string): Article[] {
-  const items = xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? [];
+  const atom = !/<item\b/i.test(xml) && /<entry\b/i.test(xml);
+  const items = (atom ? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) : xml.match(/<item\b[\s\S]*?<\/item>/gi)) ?? [];
   const out: Article[] = [];
   for (const item of items) {
-    const title = htmlToText(tag(item, 'title') ?? '');
-    const url = htmlToText(tag(item, 'link') ?? '').replace(/\?at_medium=RSS.*$/, '');
-    if (!title || !url) continue;
-    const published = Date.parse(htmlToText(tag(item, 'pubDate') ?? tag(item, 'dc:date') ?? '')) || 0;
-    const summary = htmlToText(decodeEntities(tag(item, 'description') ?? '').replace(/<\/p>/gi, '\n'))
+    const title = htmlToText(decodeEntities(tag(item, 'title') ?? ''));
+    const link = atom ? atomLink(item) : tag(item, 'link');
+    const url = htmlToText(link ?? '').replace(/\?at_medium=RSS.*$/, '');
+    if (!title || !url.startsWith('http')) continue;
+    const published = Date.parse(htmlToText(tag(item, 'pubDate') ?? tag(item, 'dc:date') ?? tag(item, 'published') ?? tag(item, 'updated') ?? '')) || 0;
+    const summary = htmlToText(decodeEntities(tag(item, 'description') ?? tag(item, 'summary') ?? tag(item, 'content') ?? '').replace(/<\/p>/gi, '\n'))
       .replace(/\s*Continue reading\.*\s*$/i, '')
       .split('\n')[0]
       .slice(0, 280);
@@ -373,20 +497,64 @@ export function parseFeed(xml: string, topic: string): Article[] {
   return out.sort((a, b) => b.published - a.published);
 }
 
-/** Feeds merged newest first, without the same story twice. */
-export function mergeArticles(lists: Article[][], limit = 40): Article[] {
+const DAY_MS = 24 * 60 * 60_000;
+
+/**
+ * Feeds merged without the same story twice, taking turns between feeds so
+ * one busy feed (BBC Football posts 80 stories a day) can't crowd out the
+ * others. Each feed offers its newest stories first, and stories older than
+ * three days only fill in when there's nothing newer.
+ */
+export function mergeArticles(lists: Article[][], limit = 60): Article[] {
+  const newest = Math.max(0, ...lists.flat().map((a) => a.published));
+  const pools = lists
+    .map((list) => [...list].sort((a, b) => b.published - a.published))
+    .map((list) => {
+      const recentOnes = list.filter((a) => !a.published || a.published > newest - 3 * DAY_MS);
+      return recentOnes.length > 0 ? recentOnes : list.slice(0, 3);
+    })
+    // The feed with the freshest story goes first in each turn.
+    .sort((a, b) => (b[0]?.published ?? 0) - (a[0]?.published ?? 0));
   const seen = new Set<string>();
-  const all = lists.flat().sort((a, b) => b.published - a.published);
   const out: Article[] = [];
-  for (const a of all) {
-    const key = a.title.toLowerCase().replace(/\W+/g, ' ').trim();
-    if (seen.has(a.url) || seen.has(key)) continue;
-    seen.add(a.url);
-    seen.add(key);
-    out.push(a);
-    if (out.length >= limit) break;
+  const longest = Math.max(0, ...pools.map((p) => p.length));
+  for (let i = 0; i < longest && out.length < limit; i++) {
+    for (const pool of pools) {
+      const a = pool[i];
+      if (!a) continue;
+      const key = a.title.toLowerCase().replace(/\W+/g, ' ').trim();
+      if (seen.has(a.url) || seen.has(key)) continue;
+      seen.add(a.url);
+      seen.add(key);
+      out.push(a);
+      if (out.length >= limit) break;
+    }
   }
   return out;
+}
+
+// ---- Search (Google News): every publisher, for anything the topics don't cover.
+
+export function searchUrl(query: string): string {
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+/** Google News titles end in " - Publisher"; the publisher goes in `source`. */
+export function parseSearch(xml: string): Article[] {
+  return parseFeed(xml, 'search').map((a) => {
+    const m = a.title.match(/^(.*) - ([^-]+)$/);
+    return { ...a, title: m ? m[1] : a.title, source: m ? m[2].trim() : a.source, summary: '' };
+  });
+}
+
+/** Stories you already have that match the words typed, every word anywhere in the title or summary. */
+export function filterArticles(list: Article[], query: string): Article[] {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return list;
+  return list.filter((a) => {
+    const text = `${a.title} ${a.summary} ${a.source}`.toLowerCase();
+    return words.every((w) => text.includes(w));
+  });
 }
 
 // ---- Reader view

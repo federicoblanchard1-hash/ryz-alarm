@@ -1,4 +1,4 @@
-import { CATEGORIES, decodeEntities, extractArticle, feedsFor, mergeArticles, parseFeed, timeAgo } from '../news';
+import { CATEGORIES, decodeEntities, extractArticle, feedsFor, filterArticles, mergeArticles, parseFeed, parseSearch, timeAgo, type Article } from '../news';
 
 const BBC_FEED = `<rss><channel>
 <item><title><![CDATA[Wiegman signs new deal]]></title>
@@ -82,4 +82,42 @@ it('decodes entities and formats ages', () => {
   expect(decodeEntities('Fish &amp; chips &#8217; &#x2014;')).toBe('Fish & chips ’ —');
   expect(timeAgo(0, 30 * 60_000)).toBe('30 min ago');
   expect(timeAgo(0, 5 * 3_600_000)).toBe('5 h ago');
+});
+
+describe('mixing and search', () => {
+  const story = (source: string, i: number, hoursAgo: number): Article => ({
+    id: `${source}${i}`,
+    title: `${source} story ${i}`,
+    summary: '',
+    url: `https://${source}.example/${i}`,
+    source,
+    published: Date.UTC(2026, 9, 19, 12) - hoursAgo * 3_600_000,
+    topic: 't',
+  });
+
+  it("doesn't let one busy feed crowd out the others", () => {
+    const busy = Array.from({ length: 80 }, (_, i) => story('busy', i, i * 0.1));
+    const quiet = Array.from({ length: 10 }, (_, i) => story('quiet', i, 5 + i));
+    const top = mergeArticles([busy, quiet]).slice(0, 10);
+    expect(top.filter((a) => a.source === 'quiet').length).toBe(5);
+  });
+
+  it('reads Atom feeds', () => {
+    const xml = `<feed><entry><title>Hello &amp; welcome</title><link rel="alternate" href="https://www.theverge.com/a"/><updated>2026-10-19T10:00:00Z</updated><summary>Short</summary></entry></feed>`;
+    const [a] = parseFeed(xml, 'tech.tech');
+    expect(a.title).toBe('Hello & welcome');
+    expect(a.url).toBe('https://www.theverge.com/a');
+    expect(a.source).toBe('The Verge');
+    expect(a.published).toBe(Date.UTC(2026, 9, 19, 10));
+  });
+
+  it('splits the publisher off Google News titles', () => {
+    const xml = `<rss><channel><item><title>Federer opens a school - The Times</title><link>https://news.google.com/rss/articles/x</link><pubDate>Sat, 17 Oct 2026 05:16:21 GMT</pubDate></item></channel></rss>`;
+    expect(parseSearch(xml)[0]).toMatchObject({ title: 'Federer opens a school', source: 'The Times' });
+  });
+
+  it('filters stories by every word typed', () => {
+    const list = [story('a', 1, 1), { ...story('b', 2, 1), title: 'Swiss Alps sleep study' }];
+    expect(filterArticles(list, 'sleep alps').map((a) => a.source)).toEqual(['b']);
+  });
 });

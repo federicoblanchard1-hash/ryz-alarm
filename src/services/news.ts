@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 
-import { extractArticle, feedsFor, mergeArticles, parseFeed, type Article, type ReadableArticle } from '@/core/news';
+import { extractArticle, feedsFor, mergeArticles, parseFeed, parseSearch, searchUrl, type Article, type ReadableArticle } from '@/core/news';
 import { colors } from '@/theme';
 
 const CACHE_KEY = 'ryz/news/v1';
@@ -50,6 +50,11 @@ export async function fetchNews(topics: string[]): Promise<Article[]> {
   const articles = mergeArticles(lists);
   AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ key: topics.join(','), at: Date.now(), articles } satisfies Cached)).catch(() => {});
   return articles;
+}
+
+/** Stories about anything, from every publisher Google News knows. */
+export async function searchNews(query: string): Promise<Article[]> {
+  return parseSearch(await get(searchUrl(query), 10_000, true)).slice(0, 30);
 }
 
 /** The story's text, for the reader view; null if the page can't be read (blocked, video, or no text). */
