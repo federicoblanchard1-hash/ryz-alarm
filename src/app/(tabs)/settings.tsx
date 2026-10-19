@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
 import { topicById } from '@/core/news';
 import { scheduleTest } from '@/core/ring';
@@ -11,7 +12,7 @@ import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { TAB_BAR_HEIGHT, colors, space } from '@/theme';
+import { colors, space } from '@/theme';
 
 const SOURCES = [
   { title: 'Low 520 Hz tone wakes deep sleepers', who: 'Bruck & Thomas, Victoria University', url: 'https://vuir.vu.edu.au/3994' },
@@ -66,13 +67,14 @@ export default function SettingsScreen() {
   const permissions = usePermissions();
   const location = useLocationPermission();
   const insets = useSafeAreaInsets();
+  const tabSpace = useTabBarSpace();
   const { settings } = data;
   const notificationsOk = permissions.state?.notifications === 'granted';
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Txt variant="largeTitle" style={styles.title} accessibilityRole="header">Settings</Txt>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xxl }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]}>
         <Section label="Sleep" footer="Adults need at least 7 hours a night. Ryz uses your goal to suggest a bedtime.">
           <Chips
             title="Sleep goal"

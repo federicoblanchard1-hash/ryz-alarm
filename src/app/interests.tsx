@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.xl, minHeight: 44 },
   skip: { fontSize: 17, fontFamily: FONT.regular, color: colors.textMuted },
   content: { paddingHorizontal: space.lg, gap: space.md },
-  title: { fontSize: 34, lineHeight: 40, fontFamily: FONT.medium, color: colors.text, paddingHorizontal: space.xs },
+  title: { fontSize: 42, lineHeight: 48, fontFamily: FONT.display, color: colors.text, paddingHorizontal: space.xs },
   subtitle: { paddingHorizontal: space.xs, marginBottom: space.md },
   card: { borderRadius: radius.md + 6, backgroundColor: colors.surface, overflow: 'hidden' },
   cardOn: { borderWidth: 1, borderColor: colors.borderStrong },

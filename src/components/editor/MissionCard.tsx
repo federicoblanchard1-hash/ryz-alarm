@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Sheet } from '@/components/Sheet';
-import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
-import { BODY, BRAIN, LEVEL_NAMES, MAX_MISSIONS, MISSIONS, defaultMission, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
+import { Button, Chips, LinkRow, Stepper, Txt, haptic } from '@/components/ui';
+import { QrScanner } from '@/missions/QrScanner';
+import { LEVEL_NAMES, MAX_MISSIONS, MISSIONS, MISSION_GROUPS, clampAmount, defaultMission, missionsIn, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
 import { MISSION_ICONS } from '@/missions/common';
 import { FONT, colors, radius, space } from '@/theme';
 
@@ -20,6 +21,7 @@ interface Props {
 export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck }: Props) {
   const [picking, setPicking] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
+  const [scanning, setScanning] = useState(false);
   const edited = editing !== null ? missions[editing] : undefined;
 
   const add = (type: MissionType) => {
@@ -36,9 +38,10 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
     setEditing(null);
   };
 
-  const group = (title: string, types: MissionType[]) => (
-    <View style={styles.group}>
+  const group = (title: string, types: MissionType[], description?: string) => (
+    <View style={styles.group} key={title}>
       <Txt variant="section" style={styles.groupTitle}>{title}</Txt>
+      {description ? <Txt variant="caption" style={styles.groupText}>{description}</Txt> : null}
       {types.map((type) => {
         const taken = missions.some((m) => m.type === type);
         return (
@@ -98,20 +101,68 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
       <LinkRow title="Wake up check" value={awakeCheckLabel} onPress={onAwakeCheck} />
 
       <Sheet visible={picking} onClose={() => setPicking(false)} title="Mission">
-        {group('Wake your brain', BRAIN)}
-        {group('Wake your body', BODY)}
+        {MISSION_GROUPS.map((g) => group(g.title, missionsIn(g.id), g.description))}
       </Sheet>
 
       <Sheet
         visible={edited !== undefined}
-        onClose={() => setEditing(null)}
+        onClose={() => {
+          setEditing(null);
+          setScanning(false);
+        }}
         title={edited ? MISSIONS[edited.type].title : ''}
-        footer={<Button title="Done" onPress={() => setEditing(null)} />}
+        footer={
+          <Button
+            title="Done"
+            onPress={() => {
+              setEditing(null);
+              setScanning(false);
+            }}
+          />
+        }
       >
         {edited ? (
           <>
             <Txt variant="muted">{MISSIONS[edited.type].description}</Txt>
-            <Chips title="How many" value={edited.amount} onChange={(amount) => update({ ...edited, amount })} options={MISSIONS[edited.type].amounts.map((n) => ({ value: n, label: MISSIONS[edited.type].unit(n) }))} />
+            {MISSIONS[edited.type].research ? (
+              <View style={styles.research}>
+                <Ionicons name="flask-outline" size={18} color={colors.textMuted} />
+                <Txt variant="caption" style={styles.flex}>{MISSIONS[edited.type].research}</Txt>
+              </View>
+            ) : null}
+            {edited.type === 'qr' ? (
+              <View style={styles.qr}>
+                <Txt variant="caption">
+                  {edited.code ? `Saved code: …${edited.code.slice(-12)}. The alarm only stops when you scan this one.` : 'Scan a code somewhere away from your bed: a bottle in the kitchen, a sticker in the bathroom. With none saved, any code works.'}
+                </Txt>
+                {scanning ? (
+                  <QrScanner
+                    height={260}
+                    onScan={(code) => {
+                      haptic('success');
+                      update({ ...edited, code });
+                      setScanning(false);
+                    }}
+                  />
+                ) : (
+                  <Button title={edited.code ? 'Scan a different code' : 'Scan my code'} icon="qr-code-outline" variant="secondary" onPress={() => setScanning(true)} />
+                )}
+              </View>
+            ) : (
+              <>
+                <Txt variant="caption">How many</Txt>
+                <Stepper
+                  label={MISSIONS[edited.type].unit(2).replace(/^\d+ /, '')}
+                  value={edited.amount}
+                  min={MISSIONS[edited.type].min}
+                  max={MISSIONS[edited.type].max}
+                  step={MISSIONS[edited.type].step}
+                  format={MISSIONS[edited.type].unit}
+                  onChange={(amount) => update({ ...edited, amount: clampAmount(edited.type, amount) })}
+                />
+                <Chips value={edited.amount} onChange={(amount) => update({ ...edited, amount })} options={MISSIONS[edited.type].amounts.map((n) => ({ value: n, label: String(n) }))} />
+              </>
+            )}
             {MISSIONS[edited.type].hasLevels ? (
               <Chips
                 title="Difficulty"
@@ -127,7 +178,7 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
                 variant="secondary"
                 style={styles.flex}
                 onPress={() => {
-                  const params = { type: edited.type, amount: String(edited.amount), level: String(edited.level) };
+                  const params = { type: edited.type, amount: String(edited.amount), level: String(edited.level), code: edited.code ?? '' };
                   setEditing(null);
                   router.push({ pathname: '/try-mission', params });
                 }}
@@ -158,7 +209,10 @@ const styles = StyleSheet.create({
   slotLabel: { fontSize: 14, lineHeight: 18, fontFamily: FONT.medium, color: colors.onAccent, paddingHorizontal: 6 },
   remove: { position: 'absolute', top: -10, right: -10, width: 28, height: 28, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   group: { marginBottom: space.lg },
-  groupTitle: { marginBottom: space.sm },
+  groupTitle: { marginBottom: space.xs },
+  groupText: { marginBottom: space.sm },
+  research: { flexDirection: 'row', gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surfaceRaised },
+  qr: { gap: space.md, paddingVertical: space.sm },
   pickRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, minHeight: 60 },
   pressed: { opacity: 0.6 },
   pickIcon: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },

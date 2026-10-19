@@ -1,4 +1,27 @@
-import { makePattern, makeSum, memoryGrid, pickSentences, sameWords, seeded, shakeCounter, squatCounter, type Sample } from '../missions';
+import {
+  MISSIONS,
+  MISSION_GROUPS,
+  SIGNS,
+  arrowTrial,
+  clampAmount,
+  makePattern,
+  makeSum,
+  memoryGrid,
+  missionsIn,
+  numberBoard,
+  oddTile,
+  pickSentences,
+  pickWord,
+  pvtCounts,
+  pvtDelay,
+  sameWords,
+  scramble,
+  seeded,
+  shakeCounter,
+  squatCounter,
+  symbolProblem,
+  type Sample,
+} from '../missions';
 
 describe('makeSum', () => {
   it('gets harder with the level and always has the right answer', () => {
@@ -55,5 +78,83 @@ describe('squatCounter', () => {
       [1, 0.7, 0.6, 0.7, 1, 1.3, 1.4, 1.3, 1, 0.9, 1].map((z, i) => ({ x: 0, y: 0, z, t: start + i * 80 }));
     const samples = [...Array.from({ length: 20 }, (_, i) => still(i * 50)), ...squat(1000), ...squat(2500), ...squat(4000)];
     expect(samples.filter(count)).toHaveLength(3);
+  });
+});
+
+describe('catalog', () => {
+  it('puts every mission in exactly one group', () => {
+    const listed = MISSION_GROUPS.flatMap((g) => missionsIn(g.id));
+    expect(listed.sort()).toEqual(Object.keys(MISSIONS).sort());
+  });
+
+  it('keeps custom amounts inside the limits and on the step', () => {
+    expect(clampAmount('squats', 0)).toBe(MISSIONS.squats.min);
+    expect(clampAmount('squats', 10_000)).toBe(MISSIONS.squats.max);
+    const { min, step } = MISSIONS.steps;
+    expect((clampAmount('steps', min + step + 1) - min) % step).toBe(0);
+  });
+});
+
+describe('brain generators', () => {
+  it('number hunt holds 1…n² once each', () => {
+    const { size, numbers } = numberBoard(2, seeded(3));
+    expect([...numbers].sort((a, b) => a - b)).toEqual(Array.from({ length: size * size }, (_, i) => i + 1));
+  });
+
+  it('odd tile sits on the board and differs from the rest', () => {
+    for (let round = 0; round < 20; round++) {
+      const t = oddTile(3, round, seeded(round + 1));
+      expect(t.odd).toBeLessThan(t.size * t.size);
+      expect(Math.abs(t.other - t.base)).toBeGreaterThan(0.03);
+    }
+  });
+
+  it('missing symbol has exactly one sign that fits', () => {
+    const random = seeded(5);
+    for (const level of [1, 2, 3] as const) {
+      for (let i = 0; i < 100; i++) {
+        const p = symbolProblem(level, random);
+        const fits = SIGNS.filter((s) => {
+          if (s === '+') return p.a + p.b === p.result;
+          if (s === '−') return p.a - p.b === p.result;
+          if (s === '×') return p.a * p.b === p.result;
+          return p.a % p.b === 0 && p.a / p.b === p.result;
+        });
+        expect(fits).toEqual([p.sign]);
+      }
+    }
+  });
+
+  it('scrambles a word into the same letters in a new order', () => {
+    const random = seeded(7);
+    for (const level of [1, 2, 3] as const) {
+      const word = pickWord(level, random);
+      const mixed = scramble(word, random);
+      expect(mixed).not.toBe(word);
+      expect(mixed.split('').sort().join('')).toBe(word.split('').sort().join(''));
+    }
+  });
+
+  it('reaction test ignores false starts and slow taps', () => {
+    expect(pvtCounts(80, 1)).toBe(false);
+    expect(pvtCounts(300, 3)).toBe(true);
+    expect(pvtCounts(450, 3)).toBe(false);
+    expect(pvtCounts(450, 1)).toBe(true);
+    const d = pvtDelay(seeded(9));
+    expect(d).toBeGreaterThanOrEqual(2000);
+    expect(d).toBeLessThanOrEqual(7000);
+  });
+
+  it('arrow test shows more conflicting words on harder levels', () => {
+    const conflicts = (level: 1 | 3) => {
+      const random = seeded(11);
+      let n = 0;
+      for (let i = 0; i < 400; i++) {
+        const t = arrowTrial(level, random);
+        if (t.arrow !== t.word) n++;
+      }
+      return n;
+    };
+    expect(conflicts(3)).toBeGreaterThan(conflicts(1));
   });
 });

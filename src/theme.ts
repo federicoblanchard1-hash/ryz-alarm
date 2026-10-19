@@ -21,15 +21,18 @@ export const colors = {
 };
 
 /**
- * Outfit, loaded in the root layout. Text sits a step lighter than usual:
- * body text is Light, headings Medium, the big clocks ExtraLight.
+ * Geist for the interface (crisp, modern, with thin weights for the clocks)
+ * and Instrument Serif for big titles and headlines. Loaded in the root layout.
+ * Text sits a step lighter than usual: body Light, headings Medium.
  */
 export const FONT = {
-  thin: 'Outfit_200ExtraLight',
-  light: 'Outfit_300Light',
-  regular: 'Outfit_400Regular',
-  medium: 'Outfit_500Medium',
-  semibold: 'Outfit_600SemiBold',
+  thin: 'Geist_200ExtraLight',
+  light: 'Geist_300Light',
+  regular: 'Geist_400Regular',
+  medium: 'Geist_500Medium',
+  semibold: 'Geist_600SemiBold',
+  display: 'InstrumentSerif_400Regular',
+  displayItalic: 'InstrumentSerif_400Regular_Italic',
 };
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 };

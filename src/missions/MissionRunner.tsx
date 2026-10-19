@@ -11,6 +11,13 @@ import { MISSION_ICONS, type MissionProps } from './common';
 import { MathMission } from './MathMission';
 import { MemoryMission } from './MemoryMission';
 import { TypingMission } from './TypingMission';
+import { ArrowMission } from './ArrowMission';
+import { NumbersMission } from './NumbersMission';
+import { OddTileMission } from './OddTileMission';
+import { QrMission } from './QrMission';
+import { ReactionMission } from './ReactionMission';
+import { SymbolMission } from './SymbolMission';
+import { UnscrambleMission } from './UnscrambleMission';
 
 const SCREENS: Record<Mission['type'], (props: MissionProps) => React.ReactElement> = {
   math: MathMission,
@@ -19,6 +26,14 @@ const SCREENS: Record<Mission['type'], (props: MissionProps) => React.ReactEleme
   shake: BodyMission,
   squats: BodyMission,
   steps: BodyMission,
+  jacks: BodyMission,
+  numbers: NumbersMission,
+  oddtile: OddTileMission,
+  symbol: SymbolMission,
+  unscramble: UnscrambleMission,
+  qr: QrMission,
+  pvt: ReactionMission,
+  arrows: ArrowMission,
 };
 
 /** Whether this phone can count the mission. Body missions need a motion sensor (and on web there isn't a usable one). */
@@ -26,6 +41,7 @@ async function canRun(mission: Mission): Promise<boolean> {
   const sensor = MISSIONS[mission.type].sensor;
   if (!sensor) return true;
   if (Platform.OS === 'web') return false;
+  if (sensor === 'camera') return true;
   try {
     return sensor === 'accelerometer' ? await Accelerometer.isAvailableAsync() : await Pedometer.isAvailableAsync();
   } catch {

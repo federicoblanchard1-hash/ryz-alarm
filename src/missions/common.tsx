@@ -13,6 +13,14 @@ export const MISSION_ICONS: Record<MissionType, IconName> = {
   shake: 'phone-portrait-outline',
   squats: 'body-outline',
   steps: 'walk-outline',
+  numbers: 'apps-outline',
+  oddtile: 'contrast-outline',
+  symbol: 'help-circle-outline',
+  unscramble: 'shuffle-outline',
+  qr: 'qr-code-outline',
+  pvt: 'flash-outline',
+  arrows: 'swap-horizontal-outline',
+  jacks: 'fitness-outline',
 };
 
 export interface MissionProps {

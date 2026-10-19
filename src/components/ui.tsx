@@ -9,8 +9,8 @@ import { EASE_OUT, FONT, colors, radius, space } from '@/theme';
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 const variants = StyleSheet.create({
-  largeTitle: { fontSize: 34, lineHeight: 40, fontFamily: FONT.semibold, color: colors.text, letterSpacing: -0.8 },
-  title: { fontSize: 28, lineHeight: 34, fontFamily: FONT.semibold, color: colors.text, letterSpacing: -0.5 },
+  largeTitle: { fontSize: 40, lineHeight: 46, fontFamily: FONT.display, color: colors.text, letterSpacing: -0.4 },
+  title: { fontSize: 32, lineHeight: 38, fontFamily: FONT.display, color: colors.text, letterSpacing: -0.2 },
   heading: { fontSize: 17, lineHeight: 22, fontFamily: FONT.medium, color: colors.text },
   body: { fontSize: 16, fontFamily: FONT.light, lineHeight: 22, color: colors.text },
   /** Settings rows, at Alarmy's size. */
@@ -258,6 +258,46 @@ export function Slider({ value, onChange, label, min = 0 }: { value: number; onC
   );
 }
 
+/** − value + for picking any number in a range. Holding a button jumps ten steps. */
+export function Stepper({ value, min, max, step = 1, onChange, format, label }: { value: number; min: number; max: number; step?: number; onChange: (v: number) => void; format: (v: number) => string; label: string }) {
+  const set = (v: number) => {
+    const next = Math.min(max, Math.max(min, v));
+    if (next !== value) haptic('select');
+    onChange(next);
+  };
+  const button = (dir: -1 | 1) => {
+    const disabled = dir < 0 ? value <= min : value >= max;
+    return (
+      <Pressable
+        onPress={() => set(value + dir * step)}
+        onLongPress={() => set(value + dir * step * 10)}
+        disabled={disabled}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={dir < 0 ? `Fewer ${label}` : `More ${label}`}
+        style={({ pressed }) => [styles.stepButton, pressed && styles.rowPressed, disabled && styles.disabled]}
+      >
+        <Ionicons name={dir < 0 ? 'remove' : 'add'} size={26} color={colors.text} />
+      </Pressable>
+    );
+  };
+  return (
+    <View
+      style={styles.stepper}
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel={label}
+      accessibilityValue={{ text: format(value) }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={(e) => set(value + (e.nativeEvent.actionName === 'increment' ? step : -step))}
+    >
+      {button(-1)}
+      <Text style={styles.stepValue}>{format(value)}</Text>
+      {button(1)}
+    </View>
+  );
+}
+
 export interface Option<T> {
   value: T;
   label: string;
@@ -353,6 +393,9 @@ const styles = StyleSheet.create({
   segmentOn: { backgroundColor: colors.accent },
   segmentText: { fontSize: 14, fontFamily: FONT.medium, color: colors.textFaint },
   segmentTextOn: { color: colors.onAccent },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
+  stepButton: { width: 52, height: 52, borderRadius: 26, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  stepValue: { flex: 1, textAlign: 'center', fontSize: 24, lineHeight: 30, fontFamily: FONT.regular, color: colors.text, fontVariant: ['tabular-nums'] },
   chipBlock: { paddingVertical: space.md, gap: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {

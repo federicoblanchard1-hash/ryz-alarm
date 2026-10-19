@@ -3,13 +3,14 @@ import { router } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarSpace } from '@/components/tabBarSpace';
 import { AlarmRow } from '@/components/AlarmRow';
 import { PressableScale, Segmented, Txt } from '@/components/ui';
 import { nextRing } from '@/core/next';
 import { formatClock, formatSpan } from '@/core/time';
 import { useNow } from '@/state/useNow';
 import { sortedAlarms, useStore } from '@/state/store';
-import { FONT, TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 
 const openEditor = (id: string) => router.push({ pathname: '/alarm/[id]', params: { id } });
 
@@ -18,6 +19,7 @@ const DATE_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'long', month:
 export default function Alarms() {
   const { data, ready, setEnabled, updateSettings } = useStore();
   const insets = useSafeAreaInsets();
+  const tabSpace = useTabBarSpace();
   const now = useNow();
   const { use24h } = data.settings;
   const alarms = sortedAlarms(data.alarms);
@@ -27,7 +29,7 @@ export default function Alarms() {
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + 110 }]}>
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabSpace + 110 }]}>
         <View style={styles.header}>
           <Txt style={styles.wordmark} accessibilityRole="header" accessibilityLabel="Ryz alarms">ryz</Txt>
           <Segmented
@@ -68,7 +70,7 @@ export default function Alarms() {
         )}
       </ScrollView>
 
-      <View style={[styles.fabWrap, { bottom: Math.max(insets.bottom, space.md) + TAB_BAR_HEIGHT + space.lg }]} pointerEvents="box-none">
+      <View style={[styles.fabWrap, { bottom: tabSpace + space.lg }]} pointerEvents="box-none">
         <PressableScale onPress={() => openEditor('new')} style={styles.fab} accessibilityLabel="Add alarm">
           <Ionicons name="add" size={32} color={colors.onAccent} />
         </PressableScale>
@@ -80,7 +82,7 @@ export default function Alarms() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.md },
-  wordmark: { fontSize: 22, lineHeight: 28, fontFamily: FONT.light, color: colors.text, letterSpacing: 8 },
+  wordmark: { fontSize: 34, lineHeight: 40, fontFamily: FONT.displayItalic, color: colors.text, letterSpacing: 1 },
   list: { paddingHorizontal: space.lg, gap: space.md },
   now: { alignItems: 'center', paddingTop: space.xxl, paddingBottom: space.xl, gap: space.xs },
   clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },

@@ -1,11 +1,5 @@
-import {
-  Outfit_200ExtraLight,
-  Outfit_300Light,
-  Outfit_400Regular,
-  Outfit_500Medium,
-  Outfit_600SemiBold,
-  useFonts,
-} from '@expo-google-fonts/outfit';
+import { Geist_200ExtraLight, Geist_300Light, Geist_400Regular, Geist_500Medium, Geist_600SemiBold, useFonts } from '@expo-google-fonts/geist';
+import { InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import { Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
@@ -57,7 +51,15 @@ function WakeRouter() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ Outfit_200ExtraLight, Outfit_300Light, Outfit_400Regular, Outfit_500Medium, Outfit_600SemiBold });
+  const [fontsLoaded, fontError] = useFonts({
+    Geist_200ExtraLight,
+    Geist_300Light,
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    InstrumentSerif_400Regular,
+    InstrumentSerif_400Regular_Italic,
+  });
   // A moment of black while the font loads; if it can't load, carry on with the system font.
   if (!fontsLoaded && !fontError) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   return (

@@ -12,13 +12,14 @@ const HINTS = {
   shake: 'Shake your phone hard, like you mean it.',
   squats: 'Hold the phone flat against your chest, then squat all the way down and stand back up.',
   steps: 'Get out of bed and walk around with your phone.',
+  jacks: 'Hold your phone firmly and do jumping jacks. Each landing counts.',
 };
 
 /** Counts shakes, squats or steps until the target is reached. */
 export function BodyMission({ mission, onActivity, onDone }: MissionProps) {
   const [count, setCount] = useState(0);
   const done = useRef(false);
-  const type = mission.type as 'shake' | 'squats' | 'steps';
+  const type = mission.type as 'shake' | 'squats' | 'steps' | 'jacks';
   // Latest callbacks, so a new function from the parent doesn't count as a new shake.
   const callbacks = useRef({ onActivity, onDone });
   useEffect(() => {
@@ -39,8 +40,9 @@ export function BodyMission({ mission, onActivity, onDone }: MissionProps) {
         sub?.remove();
       };
     }
-    const counts = type === 'shake' ? shakeCounter() : squatCounter();
-    Accelerometer.setUpdateInterval(type === 'shake' ? 40 : 50);
+    // A jumping jack lands harder and slower than a shake.
+    const counts = type === 'shake' ? shakeCounter() : type === 'jacks' ? shakeCounter(2.1, 450) : squatCounter();
+    Accelerometer.setUpdateInterval(type === 'squats' ? 50 : 40);
     const sub = Accelerometer.addListener(({ x, y, z }) => {
       if (counts({ x, y, z, t: Date.now() })) setCount((c) => c + 1);
     });
@@ -50,7 +52,7 @@ export function BodyMission({ mission, onActivity, onDone }: MissionProps) {
   useEffect(() => {
     if (count === 0) return;
     callbacks.current.onActivity();
-    if (type === 'squats') haptic('light');
+    if (type === 'squats' || type === 'jacks') haptic('light');
     if (count >= mission.amount && !done.current) {
       done.current = true;
       callbacks.current.onDone();

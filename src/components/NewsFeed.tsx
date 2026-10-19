@@ -127,7 +127,7 @@ export function NewsPrompt() {
 const styles = StyleSheet.create({
   wrap: { marginTop: space.lg, gap: space.md },
   header: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  title: { fontSize: 24, lineHeight: 30, fontFamily: FONT.medium, color: colors.text },
+  title: { fontSize: 30, lineHeight: 34, fontFamily: FONT.display, color: colors.text },
   edit: { fontSize: 16, lineHeight: 22, fontFamily: FONT.regular, color: colors.textMuted },
   filterScroll: { marginHorizontal: -space.lg },
   filters: { gap: space.sm, paddingHorizontal: space.lg },
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   lead: { borderRadius: radius.lg - 6, backgroundColor: colors.surface, overflow: 'hidden' },
   leadImage: { width: '100%', aspectRatio: 16 / 9, backgroundColor: colors.surfaceRaised },
   leadText: { padding: space.lg, gap: 6 },
-  leadTitle: { fontSize: 21, lineHeight: 27, fontFamily: FONT.medium, color: colors.text },
+  leadTitle: { fontSize: 25, lineHeight: 30, fontFamily: FONT.display, color: colors.text },
   summary: { fontSize: 15, lineHeight: 21, fontFamily: FONT.light, color: colors.textMuted },
   meta: { fontSize: 13, lineHeight: 18, fontFamily: FONT.regular, color: colors.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

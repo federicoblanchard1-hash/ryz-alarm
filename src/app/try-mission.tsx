@@ -11,11 +11,11 @@ import { colors, space } from '@/theme';
 
 /** Practise a mission from the editor, without an alarm ringing. */
 export default function TryMission() {
-  const params = useLocalSearchParams<{ type: string; amount: string; level: string }>();
+  const params = useLocalSearchParams<{ type: string; amount: string; level: string; code?: string }>();
   const insets = useSafeAreaInsets();
   const [finished, setFinished] = useState(false);
   const type = (params.type in MISSIONS ? params.type : 'math') as MissionType;
-  const [mission] = useState<Mission>(() => ({ type, amount: Number(params.amount) || MISSIONS[type].amounts[0], level: (Number(params.level) || 1) as MissionLevel }));
+  const [mission] = useState<Mission>(() => ({ type, amount: Number(params.amount) || MISSIONS[type].amounts[0], level: (Number(params.level) || 1) as MissionLevel, code: params.code || undefined }));
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (

@@ -82,7 +82,14 @@
         }
       ],
       "expo-web-browser",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Ryz uses the camera to scan the QR code or barcode you chose for a wake-up mission, so you have to get out of bed to stop the alarm.",
+          "recordAudioAndroid": false
+        }
+      ]
     ]
   }
 }

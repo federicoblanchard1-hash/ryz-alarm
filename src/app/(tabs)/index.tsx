@@ -2,8 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useTabBarSpace } from '@/components/tabBarSpace';
 import { AlarmTags } from '@/components/ModeBadge';
 import { Button, Card, PressableScale, Txt, haptic, type IconName } from '@/components/ui';
 import { NewsFeed, NewsPrompt } from '@/components/NewsFeed';
@@ -14,7 +14,7 @@ import { HOUR, MINUTE, formatClock, formatClockText, formatHours, formatSpan } f
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import { FONT, TAB_BAR_HEIGHT, colors, radius, space } from '@/theme';
+import { FONT, colors, radius, space } from '@/theme';
 
 /** A shortcut like Alarmy's: a rounded square holding a value or an icon, with its name below. */
 function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string; label: string; onPress: () => void }) {
@@ -37,7 +37,7 @@ function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string
 export default function Home() {
   const { data, ready, update } = useStore();
   const permissions = usePermissions();
-  const insets = useSafeAreaInsets();
+  const tabSpace = useTabBarSpace();
   const now = useNow();
   const { use24h, sleepGoalMinutes } = data.settings;
   const next = nextRing(data, now);
@@ -54,7 +54,7 @@ export default function Home() {
   const needsPermission = permissions.supported && permissions.state !== null && permissions.state.notifications !== 'granted' && data.alarms.length > 0;
 
   return (
-    <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + space.xxl }}>
+    <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="never" contentContainerStyle={{ paddingBottom: tabSpace + space.xl }}>
       <WeatherHero>
         <View style={styles.tiles}>
           <Tile
