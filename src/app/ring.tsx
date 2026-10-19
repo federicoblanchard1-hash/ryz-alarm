@@ -141,8 +141,11 @@ export default function RingScreen() {
               />
             ))
           )}
-          <View style={styles.clockRow}>
-            <Txt style={styles.clock} accessibilityRole="header">{clock.time}</Txt>
+          {/* Hours over minutes, big enough to read without glasses. */}
+          <View style={styles.stack} accessible accessibilityRole="header" accessibilityLabel={`${clock.time} ${clock.period}`}>
+            {clock.time.split(':').map((part, i) => (
+              <Txt key={i} style={[styles.digits, i === 1 && styles.minutes]}>{part.padStart(2, '0')}</Txt>
+            ))}
             {clock.period ? <Txt style={styles.period}>{clock.period}</Txt> : null}
           </View>
         </View>
@@ -175,11 +178,12 @@ const styles = StyleSheet.create({
   missions: { flex: 1, paddingHorizontal: space.xl, gap: space.xl },
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
   top: { alignItems: 'center', gap: space.md, marginTop: space.xxl },
-  pulseBox: { width: 300, height: 300, alignItems: 'center', justifyContent: 'center' },
-  pulse: { position: 'absolute', width: 300, height: 300, borderRadius: 150, borderWidth: 1.5, borderColor: colors.text },
-  clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  clock: { fontSize: 84, lineHeight: 98, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -3 },
-  period: { fontSize: 24, lineHeight: 30, fontWeight: '500', color: colors.textMuted },
+  pulseBox: { width: 340, height: 340, alignItems: 'center', justifyContent: 'center' },
+  pulse: { position: 'absolute', width: 340, height: 340, borderRadius: 170, borderWidth: 1.5, borderColor: colors.text },
+  stack: { alignItems: 'center' },
+  digits: { fontSize: 112, lineHeight: 112, fontWeight: '200', color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -4 },
+  minutes: { color: colors.textMuted },
+  period: { fontSize: 15, lineHeight: 20, fontWeight: '600', color: colors.textMuted, letterSpacing: 2, marginTop: space.xs },
   center: { textAlign: 'center' },
   actions: { gap: space.md },
   big: { height: 64 },

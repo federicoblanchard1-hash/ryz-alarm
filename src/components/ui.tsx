@@ -161,6 +161,44 @@ export function ToggleRow({ title, description, value, onChange }: { title: stri
   );
 }
 
+/** A tappable settings row: title on the left, value and chevron on the right. */
+export function LinkRow({ title, value, onPress, icon }: { title: string; value?: string; onPress: () => void; icon?: IconName }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={value ? `${title}: ${value}` : title} style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
+      {icon ? <Ionicons name={icon} size={20} color={colors.text} /> : null}
+      <Txt variant="body" style={styles.rowText}>{title}</Txt>
+      {value ? <Txt variant="muted">{value}</Txt> : null}
+      <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
+    </Pressable>
+  );
+}
+
+/** Two or three options in one pill, like iOS's segmented control (12h / 24h). */
+export function Segmented<T extends string | number>({ options, value, onChange, label }: { options: Option<T>[]; value: T; onChange: (v: T) => void; label: string }) {
+  return (
+    <View style={styles.segmented} accessibilityRole="radiogroup" accessibilityLabel={label}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <Pressable
+            key={String(o.value)}
+            onPress={() => {
+              if (!on) haptic('select');
+              onChange(o.value);
+            }}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            hitSlop={6}
+            style={[styles.segment, on && styles.segmentOn]}
+          >
+            <Text style={[styles.segmentText, on && styles.segmentTextOn]}>{o.label}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export interface Option<T> {
   value: T;
   label: string;
@@ -243,6 +281,12 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
   rowText: { flex: 1, gap: 2 },
+  rowPressed: { opacity: 0.6 },
+  segmented: { flexDirection: 'row', padding: 3, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  segment: { minWidth: 48, height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  segmentOn: { backgroundColor: colors.accent },
+  segmentText: { fontSize: 14, fontWeight: '600', color: colors.textFaint },
+  segmentTextOn: { color: colors.onAccent },
   chipBlock: { paddingVertical: space.md, gap: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {

@@ -87,7 +87,17 @@ function Backdrop({ scene, isDay, height }: Props) {
       drift: 30 + random() * 30,
       duration: 14000 + random() * 10000,
     }));
-    return { stars, clouds, drops, flakes, bands };
+    // Rain on glass, like a window in the morning: still beads, and a few that run down.
+    const beads = Array.from({ length: rainCount ? Math.round(rainCount * 0.6) : 0 }, () => ({
+      left: random() * width,
+      top: random() * height * 0.85,
+      size: 4 + random() * random() * 15,
+      runs: random() < 0.22,
+      run: 60 + random() * 140,
+      duration: 7000 + random() * 9000,
+      delay: random() * 6000,
+    }));
+    return { stars, clouds, drops, flakes, bands, beads };
   }, [width, height, scene, cloudCount, rainCount]);
 
   return (
@@ -203,6 +213,30 @@ function Backdrop({ scene, isDay, height }: Props) {
         />
       ))}
 
+      {layers.beads.map((b, i) => (
+        <Animated.View
+          key={`bead${i}`}
+          style={[
+            styles.bead,
+            { left: b.left, top: b.top, width: b.size, height: b.size * 1.12, borderRadius: b.size },
+            moving &&
+              b.runs &&
+              anim(
+                {
+                  '0%': { opacity: 1, transform: [{ translateY: 0 }] },
+                  '70%': { opacity: 1, transform: [{ translateY: 0 }] },
+                  '92%': { opacity: 0.8, transform: [{ translateY: b.run }] },
+                  '100%': { opacity: 0, transform: [{ translateY: b.run + 10 }] },
+                },
+                b.duration,
+                { animationDelay: `${b.delay}ms`, animationTimingFunction: 'ease-in' },
+              ),
+          ]}
+        >
+          <View style={[styles.beadShine, { width: Math.max(1.5, b.size * 0.28), height: Math.max(1.5, b.size * 0.28) }]} />
+        </Animated.View>
+      ))}
+
       {scene === 'storm' && moving ? (
         <Animated.View
           style={[
@@ -232,6 +266,8 @@ const styles = StyleSheet.create({
   puff: { position: 'absolute', borderRadius: 999, backgroundColor: '#FFFFFF' },
   band: { position: 'absolute' },
   drop: { position: 'absolute', top: 0, width: 1.5, borderRadius: 1, backgroundColor: '#FFFFFF' },
+  bead: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderBottomColor: 'rgba(255,255,255,0.55)' },
+  beadShine: { position: 'absolute', top: '18%', left: '22%', borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.8)' },
   flash: { backgroundColor: '#FFFFFF', opacity: 0 },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0 },
 });

@@ -21,11 +21,13 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 
 ## Home
 
-- **Weather where you wake up**: your town, the temperature, conditions, today's high and low, and the next 24 hours with weather emojis, like Apple Weather. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
-- **A background that matches the weather**, drawn in greys and animated: sun and glow, moon and twinkling stars at night, drifting clouds, rain, snow, fog, and lightning in a storm. It holds still when Reduce Motion is on.
-- **Next alarm** with its sound and missions, plus the bedtime for your sleep goal.
+- **Weather where you wake up**, laid out like Alarmy's morning screen: a greeting, your town (tap to refresh), the temperature big on the left, conditions and today's high and low on the right, and the next 24 hours with weather emojis underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
+- **A background that matches the weather**, drawn in greys and animated: sun and glow, moon and twinkling stars at night, drifting clouds, rain with drops on the glass, snow, fog, and lightning in a storm. It holds still when Reduce Motion is on.
+- **Next alarm** with how long until it rings, its sound and missions, plus quick tiles for bedtime, your sleep goal and a test alarm.
 
-Three tabs: **Home**, **Alarms** and **Settings**, on the platform's own tab bar.
+Three tabs: **Home**, **Alarms** and **Settings**, on the platform's own tab bar. **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
+
+The **alarm editor** follows Alarmy's layout: the time, repeat days, three mission slots, an *Alarm sound* card with a play button, and *Custom setting* (snooze, label). Each setting opens in a bottom sheet, and Save stays at the bottom of the screen.
 
 ## Missions
 
