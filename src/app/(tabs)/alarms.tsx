@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { AlarmRow } from '@/components/AlarmRow';
+import { NapCountdown, NewAlarmSheet, QuickAlarmSheet } from '@/components/QuickAlarm';
 import { PressableScale, Segmented, Txt } from '@/components/ui';
 import { nextRing } from '@/core/next';
 import { formatClock, formatSpan } from '@/core/time';
@@ -17,12 +19,14 @@ const openEditor = (id: string) => router.push({ pathname: '/alarm/[id]', params
 const DATE_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 
 export default function Alarms() {
-  const { data, ready, setEnabled, updateSettings } = useStore();
+  const { data, ready, setEnabled, updateSettings, saveAlarm, deleteAlarm } = useStore();
+  const [sheet, setSheet] = useState<'new' | 'quick' | null>(null);
   const insets = useSafeAreaInsets();
   const tabSpace = useTabBarSpace();
   const now = useNow();
   const { use24h } = data.settings;
-  const alarms = sortedAlarms(data.alarms);
+  const alarms = sortedAlarms(data.alarms.filter((a) => !a.quick));
+  const naps = data.alarms.filter((a) => a.quick && a.enabled && a.date !== undefined && a.date > now);
   const date = new Date(now);
   const clock = formatClock(date.getHours(), date.getMinutes(), use24h);
   const next = nextRing(data, now);
@@ -55,6 +59,10 @@ export default function Alarms() {
           </View>
         </View>
 
+        {naps.map((nap) => (
+          <NapCountdown key={nap.id} alarm={nap} onCancel={() => deleteAlarm(nap.id)} />
+        ))}
+
         {ready && alarms.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="alarm-outline" size={40} color={colors.textFaint} />
@@ -71,10 +79,29 @@ export default function Alarms() {
       </ScrollView>
 
       <View style={[styles.fabWrap, { bottom: tabSpace + space.lg }]} pointerEvents="box-none">
-        <PressableScale onPress={() => openEditor('new')} style={styles.fab} accessibilityLabel="Add alarm">
+        <PressableScale onPress={() => setSheet('new')} style={styles.fab} accessibilityLabel="Add an alarm or a quick alarm">
           <Ionicons name="add" size={32} color={colors.onAccent} />
         </PressableScale>
       </View>
+
+      <NewAlarmSheet
+        visible={sheet === 'new'}
+        onClose={() => setSheet(null)}
+        onAlarm={() => {
+          setSheet(null);
+          openEditor('new');
+        }}
+        onQuick={() => setSheet('quick')}
+      />
+      <QuickAlarmSheet
+        visible={sheet === 'quick'}
+        onClose={() => setSheet(null)}
+        use24h={use24h}
+        onStart={(alarm) => {
+          saveAlarm(alarm);
+          setSheet(null);
+        }}
+      />
     </View>
   );
 }

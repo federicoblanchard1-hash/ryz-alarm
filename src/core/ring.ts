@@ -59,8 +59,10 @@ function settle(data: AppData, ring: Extract<ActiveRing, { type: 'ring' }>): App
   const handled = ring.source === 'alarm' ? { ...data.handled, [ring.alarmId]: ring.at } : data.handled;
   // Any earlier snooze or re-ring for the same alarm is over too.
   const pending = data.pending.filter((e) => !(e.alarmId === ring.alarmId && e.kind !== 'awakeCheck'));
-  // A one-time alarm has done its job once it rang.
-  const alarms = data.alarms.map((a) => (a.id === ring.alarmId && a.days.length === 0 && a.enabled ? { ...a, enabled: false, date: undefined } : a));
+  // A one-time alarm has done its job once it rang; a quick (nap) alarm, which has no snooze, goes away entirely.
+  const alarms = data.alarms
+    .filter((a) => !(a.id === ring.alarmId && a.quick))
+    .map((a) => (a.id === ring.alarmId && a.days.length === 0 && a.enabled ? { ...a, enabled: false, date: undefined } : a));
   return { ...data, alarms, pending, handled };
 }
 
@@ -110,7 +112,13 @@ export function cleanup(data: AppData, now: number): AppData {
     return now < e.at + window * MINUTE;
   });
   let alarmsChanged = false;
-  const alarms = data.alarms.map((a) => {
+  // Quick alarms that are over (rang out or switched off) are removed.
+  const live = data.alarms.filter((a) => {
+    const over = a.quick && (!a.enabled || a.date === undefined || now >= a.date + a.ringMinutes * MINUTE);
+    if (over) alarmsChanged = true;
+    return !over;
+  });
+  const alarms = live.map((a) => {
     if (a.enabled && a.days.length === 0 && (a.date === undefined || now >= a.date + a.ringMinutes * MINUTE)) {
       alarmsChanged = true;
       return { ...a, enabled: false, date: undefined };

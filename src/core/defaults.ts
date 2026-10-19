@@ -63,3 +63,28 @@ export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, numbe
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {
   return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {} };
 }
+
+/** A power-nap countdown: one ring at exactly `now + minutes`, no missions, no snooze. */
+export function quickAlarm(id: string, now: number, minutes: number, sound: Alarm['sound'], mode: Alarm['mode'], vibrate: boolean): Alarm {
+  const at = now + minutes * 60_000;
+  const d = new Date(at);
+  return {
+    ...newAlarm(id),
+    hour: d.getHours(),
+    minute: d.getMinutes(),
+    days: [],
+    date: at,
+    label: `Nap · ${minutes} min`,
+    mode,
+    sound,
+    vibrate,
+    fadeInSeconds: 30,
+    escalate: true,
+    escalateAfterMinutes: 1,
+    ringMinutes: 10,
+    snooze: { enabled: false, minutes: 9, limit: 0 },
+    awakeCheck: { enabled: false, delayMinutes: 5, answerMinutes: 3 },
+    missions: [],
+    quick: true,
+  };
+}

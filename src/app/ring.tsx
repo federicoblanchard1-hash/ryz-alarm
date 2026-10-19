@@ -91,8 +91,9 @@ export default function RingScreen() {
     // Stopping the alarm also ends a running sleep session.
     update((d, t) => endSleep(stop(d, ring, t), t).data);
     clearDelivered();
-    router.replace('/morning');
-  }, [ring, update]);
+    // A nap isn't a morning: go straight back.
+    router.replace(alarm?.quick ? '/' : '/morning');
+  }, [ring, alarm, update]);
 
   const startMissions = () => {
     haptic('light');

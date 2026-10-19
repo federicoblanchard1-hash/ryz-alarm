@@ -1,4 +1,4 @@
-import { emptyData, newAlarm } from '../defaults';
+import { emptyData, newAlarm, quickAlarm } from '../defaults';
 import { canSnooze, cleanup, confirmAwake, findActive, scheduleTest, snooze, stop } from '../ring';
 import type { ActiveRing, Alarm, AppData } from '../types';
 
@@ -112,5 +112,27 @@ describe('cleanup', () => {
   it('returns the same object when nothing changed', () => {
     const d = data([newAlarm('a')]);
     expect(cleanup(d, SEVEN)).toBe(d);
+  });
+});
+
+describe('quick alarms', () => {
+  const now = new Date(2026, 9, 19, 14, 0, 30).getTime();
+
+  it('rings at the exact countdown time and disappears once stopped', () => {
+    const nap = quickAlarm('nap', now, 20, 'gentle', 'gentle', true);
+    expect(nap.date).toBe(now + 20 * 60_000);
+    const data = { ...emptyData(true), alarms: [nap] };
+    const active = findActive(data, nap.date! + 5_000);
+    expect(active?.type).toBe('ring');
+    if (active?.type !== 'ring') return;
+    expect(stop(data, active, nap.date! + 10_000).alarms).toHaveLength(0);
+  });
+
+  it('is cleaned up after it rang out or was switched off', () => {
+    const nap = quickAlarm('nap', now, 10, 'gentle', 'gentle', true);
+    const data = { ...emptyData(true), alarms: [nap] };
+    expect(cleanup(data, now + 60_000).alarms).toHaveLength(1);
+    expect(cleanup(data, now + 60 * 60_000).alarms).toHaveLength(0);
+    expect(cleanup({ ...data, alarms: [{ ...nap, enabled: false }] }, now).alarms).toHaveLength(0);
   });
 });

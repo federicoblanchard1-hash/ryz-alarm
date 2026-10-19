@@ -24,8 +24,9 @@ interface Store {
 
 const StoreContext = createContext<Store | null>(null);
 
-/** A one-time alarm gets a concrete date when it's switched on. */
+/** A one-time alarm gets a concrete date when it's switched on. A quick alarm keeps its exact countdown time. */
 function withDate(alarm: Alarm, now: number): Alarm {
+  if (alarm.quick) return alarm;
   if (alarm.days.length > 0 || !alarm.enabled) return { ...alarm, date: undefined };
   return { ...alarm, date: nextClock(alarm.hour, alarm.minute, now) };
 }

@@ -85,6 +85,8 @@ export interface Alarm {
   awakeCheck: { enabled: boolean; delayMinutes: number; answerMinutes: number };
   /** Tasks to finish before the alarm turns off, done in order. */
   missions: Mission[];
+  /** A countdown for a nap: rings once at `date`, no missions, and removes itself afterwards. */
+  quick?: boolean;
 }
 
 export interface Settings {
