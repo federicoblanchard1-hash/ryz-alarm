@@ -19,13 +19,17 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 - In the terminal, press `r` to reload the app and `Ctrl+C` to stop.
 - Keep Ryz open to test alarms: Settings → **Test alarm in 1 minute**. In Expo Go, alarms that ring while Ryz is closed use the phone's default notification sound, not Ryz's sounds. The full alarm needs a real build (see *Running it* below).
 
+## Getting started
+
+On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, pick your **news topics**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase; your name, age, news topics, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms and sleep history stay on the phone, so alarms always work offline.
+
 ## Morning (home)
 
 - **Weather where you wake up**, laid out like Alarmy's morning screen: your town (tap to refresh), the temperature on the left, conditions and today's high and low on the right, and the next 24 hours with white weather icons underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
 - **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
 - **Shortcut tiles** on the scene: next alarm, bedtime, sleep goal and a test alarm.
 - **Next alarm** card with how long until it rings, its sound and missions.
-- **Your news**: on first launch Ryz asks what you like to read, from 13 categories and 133 topics, each category opening into its sub-topics (Football into Premier League, Champions League, La Liga, Serie A…; Countries into France, Germany, Japan…; Science into Space, Physics, Neuroscience…). It stays up to date: re-fetched every 5 minutes while Ryz is open, when you come back to the app or the tab, and when you pull down on Morning, with "Updated x min ago" under the title. Stories come from BBC, The Guardian and Ars Technica: free, no paywall, available in Switzerland. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
+- **Your news**: on first launch Ryz asks what you like to read, from 13 categories and 133 topics, each category opening into its sub-topics (Football into Premier League, Champions League, La Liga, Serie A…; Countries into France, Germany, Japan…; Science into Space, Physics, Neuroscience…). It stays up to date: re-fetched every 5 minutes while Ryz is open, when you come back to the app or the tab, and when you pull down on Morning, with "Updated x min ago" under the title. Stories come from over 50 free publishers (BBC, The Guardian, The New York Times, Sky, France 24, Euronews, Le Monde, Wired, The Verge, ESPN, Autosport, Variety, Space.com…), and the feed takes turns between them so no single source fills it. A small **search bar** finds anything: it filters your stories and searches every publisher through Google News. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
 
 Four tabs: **Morning**, **Alarms**, **Sleep** and **Settings**, in the native iOS tab bar on iPhone (a floating pill on web). **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
 
@@ -33,7 +37,7 @@ The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Rin
 
 ## Missions
 
-Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each (any number of sums, squats, steps… with a − / + stepper, or a preset) and how hard. While you work, the alarm turns down; if you stop for a while (5 s to 1 min, Settings) it's back to full volume. An optional **time limit per mission** (30 s to 3 min) restarts the mission with a new puzzle when it runs out.
+Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. While you work, the alarm turns down; if you stop for a while (5 s to 1 min, Settings) it's back to full volume. An optional **time limit per mission** (30 s to 3 min) restarts the mission with a new puzzle when it runs out.
 
 | Wake your brain | Wake your body | Scientific |
 | --- | --- | --- |
@@ -66,15 +70,23 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 - **Ringing screen**: black, with the time inside a dial of 60 ticks that fill with the seconds, a dot sweeping round once a minute and a breathing glow. The screen turns up to full brightness (light right after waking helps clear grogginess; Settings can turn it off).
 - **Good-morning screen** greets you by name, asks how you slept, and lists what helps after waking: bright light, music you like, the same wake time tomorrow.
 
+## Quick alarm
+
+Tap **+** on Alarms and choose **Quick alarm** for a power nap: 10, 20, 26 (NASA's nap), 45 or 90 minutes, or any length up to 3 hours. It rings once at exactly that time, with no missions or snooze, shows a live countdown on Alarms, and removes itself afterwards.
+
 ## Sleep
 
 - **Start sleep** when you go to bed; stopping your alarm ends it (or tap *I'm awake*). Nights can also be added by hand and deleted with a long press.
-- Your **average night** against your goal, **hours per night** for a week, two weeks or a month (tap a night for its times and rating), average bedtime and wake-up, **regularity** (how much your wake time moves) and **sleep debt**.
+- **Smartwatch**: switch it on and nights come in by themselves from Apple Health (Apple Watch, or any watch that writes to Health) or Health Connect (Galaxy Watch, Pixel Watch, Fitbit, Garmin…). While it's on, the Start button is disabled, because there's nothing to press. Not wearing the watch tonight? Switch it off and use the button. This needs a real build of the app (see *Running it*); Expo Go explains that and keeps the button.
+- **Ranges**: week, 2 weeks, month, year, or any dates from a calendar. Long ranges average by week or by month.
+- Stats: your **average night** against your goal, hours per night (tap a column for details), average bedtime and wake-up with their spread, **regularity**, **sleep debt**, nights on goal, **weekend shift** (social jet lag, Wittmann et al., 2006), longest and shortest night, and how you felt.
 - One research-based note at a time: under 7 hours (AASM/SRS), irregular mornings (Windred et al., 2024), or short of your goal.
 
 ## Settings
 
-- **Profile**: your name and age group, kept on the phone only (no account, nothing is uploaded). Your age suggests a sleep goal (Hirshkowitz et al., 2015).
+- **Account**: who's signed in, and Log out.
+- **Profile**: your name and age group. Your age suggests a sleep goal (Hirshkowitz et al., 2015).
+- **Your goals**: what you picked at sign-up; change them any time.
 - **Missions**: time for each mission, quieter during missions, and how long before the alarm is back at full volume.
 - **Waking up**: bright screen when ringing, daylight reminder.
 - Sleep goal and bedtime reminder, clock and temperature units, alarm checks and a test alarm, news topics, location, erase all data, and the research behind Ryz.
@@ -137,7 +149,8 @@ assets/weather/   the rendered sky backgrounds
 - **iPhone silent switch**: when Ryz is closed, iOS notifications are silent in silent mode. The fix is Apple's **AlarmKit** (iOS 26+), which rings like the Clock app. It needs a native module and is the top priority for version 2.
 - **Android lock screen**: Ryz rings from a notification; it doesn't yet take over the lock screen with a full-screen alarm (that needs the full-screen intent, also a native module).
 - **When the app is in the background on Android**, in-app playback uses media volume. Notifications use alarm volume.
-- **Real accounts**: the profile lives on the phone. Syncing between devices would need a sign-in and a server (for example Supabase).
+- **Sign-up emails**: Supabase's built-in email service only sends to the project team's addresses. Before other people sign up, either turn off **Confirm email** (Supabase dashboard → Authentication → Sign In / Providers → Email) or add your own SMTP server.
+- **Alarms and sleep history** are kept on the phone, not in the account yet.
 - **Squat counting** uses a simple motion pattern (a dip then a peak), tuned on synthetic data. It needs testing on real phones and people.
 - **Not built yet**, from the research list: a voice alarm (record a familiar voice), a smart wake window from Apple Health / Health Connect sleep data, smart-bulb dawn light, and a study with a sleep researcher to measure whether Ryz actually reduces grogginess.
 - The bundle identifier `com.ryzalarm.app` in `app.json` is a placeholder. Change it to your own before publishing.
