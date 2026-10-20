@@ -6,12 +6,13 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DayPicker } from '@/components/DayPicker';
+import { AmountPicker } from '@/components/AmountPicker';
 import { MissionCard } from '@/components/editor/MissionCard';
 import { CATEGORY_ICON } from '@/components/ModeBadge';
 import { Sheet } from '@/components/Sheet';
 import { TimePicker } from '@/components/TimePicker';
 import { Slider } from '@/components/Slider';
-import { Chips, LinkRow, PressableScale, Txt, haptic, ToggleRow } from '@/components/ui';
+import { LinkRow, PressableScale, Txt, haptic, ToggleRow } from '@/components/ui';
 import { newAlarm } from '@/core/defaults';
 import { makeId } from '@/core/ring';
 import { formatSpan, nextClock, nextOccurrence } from '@/core/time';
@@ -26,7 +27,6 @@ import { usePermissions } from '@/state/usePermissions';
 import { FONT, colors, radius, space } from '@/theme';
 
 const soundTitle = (id: AlarmSoundId) => (SOUNDS[id] ?? SOUNDS.gentle).title;
-const minutes = (values: number[]) => values.map((v) => ({ value: v, label: `${v} min` }));
 const fadeLabel = (s: number) => (s < 60 ? `${s} s` : `${s / 60} min`);
 const PREVIEW_SECONDS = 6;
 const PREVIEW_PROGRESS = {
@@ -300,18 +300,22 @@ export default function EditAlarm() {
       </Sheet>
 
       <Sheet visible={sheet === 'gentle'} onClose={() => setSheet(null)} title="Gentle wake-up">
-        <Chips
+        <AmountPicker
           title="Fade in over"
           value={draft.fadeInSeconds}
+          min={10}
+          max={600}
+          step={5}
+          unit={(n) => `${n} seconds`}
+          hint={(n) => (n >= 60 ? fadeLabel(n) : null)}
           onChange={(fadeInSeconds) => set({ fadeInSeconds })}
-          options={[30, 60, 120, 300].map((v) => ({ value: v, label: fadeLabel(v) }))}
         />
         <ToggleRow title="Switch to the 520 Hz tone" description="If you sleep through the melody" value={draft.escalate} onChange={(escalate) => set({ escalate })} />
-        {draft.escalate ? <Chips title="After" value={draft.escalateAfterMinutes} onChange={(escalateAfterMinutes) => set({ escalateAfterMinutes })} options={minutes([1, 2, 3, 5])} /> : null}
+        {draft.escalate ? <AmountPicker title="After" value={draft.escalateAfterMinutes} min={1} max={30} unit={(n) => `${n} ${n === 1 ? 'minute' : 'minutes'}`} onChange={(escalateAfterMinutes) => set({ escalateAfterMinutes })} /> : null}
       </Sheet>
 
       <Sheet visible={sheet === 'ring'} onClose={() => setSheet(null)} title="Keep ringing">
-        <Chips value={draft.ringMinutes} onChange={(ringMinutes) => set({ ringMinutes })} options={minutes([5, 10, 15])} />
+        <AmountPicker value={draft.ringMinutes} min={1} max={60} unit={(n) => `${n} ${n === 1 ? 'minute' : 'minutes'}`} onChange={(ringMinutes) => set({ ringMinutes })} />
         <Txt variant="caption">If nobody touches it, the alarm snoozes itself when snoozes are left.</Txt>
       </Sheet>
 
@@ -319,8 +323,8 @@ export default function EditAlarm() {
         <ToggleRow title="Allow snooze" value={snooze.enabled} onChange={(enabled) => set({ snooze: { ...snooze, enabled } })} />
         {snooze.enabled ? (
           <>
-            <Chips title="Length" value={snooze.minutes} onChange={(m) => set({ snooze: { ...snooze, minutes: m } })} options={minutes([5, 9, 10, 15, 20, 30])} />
-            <Chips title="How many times" value={snooze.limit} onChange={(limit) => set({ snooze: { ...snooze, limit } })} options={[1, 2, 3, 5].map((v) => ({ value: v, label: String(v) }))} />
+            <AmountPicker title="Length" value={snooze.minutes} min={1} max={60} unit={(n) => `${n} ${n === 1 ? 'minute' : 'minutes'}`} onChange={(m) => set({ snooze: { ...snooze, minutes: m } })} />
+            <AmountPicker title="How many times" value={snooze.limit} min={1} max={10} unit={(n) => `${n} ${n === 1 ? 'time' : 'times'}`} onChange={(limit) => set({ snooze: { ...snooze, limit } })} />
           </>
         ) : null}
         <Txt variant="caption">{"Snoozing for up to about 30 minutes didn't hurt sleep or mood in a 2023 study."}</Txt>
@@ -330,8 +334,8 @@ export default function EditAlarm() {
         <ToggleRow title="Check that I'm awake" description="Asks a few minutes after you stop the alarm" value={awakeCheck.enabled} onChange={(enabled) => set({ awakeCheck: { ...awakeCheck, enabled } })} />
         {awakeCheck.enabled ? (
           <>
-            <Chips title="Ask after" value={awakeCheck.delayMinutes} onChange={(delayMinutes) => set({ awakeCheck: { ...awakeCheck, delayMinutes } })} options={minutes([3, 5, 10])} />
-            <Chips title="Answer within" value={awakeCheck.answerMinutes} onChange={(answerMinutes) => set({ awakeCheck: { ...awakeCheck, answerMinutes } })} options={minutes([2, 3, 5])} />
+            <AmountPicker title="Ask after" value={awakeCheck.delayMinutes} min={1} max={30} unit={(n) => `${n} ${n === 1 ? 'minute' : 'minutes'}`} onChange={(delayMinutes) => set({ awakeCheck: { ...awakeCheck, delayMinutes } })} />
+            <AmountPicker title="Answer within" value={awakeCheck.answerMinutes} min={1} max={15} unit={(n) => `${n} ${n === 1 ? 'minute' : 'minutes'}`} onChange={(answerMinutes) => set({ awakeCheck: { ...awakeCheck, answerMinutes } })} />
           </>
         ) : null}
         <Txt variant="caption">{"Stops you falling back asleep: if you don't answer, the alarm rings again."}</Txt>

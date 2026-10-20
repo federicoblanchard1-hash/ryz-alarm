@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Alert, AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AmountPicker } from '@/components/AmountPicker';
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
 import { AGE_GROUPS } from '@/core/defaults';
@@ -34,7 +35,6 @@ const SOURCES = [
   { title: 'Place names on web', who: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright' },
 ];
 
-const seconds = (values: number[]) => values.map((v) => ({ value: v, label: v === 0 ? 'Off' : v < 60 ? `${v} s` : `${v / 60} min` }));
 
 function confirm(title: string, message: string, action: string, onYes: () => void) {
   if (Platform.OS === 'web') {
@@ -203,11 +203,24 @@ export default function SettingsScreen() {
         </Section>
 
         <Section label="Missions" footer="When time runs out, the mission starts over with a new puzzle and the alarm comes back at full volume.">
-          <Chips title="Time for each mission" value={settings.missionTimeLimitSeconds} onChange={(missionTimeLimitSeconds) => updateSettings({ missionTimeLimitSeconds })} options={seconds([0, 30, 60, 90, 120, 180])} />
+          <View style={styles.picker}>
+            <AmountPicker
+              title="Time for each mission (0 = no limit)"
+              value={settings.missionTimeLimitSeconds}
+              min={0}
+              max={300}
+              step={5}
+              unit={(n) => (n === 0 ? '0 no limit' : `${n} seconds`)}
+              hint={(n) => (n >= 60 ? `${Math.floor(n / 60)} min${n % 60 ? ` ${n % 60} s` : ''}` : null)}
+              onChange={(missionTimeLimitSeconds) => updateSettings({ missionTimeLimitSeconds })}
+            />
+          </View>
           <Divider />
           <ToggleRow title="Quieter during missions" description="Turns the alarm down while you work, so you can think" value={settings.quietDuringMissions} onChange={(quietDuringMissions) => updateSettings({ quietDuringMissions })} />
           {settings.quietDuringMissions ? (
-            <Chips title="Full volume again if you stop for" value={settings.missionIdleSeconds} onChange={(missionIdleSeconds) => updateSettings({ missionIdleSeconds })} options={seconds([5, 10, 15, 20, 30, 60])} />
+            <View style={styles.picker}>
+              <AmountPicker title="Full volume again if you stop for" value={settings.missionIdleSeconds} min={5} max={120} unit={(n) => `${n} seconds`} onChange={(missionIdleSeconds) => updateSettings({ missionIdleSeconds })} />
+            </View>
           ) : null}
         </Section>
 
@@ -218,21 +231,33 @@ export default function SettingsScreen() {
         </Section>
 
         <Section label="Sleep" footer="Adults need at least 7 hours a night. Ryz uses your goal to suggest a bedtime.">
-          <Chips
-            title="Sleep goal"
-            value={settings.sleepGoalMinutes}
-            onChange={(sleepGoalMinutes) => updateSettings({ sleepGoalMinutes })}
-            options={[420, 450, 480, 510, 540].map((m) => ({ value: m, label: formatHours(m) }))}
-          />
+          <View style={styles.picker}>
+            <AmountPicker
+              title="Sleep goal"
+              value={settings.sleepGoalMinutes}
+              min={240}
+              max={720}
+              step={15}
+              unit={(n) => `${n} minutes`}
+              hint={formatHours}
+              onChange={(sleepGoalMinutes) => updateSettings({ sleepGoalMinutes })}
+            />
+          </View>
           <Divider />
           <ToggleRow title="Bedtime reminder" description="Before the earliest alarm of each morning" value={settings.bedtimeReminder} onChange={(bedtimeReminder) => updateSettings({ bedtimeReminder })} />
           {settings.bedtimeReminder ? (
-            <Chips
-              title="Remind me before bedtime"
-              value={settings.reminderLeadMinutes}
-              onChange={(reminderLeadMinutes) => updateSettings({ reminderLeadMinutes })}
-              options={[15, 30, 60].map((m) => ({ value: m, label: `${m} min` }))}
-            />
+            <View style={styles.picker}>
+              <AmountPicker
+                title="Remind me before bedtime"
+                value={settings.reminderLeadMinutes}
+                min={5}
+                max={180}
+                step={5}
+                unit={(n) => `${n} minutes`}
+                hint={(n) => (n >= 60 ? formatHours(n) : null)}
+                onChange={(reminderLeadMinutes) => updateSettings({ reminderLeadMinutes })}
+              />
+            </View>
           ) : null}
         </Section>
 
@@ -352,6 +377,7 @@ const styles = StyleSheet.create({
   webNote: { paddingVertical: space.md },
   test: { gap: space.sm, paddingVertical: space.md },
   danger: { color: colors.danger },
+  picker: { paddingVertical: space.md },
   about: { textAlign: 'center' },
   profile: { gap: space.md, paddingVertical: space.md },
   profileTop: { flexDirection: 'row', alignItems: 'center', gap: space.lg },

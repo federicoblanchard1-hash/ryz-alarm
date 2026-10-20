@@ -5,18 +5,35 @@ import { FONT, colors, radius, space } from '@/theme';
 import { Slider } from './Slider';
 import { Txt } from './ui';
 
+interface Props {
+  value: number;
+  min: number;
+  max: number;
+  /** Values snap to multiples of this (from `min`). */
+  step?: number;
+  /** "12 minutes": the word after the number comes from here. */
+  unit: (n: number) => string;
+  onChange: (n: number) => void;
+  /** A small heading above, like a chip group's title. */
+  title?: string;
+  /** Extra words after the unit, e.g. "7 h 30 min" for a sleep goal in minutes. */
+  hint?: (n: number) => string | null;
+}
+
 /**
- * Pick a count from `min` to `max`: drag the slider, or tap the number and
- * type it. The number shows the count live while dragging.
+ * Pick a number from `min` to `max`: drag the slider, or tap the number and
+ * type it. The number shows the value live while dragging.
  */
-export function AmountPicker({ value, min, max, unit, onChange }: { value: number; min: number; max: number; unit: (n: number) => string; onChange: (n: number) => void }) {
+export function AmountPicker({ value, min, max, step = 1, unit, onChange, title, hint }: Props) {
   const [live, setLive] = useState<number | null>(null);
   const [typing, setTyping] = useState<string | null>(null);
   const span = Math.max(1, max - min);
+  const snap = (n: number) => min + Math.round((n - min) / step) * step;
   const toFraction = (n: number) => (n - min) / span;
-  const fromFraction = (f: number) => Math.round(min + f * span);
+  const fromFraction = (f: number) => snap(min + f * span);
   const shown = live ?? value;
-  const clamp = (n: number) => Math.min(max, Math.max(min, Math.round(n)));
+  const clamp = (n: number) => Math.min(max, Math.max(min, snap(n)));
+  const extra = hint?.(shown);
 
   const commitTyped = () => {
     const n = Number(typing);
@@ -26,11 +43,12 @@ export function AmountPicker({ value, min, max, unit, onChange }: { value: numbe
 
   return (
     <View style={styles.wrap}>
+      {title ? <Txt variant="caption">{title}</Txt> : null}
       <View style={styles.top}>
         {typing !== null ? (
           <TextInput
             value={typing}
-            onChangeText={(t) => setTyping(t.replace(/[^0-9]/g, '').slice(0, 3))}
+            onChangeText={(t) => setTyping(t.replace(/[^0-9]/g, '').slice(0, String(max).length))}
             onBlur={commitTyped}
             onSubmitEditing={commitTyped}
             keyboardType="number-pad"
@@ -45,12 +63,12 @@ export function AmountPicker({ value, min, max, unit, onChange }: { value: numbe
             <Text style={styles.number}>{shown}</Text>
           </Pressable>
         )}
-        <Txt variant="muted">{unit(shown).replace(/^\d+ /, '')}</Txt>
+        <Txt variant="muted" style={styles.unit}>{`${unit(shown).replace(/^\d+ /, '')}${extra ? ` · ${extra}` : ''}`}</Txt>
       </View>
       <Slider
         value={toFraction(value)}
         min={0}
-        label="How many"
+        label={title ?? 'How many'}
         onSlide={(f) => setLive(fromFraction(f))}
         onChange={(f) => {
           setLive(null);
@@ -73,4 +91,5 @@ const styles = StyleSheet.create({
   number: { fontSize: 36, lineHeight: 44, fontFamily: FONT.light, color: colors.text, fontVariant: ['tabular-nums'] },
   input: { minWidth: 72, paddingHorizontal: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.text, textAlign: 'center', paddingVertical: 0 },
   ends: { flexDirection: 'row', justifyContent: 'space-between' },
+  unit: { flexShrink: 1 },
 });
