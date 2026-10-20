@@ -145,9 +145,9 @@ export function reconcileXp(data: AppData, now: number): AppData {
 
 /** Free Pro for XP. Free days can be held for at most a month ahead. */
 export const SHOP: { days: number; cost: number; title: string }[] = [
-  { days: 3, cost: 300, title: '3 days of Pro' },
-  { days: 7, cost: 600, title: '1 week of Pro' },
-  { days: 30, cost: 2000, title: '1 month of Pro' },
+  { days: 3, cost: 750, title: '3 days of Pro' },
+  { days: 7, cost: 1250, title: '1 week of Pro' },
+  { days: 30, cost: 5000, title: '1 month of Pro' },
 ];
 export const MAX_FREE_DAYS = 31;
 

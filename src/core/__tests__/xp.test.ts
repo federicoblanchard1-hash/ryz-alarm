@@ -56,12 +56,12 @@ describe('XP', () => {
     expect(levelOf(100).level).toBe(2);
     expect(levelOf(350)).toEqual({ level: 3, into: 50, needed: 300 });
     const now = at(10, 12);
-    const rich: AppData = { ...emptyData(true), xp: { earned: 5000, spent: 0, events: [] } };
+    const rich: AppData = { ...emptyData(true), xp: { earned: 7000, spent: 0, events: [] } };
     const month = redeem(rich, SHOP[2], now);
     expect(month.proUntil).toBe(now + 30 * 864e5);
-    expect(balance(month.xp)).toBe(3000);
+    expect(balance(month.xp)).toBe(2000);
     expect(cantRedeem(month, SHOP[1], now)).toMatch(/month/);
     expect(redeem(month, SHOP[1], now)).toBe(month);
-    expect(cantRedeem(emptyData(true), SHOP[0], now)).toMatch(/300 XP/);
+    expect(cantRedeem(emptyData(true), SHOP[0], now)).toMatch(/750 XP/);
   });
 });

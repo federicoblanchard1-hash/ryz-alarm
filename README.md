@@ -74,7 +74,7 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 
 You earn **XP** for good mornings and nights: getting up with your alarm (+10), no snooze (+15), up within a minute (+10), each mission (+5), passing the awake check (+10), a regular wake-up time (+10), tracking a night (+5), reaching your sleep goal (+25) and every 7-day no-snooze streak (+50). Test alarms, naps and nights typed in by hand earn nothing, and each award counts once. Your level grows with all the XP you've earned.
 
-XP works like coins in the **shop** (Settings → Ryz Pro): 300 XP for 3 days of Pro, 600 for a week, 2,000 for a month, holding at most a month of free Pro at a time. The Pro screen also shows the paid plans (1, 3, 6 and 12 months). Their prices are placeholders, and payments aren't connected yet: that needs App Store / Google Play subscriptions (for example through RevenueCat). While Ryz is in beta nothing is locked behind Pro. XP and Pro are saved to your account.
+XP works like coins in the **shop** (Settings → Ryz Pro): 750 XP for 3 days of Pro, 1,250 for a week, 5,000 for a month, holding at most a month of free Pro at a time. The Pro screen also shows the paid plans (1, 3, 6 and 12 months). Their prices are placeholders, and payments aren't connected yet: that needs App Store / Google Play subscriptions (for example through RevenueCat). While Ryz is in beta nothing is locked behind Pro. XP and Pro are saved to your account.
 
 ## Quick alarm
 
