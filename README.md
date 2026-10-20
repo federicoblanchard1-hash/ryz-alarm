@@ -27,9 +27,9 @@ On first launch: a welcome screen, then **create an account** (name, email, pass
 
 - **Weather where you wake up**, laid out like Alarmy's morning screen: your town (tap to refresh), the temperature on the left, conditions and today's high and low on the right, and the next 24 hours with white weather icons underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
 - **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
-- **Shortcut tiles** on the scene: next alarm, bedtime, sleep goal and a test alarm.
+- **Shortcut tiles** on the scene: your **XP** (tap to see how to earn more), **Add alarm**, **Power nap** (the quick alarm) and **Last night**'s sleep.
 - **Next alarm** card with how long until it rings, its sound and missions.
-- **Your news**: on first launch Ryz asks what you like to read, from 13 categories and 133 topics, each category opening into its sub-topics (Football into Premier League, Champions League, La Liga, Serie A…; Countries into France, Germany, Japan…; Science into Space, Physics, Neuroscience…). It stays up to date: re-fetched every 5 minutes while Ryz is open, when you come back to the app or the tab, and when you pull down on Morning, with "Updated x min ago" under the title. Stories come from over 50 free publishers (BBC, The Guardian, The New York Times, Sky, France 24, Euronews, Le Monde, Wired, The Verge, ESPN, Autosport, Variety, Space.com…), and the feed takes turns between them so no single source fills it. Stories appear as each publisher answers, a slow site is skipped after a few seconds, and the feed goes back in time as you scroll: it shows more stories each time you reach the end, and once those run out it keeps loading older news, a few days at a time, from Google News. A small **search bar** finds anything: it filters your stories and searches every publisher through Google News. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
+- **Your news**: on first launch Ryz asks what you like to read, from 18 categories and 424 topics, each category opening into its sub-topics: World (regions only), every country A to Z, politics from around the world, football leagues, sports, tech, gaming, science, nature, health, culture, cars, religion, lifestyle and more. A search box in the topic picker finds any topic. It stays up to date: re-fetched every 5 minutes while Ryz is open, when you come back to the app or the tab, and when you pull down on Morning, with "Updated x min ago" under the title. Stories come from over 50 free publishers (BBC, The Guardian, The New York Times, Sky, France 24, Euronews, Le Monde, Wired, The Verge, ESPN, Autosport, Variety, Space.com…), and the feed takes turns between them so no single source fills it. Stories appear as each publisher answers, a slow site is skipped after a few seconds, and the feed goes back in time as you scroll: it shows more stories each time you reach the end, and once those run out it keeps loading older news, a few days at a time, from Google News. A small **search bar** finds anything: it filters your stories and searches every publisher through Google News. They open in Ryz's own reader view, which shows only the text and pictures, so there are no pop-ups, cookie banners or sign-up walls. A page that can't be read that way (a video, or one a site won't share outside a browser) opens in an in-app browser, in Safari Reader on iPhone. Ryz can't get round region blocks or paywalls, which is why it sticks to free sources. Change topics in Settings → News.
 
 Four tabs: **Morning**, **Alarms**, **Sleep** and **Settings**, in the native iOS tab bar on iPhone (a floating pill on web). **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
 
@@ -70,9 +70,15 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 - **Ringing screen**: black, with the time inside a dial of 60 ticks that fill with the seconds, a dot sweeping round once a minute and a breathing glow. The screen turns up to full brightness (light right after waking helps clear grogginess; Settings can turn it off).
 - **Good-morning screen** greets you by name, asks how you slept, and lists what helps after waking: bright light, music you like, the same wake time tomorrow.
 
+## XP and Ryz Pro
+
+You earn **XP** for good mornings and nights: getting up with your alarm (+10), no snooze (+15), up within a minute (+10), each mission (+5), passing the awake check (+10), a regular wake-up time (+10), tracking a night (+5), reaching your sleep goal (+25) and every 7-day no-snooze streak (+50). Test alarms, naps and nights typed in by hand earn nothing, and each award counts once. Your level grows with all the XP you've earned.
+
+XP works like coins in the **shop** (Settings → Ryz Pro): 300 XP for 3 days of Pro, 600 for a week, 2,000 for a month, holding at most a month of free Pro at a time. The Pro screen also shows the paid plans (1, 3, 6 and 12 months). Their prices are placeholders, and payments aren't connected yet: that needs App Store / Google Play subscriptions (for example through RevenueCat). While Ryz is in beta nothing is locked behind Pro. XP and Pro are saved to your account.
+
 ## Quick alarm
 
-Tap **+** on Alarms and choose **Quick alarm** for a power nap: 10, 20, 26 (NASA's nap), 45 or 90 minutes, or any length up to 3 hours. It rings once at exactly that time, with no missions or snooze, shows a live countdown on Alarms, and removes itself afterwards.
+Tap **+** on Alarms (or **Power nap** on Morning) and choose **Quick alarm** for a power nap: 10, 20, 26 (NASA's nap), 45 or 90 minutes, or any length up to 3 hours. It rings once at exactly that time, with no missions or snooze, shows a live countdown on Alarms, and removes itself afterwards.
 
 ## Sleep
 
@@ -91,6 +97,7 @@ Tap **+** on Alarms and choose **Quick alarm** for a power nap: 10, 20, 26 (NASA
 - **Waking up**: bright screen when ringing, daylight reminder.
 - Sleep goal and bedtime reminder, clock and temperature units, alarm checks and a test alarm, news topics, location, erase all data, and the research behind Ryz.
 - **Test alarm** in Settings, plus a check that notifications and (on Android) exact alarms are allowed.
+- **Swipe an alarm left** to delete it. Time settings (fade-in, snooze, keep ringing, the awake check, mission time limits, sleep goal…) use a slider plus a number you can tap to type.
 - Repeat days, alarm names, volume, vibration, a 12/24-hour clock, haptics, reduced-motion support, and screen-reader labels.
 
 ## How alarms ring

@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,13 @@ const DATE_FORMAT = new Intl.DateTimeFormat(undefined, { weekday: 'long', month:
 export default function Alarms() {
   const { data, ready, setEnabled, updateSettings, saveAlarm, deleteAlarm } = useStore();
   const [sheet, setSheet] = useState<'new' | 'quick' | null>(null);
+  // Power nap on Morning opens this tab with ?quick=1, straight into the quick alarm.
+  const { quick } = useLocalSearchParams<{ quick?: string }>();
+  const shown = sheet ?? (quick === '1' ? 'quick' : null);
+  const closeSheet = () => {
+    setSheet(null);
+    if (quick) router.setParams({ quick: undefined });
+  };
   const insets = useSafeAreaInsets();
   const tabSpace = useTabBarSpace();
   const now = useNow();
@@ -85,7 +92,7 @@ export default function Alarms() {
       </View>
 
       <NewAlarmSheet
-        visible={sheet === 'new'}
+        visible={shown === 'new'}
         onClose={() => setSheet(null)}
         onAlarm={() => {
           setSheet(null);
@@ -94,12 +101,12 @@ export default function Alarms() {
         onQuick={() => setSheet('quick')}
       />
       <QuickAlarmSheet
-        visible={sheet === 'quick'}
-        onClose={() => setSheet(null)}
+        visible={shown === 'quick'}
+        onClose={closeSheet}
         use24h={use24h}
         onStart={(alarm) => {
           saveAlarm(alarm);
-          setSheet(null);
+          closeSheet();
         }}
       />
     </View>

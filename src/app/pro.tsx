@@ -110,7 +110,7 @@ export default function ProScreen() {
             const why = cantRedeem(data, item, now);
             return (
               <View key={item.days} style={styles.item}>
-                <Text style={styles.itemDays}>{item.days === 30 ? '1' : item.days}</Text>
+                <Text style={styles.itemDays}>{item.days === 30 || item.days === 7 ? '1' : item.days}</Text>
                 <Text style={styles.itemUnit}>{item.days === 30 ? 'month' : item.days === 7 ? 'week' : 'days'}</Text>
                 <Text style={styles.itemCost}>{`${item.cost.toLocaleString()} XP`}</Text>
                 <Pressable

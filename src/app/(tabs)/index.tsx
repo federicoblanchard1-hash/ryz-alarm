@@ -5,12 +5,13 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { AlarmTags } from '@/components/ModeBadge';
-import { Button, Card, PressableScale, Txt, haptic, type IconName } from '@/components/ui';
+import { Button, Card, PressableScale, Txt, type IconName } from '@/components/ui';
 import { NewsFeed, NewsPrompt } from '@/components/NewsFeed';
 import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing, sleepAdvice } from '@/core/next';
-import { scheduleTest } from '@/core/ring';
-import { HOUR, MINUTE, formatClock, formatClockText, formatHours, formatSpan } from '@/core/time';
+import { formatDuration, minutesAsleep } from '@/core/sleep';
+import { HOUR, formatClock, formatClockText, formatSpan } from '@/core/time';
+import { balance, levelOf } from '@/core/xp';
 import { nearBottom } from '@/state/nearBottom';
 import { pullToRefresh } from '@/state/pullToRefresh';
 import { useNow } from '@/state/useNow';
@@ -37,7 +38,7 @@ function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string
 }
 
 export default function Home() {
-  const { data, ready, update } = useStore();
+  const { data, ready } = useStore();
   const permissions = usePermissions();
   const tabSpace = useTabBarSpace();
   const now = useNow();
@@ -46,7 +47,8 @@ export default function Home() {
   const nextDate = next ? new Date(next.at) : null;
   const clock = nextDate ? formatClock(nextDate.getHours(), nextDate.getMinutes(), use24h) : null;
   const advice = next && !next.snoozed ? sleepAdvice(next.at, now, sleepGoalMinutes, use24h) : null;
-  const bedtime = next && next.at - now <= 24 * HOUR ? new Date(next.at - sleepGoalMinutes * MINUTE) : null;
+  // The most recent night, if it ended in the last day and a half.
+  const lastNight = data.sleep.at(-1)?.end && now - data.sleep.at(-1)!.end < 36 * HOUR ? data.sleep.at(-1)! : null;
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
   const askWelcome = ready && !data.settings.onboarded;
   const [pulling, setPulling] = useState(false);
@@ -74,26 +76,14 @@ export default function Home() {
     >
       <WeatherHero>
         <View style={styles.tiles}>
+          <Tile label={`XP · level ${levelOf(data.xp.earned).level}`} value={String(balance(data.xp))} onPress={() => router.push('/xp')} />
+          <Tile label="Add alarm" icon="add" onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: 'new' } })} />
+          <Tile label="Power nap" icon="timer-outline" onPress={() => router.push({ pathname: '/alarms', params: { quick: '1' } })} />
           <Tile
-            label="Next alarm"
-            value={clock ? clock.time : undefined}
-            icon="add"
-            onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: next ? next.alarm.id : 'new' } })}
-          />
-          <Tile
-            label="Bedtime"
-            value={bedtime ? formatClock(bedtime.getHours(), bedtime.getMinutes(), use24h).time : undefined}
-            icon="bed-outline"
-            onPress={() => router.push('/settings')}
-          />
-          <Tile label="Sleep goal" value={formatHours(sleepGoalMinutes).replace(' ', '')} onPress={() => router.push('/settings')} />
-          <Tile
-            label="Test alarm"
-            icon="alarm"
-            onPress={() => {
-              haptic('light');
-              update((d, t) => scheduleTest(d, t, permissions.supported ? 60 : 5));
-            }}
+            label="Last night"
+            value={lastNight ? formatDuration(minutesAsleep(lastNight)).replace(' min', '').replace(' h ', 'h') : undefined}
+            icon="moon-outline"
+            onPress={() => router.push('/sleep')}
           />
         </View>
       </WeatherHero>
