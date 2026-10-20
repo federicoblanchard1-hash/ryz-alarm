@@ -73,7 +73,7 @@ export default function Alarms() {
           </View>
         ) : (
           alarms.map((alarm) => (
-            <AlarmRow key={alarm.id} alarm={alarm} use24h={use24h} onPress={() => openEditor(alarm.id)} onToggle={(enabled) => setEnabled(alarm.id, enabled)} />
+            <AlarmRow key={alarm.id} alarm={alarm} use24h={use24h} onPress={() => openEditor(alarm.id)} onToggle={(enabled) => setEnabled(alarm.id, enabled)} onDelete={() => deleteAlarm(alarm.id)} />
           ))
         )}
       </ScrollView>
