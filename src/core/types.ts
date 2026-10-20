@@ -161,6 +161,12 @@ export interface AppData {
   xp: XpState;
   /** Pro is on until then (ms); null if never. */
   proUntil: number | null;
+  /** When the free 14-day Pro trial started; null until onboarding is done. */
+  trialStartedAt: number | null;
+  /** The "trial has ended" screen has been shown. */
+  trialEndSeen: boolean;
+  /** A first-subscription discount bought with XP, shown on the paywall until it expires. */
+  offer: { percent: number; until: number } | null;
 }
 
 /** What should be on screen right now, if anything. */

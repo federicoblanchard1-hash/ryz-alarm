@@ -11,7 +11,9 @@ import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing, sleepAdvice } from '@/core/next';
 import { formatDuration, minutesAsleep } from '@/core/sleep';
 import { HOUR, formatClock, formatClockText, formatSpan } from '@/core/time';
-import { balance, levelOf } from '@/core/xp';
+import { FREE_NEWS_TOPICS, trialJustEnded } from '@/core/pro';
+import { balance, levelOf, nextReward } from '@/core/xp';
+import { usePro } from '@/state/usePro';
 import { nearBottom } from '@/state/nearBottom';
 import { pullToRefresh } from '@/state/pullToRefresh';
 import { useNow } from '@/state/useNow';
@@ -39,6 +41,7 @@ function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string
 
 export default function Home() {
   const { data, ready } = useStore();
+  const { pro, status } = usePro();
   const permissions = usePermissions();
   const tabSpace = useTabBarSpace();
   const now = useNow();
@@ -60,6 +63,12 @@ export default function Home() {
     // First launch: welcome, account, news topics and goals. Once; Settings can change them later.
     if (askWelcome) router.push('/welcome');
   }, [askWelcome]);
+  // When the trial runs out, say so once, with what Pro was doing for you.
+  const trialEnded = ready && trialJustEnded(data, now);
+  useEffect(() => {
+    if (trialEnded) router.push({ pathname: '/pro', params: { feature: 'trial_ended' } });
+  }, [trialEnded]);
+  const reward = nextReward(data);
   const needsPermission = permissions.supported && permissions.state !== null && permissions.state.notifications !== 'granted' && data.alarms.length > 0;
 
   return (
@@ -89,6 +98,30 @@ export default function Home() {
       </WeatherHero>
 
       <View style={styles.content}>
+        {status.kind === 'trial' ? (
+          <PressableScale onPress={() => router.push('/pro')} style={[styles.trial, status.daysLeft <= 3 && styles.trialEnding]} accessibilityLabel={`Pro trial, ${status.daysLeft} days left. See plans`}>
+            <Ionicons name="diamond" size={20} color={status.daysLeft <= 3 ? colors.onAccent : colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="heading" style={status.daysLeft <= 3 ? styles.onAccent : undefined}>
+                {status.daysLeft <= 3 ? `Your Pro trial ends in ${status.daysLeft} ${status.daysLeft === 1 ? 'day' : 'days'}` : `Pro trial · ${status.daysLeft} days left`}
+              </Txt>
+              <Txt variant="caption" style={status.daysLeft <= 3 ? styles.onAccentMuted : undefined}>
+                {status.daysLeft <= 3 ? 'Keep every mission, sound and stat with Pro.' : 'Every mission, sound and stat is unlocked. No card needed.'}
+              </Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={status.daysLeft <= 3 ? colors.onAccent : colors.textFaint} />
+          </PressableScale>
+        ) : !pro && reward ? (
+          <PressableScale onPress={() => router.push('/xp')} style={styles.trial} accessibilityLabel={`${reward.have} of ${reward.item.cost} XP toward ${reward.item.title}`}>
+            <Ionicons name="star-outline" size={20} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="heading">{`${reward.have.toLocaleString()} / ${reward.item.cost.toLocaleString()} XP to ${reward.item.title}`}</Txt>
+              <View style={styles.rewardTrack}>
+                <View style={[styles.rewardFill, { width: `${Math.min(100, (reward.have / reward.item.cost) * 100)}%` }]} />
+              </View>
+            </View>
+          </PressableScale>
+        ) : null}
         {needsPermission ? (
           <Card style={styles.warning}>
             <View style={styles.warningRow}>
@@ -137,7 +170,7 @@ export default function Home() {
           </PressableScale>
         ) : null}
 
-        {data.settings.newsTopics && data.settings.newsTopics.length > 0 ? <NewsFeed topics={data.settings.newsTopics} /> : ready ? <NewsPrompt /> : null}
+        {data.settings.newsTopics && data.settings.newsTopics.length > 0 ? <NewsFeed topics={pro ? data.settings.newsTopics : data.settings.newsTopics.slice(0, FREE_NEWS_TOPICS)} /> : ready ? <NewsPrompt /> : null}
 
         {awakeCheck ? (
           <Card style={styles.inline}>
@@ -153,6 +186,12 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  trial: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.md + 4, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
+  trialEnding: { backgroundColor: colors.accent, borderColor: colors.accent },
+  onAccent: { color: colors.onAccent },
+  onAccentMuted: { color: '#3A3A3C' },
+  rewardTrack: { height: 6, borderRadius: 3, backgroundColor: colors.surfaceRaised, overflow: 'hidden', marginTop: space.sm },
+  rewardFill: { height: '100%', backgroundColor: colors.text },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: space.lg, paddingTop: space.sm, gap: space.md },
   flex: { flex: 1 },

@@ -4,6 +4,7 @@ import { AppState, StyleSheet, View } from 'react-native';
 import { emptyData } from '@/core/defaults';
 import { buildPlan } from '@/core/plan';
 import { cleanup, defaultAlarmFor } from '@/core/ring';
+import { reconcilePro } from '@/core/pro';
 import { reconcileXp } from '@/core/xp';
 import { nextClock } from '@/core/time';
 import type { Alarm, AppData, Settings } from '@/core/types';
@@ -41,7 +42,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     Promise.all([loadData(), setupNotifications()]).then(([loaded]) => {
       if (cancelled) return;
-      setData(cleanup(loaded, Date.now()));
+      setData(reconcilePro(cleanup(loaded, Date.now()), Date.now()));
       setReady(true);
     });
     return () => {
@@ -75,7 +76,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     (fn: (d: AppData, now: number) => AppData) =>
       setData((d) => {
         const now = Date.now();
-        return reconcileXp(fn(d, now), now);
+        return reconcilePro(reconcileXp(fn(d, now), now), now);
       }),
     [],
   );

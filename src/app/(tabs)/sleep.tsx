@@ -31,6 +31,7 @@ import type { SleepRecord } from '@/core/types';
 import { HEALTH_APP, connectHealth, healthState, readWatchNights, type HealthState } from '@/services/health';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
+import { usePro } from '@/state/usePro';
 import { FONT, colors, radius, space } from '@/theme';
 
 type Range = 7 | 14 | 30 | 365 | 'custom';
@@ -131,8 +132,11 @@ export default function SleepScreen() {
   const { use24h, sleepGoalMinutes: goal, smartwatch } = data.settings;
 
   const onNights = useCallback((nights: SleepRecord[]) => update((d) => ({ ...d, sleep: mergeWatchNights(d.sleep, nights) })), [update]);
-  const watch = useWatchSync(smartwatch, onNights);
-  const automatic = smartwatch && watch.state === 'ready';
+  const { pro, unlock } = usePro();
+  // Watch sync is Pro; on the free plan the button works as usual.
+  const watchOn = smartwatch && pro;
+  const watch = useWatchSync(watchOn, onNights);
+  const automatic = watchOn && watch.state === 'ready';
 
   const toDay = range === 'custom' ? (custom.to ?? custom.from ?? now) : now;
   const fromDay = range === 'custom' ? (custom.from ?? now) : now - (range - 1) * DAY;
@@ -163,6 +167,7 @@ export default function SleepScreen() {
     } else Alert.alert('Delete this night?', `${DATE.format(r.end)} · ${formatDuration(minutesAsleep(r))}`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: go }]);
   };
   const toggleWatch = (on: boolean) => {
+    if (on && !pro) return unlock('smartwatch');
     haptic('select');
     updateSettings({ smartwatch: on });
     if (on) watch.connect();
@@ -189,13 +194,13 @@ export default function SleepScreen() {
             <Ionicons name="watch-outline" size={22} color={colors.text} />
             <View style={styles.flex}>
               <Txt variant="heading">Smartwatch</Txt>
-              <Txt variant="caption">{smartwatch ? `Automatic from ${HEALTH_APP}` : 'Off: use the button below'}</Txt>
+              <Txt variant="caption">{watchOn ? `Automatic from ${HEALTH_APP}` : pro ? 'Off: use the button below' : 'Pro: nights arrive by themselves'}</Txt>
             </View>
-            <ThemedSwitch value={smartwatch} onChange={toggleWatch} label="I sleep with a smartwatch" />
+            <ThemedSwitch value={watchOn} onChange={toggleWatch} label="I sleep with a smartwatch" />
           </View>
           <View style={styles.divider} />
 
-          {smartwatch ? (
+          {watchOn ? (
             <View style={styles.watchNote}>
               <Txt variant="muted">{WATCH_NOTE[watch.state ?? 'ready']}</Txt>
               {watch.state === 'denied' ? <Button title="Open settings" variant="secondary" icon="settings-outline" onPress={() => Linking.openSettings()} /> : null}
@@ -226,6 +231,7 @@ export default function SleepScreen() {
               label="Range"
               value={range === 'custom' ? 0 : range}
               onChange={(v) => {
+                if (v === 365 && !pro) return unlock('sleep_history');
                 setRange(v as Range);
                 setSelected(null);
                 setShowAll(false);
@@ -233,7 +239,7 @@ export default function SleepScreen() {
               options={RANGES.map((r) => ({ value: r.value as number, label: r.label }))}
             />
           </View>
-          <Pressable onPress={() => setPicking(true)} accessibilityRole="button" accessibilityLabel="Pick dates" style={[styles.calendarButton, range === 'custom' && styles.calendarOn]}>
+          <Pressable onPress={() => (pro ? setPicking(true) : unlock('sleep_history'))} accessibilityRole="button" accessibilityLabel={pro ? 'Pick dates' : 'Pick dates (Pro)'} style={[styles.calendarButton, range === 'custom' && styles.calendarOn]}>
             <Ionicons name="calendar-outline" size={20} color={range === 'custom' ? colors.onAccent : colors.text} />
           </Pressable>
         </View>

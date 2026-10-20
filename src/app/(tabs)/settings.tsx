@@ -10,7 +10,8 @@ import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
 import { AGE_GROUPS } from '@/core/defaults';
 import { GOALS } from '@/core/goals';
-import { balance, levelOf, proActive } from '@/core/xp';
+import { proStatus } from '@/core/pro';
+import { balance, levelOf } from '@/core/xp';
 import { topicById } from '@/core/news';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
@@ -149,7 +150,7 @@ export default function SettingsScreen() {
   const { data, updateSettings, update, reset } = useStore();
   const auth = useAuth();
   const now = useNow(60_000);
-  const pro = proActive(data, now);
+  const pro = proStatus(data, now);
   const permissions = usePermissions();
   const location = useLocationPermission();
   const insets = useSafeAreaInsets();
@@ -191,9 +192,9 @@ export default function SettingsScreen() {
 
         <Section label="Ryz Pro">
           <Pressable onPress={() => router.push('/pro')} accessibilityRole="button" style={styles.status}>
-            <Ionicons name={pro ? 'diamond' : 'diamond-outline'} size={22} color={colors.text} />
+            <Ionicons name={pro.kind !== 'free' ? 'diamond' : 'diamond-outline'} size={22} color={colors.text} />
             <View style={styles.flex}>
-              <Txt variant="body">{pro && data.proUntil ? `Pro until ${new Date(data.proUntil).toLocaleDateString()}` : 'Free plan'}</Txt>
+              <Txt variant="body">{pro.kind === 'pro' ? `Pro until ${new Date(pro.until).toLocaleDateString()}` : pro.kind === 'trial' ? `Pro trial · ${pro.daysLeft} days left` : 'Free plan'}</Txt>
               <Txt variant="caption">1, 3, 6 or 12 months, or free days with your XP</Txt>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />

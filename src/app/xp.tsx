@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Txt } from '@/components/ui';
-import { XP_RULES, balance, levelOf, type XpReason } from '@/core/xp';
+import { XP_RULES, balance, levelOf, nextReward, streakDays, type XpReason } from '@/core/xp';
+import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { FONT, colors, radius, space } from '@/theme';
 
@@ -18,6 +19,9 @@ export default function XpScreen() {
   const { level, into, needed } = levelOf(data.xp.earned);
   const coins = balance(data.xp);
   const recent = [...data.xp.events].reverse().slice(0, 25);
+  const now = useNow(60_000);
+  const streak = streakDays(data, now);
+  const reward = nextReward(data);
 
   return (
     <View style={styles.screen}>
@@ -33,6 +37,12 @@ export default function XpScreen() {
         <View style={styles.track} accessible accessibilityLabel={`${Math.round((into / needed) * 100)}% of the way to level ${level + 1}`}>
           <View style={[styles.fill, { width: `${(into / needed) * 100}%` }]} />
         </View>
+        <View style={styles.streak}>
+          <Ionicons name="flame-outline" size={20} color={colors.text} />
+          <Txt variant="body" style={styles.flex}>{`${streak}-day no-snooze streak${(data.xp.freezes ?? 0) > 0 ? ` · ${data.xp.freezes} ${data.xp.freezes === 1 ? 'freeze' : 'freezes'} ready` : ''}`}</Txt>
+          <Txt variant="caption">{`${7 - (streak % 7)} to +50`}</Txt>
+        </View>
+        {reward ? <Txt variant="caption">{`${(reward.item.cost - reward.have).toLocaleString()} XP more for ${reward.item.title}.`}</Txt> : null}
         <Button title="Spend XP on free Pro" icon="diamond-outline" onPress={() => router.push('/pro')} style={styles.spend} />
 
         <Txt variant="section" style={styles.section}>How to earn XP</Txt>
@@ -78,6 +88,7 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden', marginTop: space.sm },
   fill: { height: '100%', backgroundColor: colors.text, borderRadius: 4 },
   spend: { marginTop: space.lg },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surface },
   section: { marginTop: space.xl, marginLeft: space.xs },
   card: { borderRadius: radius.lg, backgroundColor: colors.surface, paddingHorizontal: space.lg },
   rule: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },

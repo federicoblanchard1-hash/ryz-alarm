@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PressableScale, Txt, haptic, type IconName } from '@/components/ui';
 import { CATEGORIES, type Category } from '@/core/news';
+import { FREE_NEWS_TOPICS } from '@/core/pro';
+import { usePro } from '@/state/usePro';
 import { useStore } from '@/state/store';
 import { FONT, colors, radius, space } from '@/theme';
 
@@ -75,7 +77,14 @@ export default function Interests() {
   // Searching shows every matching topic across all categories.
   const matches = q ? CATEGORIES.flatMap((c) => c.topics.filter((t) => t.title.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)).map((t) => ({ topic: t, category: c }))) : [];
 
-  const change = (ids: string[], on: boolean) =>
+  const { pro, unlock } = usePro();
+  // The free plan follows a few topics. Sign-up isn't limited: the Pro trial starts right after it.
+  const limited = !pro && !first;
+  const change = (ids: string[], on: boolean) => {
+    if (on && limited && new Set([...selected, ...ids]).size > FREE_NEWS_TOPICS) {
+      unlock('news_topics');
+      return;
+    }
     setSelected((prev) => {
       const next = new Set(prev);
       for (const id of ids) {
@@ -84,6 +93,7 @@ export default function Interests() {
       }
       return next;
     });
+  };
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const save = (topics: string[]) => {

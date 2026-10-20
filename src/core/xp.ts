@@ -1,3 +1,4 @@
+import { isPro, trialEndsAt } from './pro';
 import { minutesAsleep, nightKey } from './sleep';
 import type { ActiveRing, Alarm, AppData } from './types';
 
@@ -21,9 +22,13 @@ export interface XpState {
   spent: number;
   /** Recent awards and purchases, oldest first (the last 200). */
   events: XpEvent[];
+  /** Streak freezes in reserve: each covers one missed morning. */
+  freezes?: number;
+  /** Days ("2026-10-20") a freeze covered. */
+  frozenDays?: string[];
 }
 
-export const EMPTY_XP: XpState = { earned: 0, spent: 0, events: [] };
+export const EMPTY_XP: XpState = { earned: 0, spent: 0, events: [], freezes: 0, frozenDays: [] };
 
 /** How to earn XP, in the order the XP screen lists it. */
 export const XP_RULES: { reason: Exclude<XpReason, 'redeem'>; title: string; amount: number; text: string }[] = [
@@ -67,7 +72,7 @@ export function addXp(data: AppData, events: XpEvent[]): AppData {
   const spent = fresh.filter((e) => e.amount < 0).reduce((n, e) => n - e.amount, 0);
   return {
     ...data,
-    xp: { earned: data.xp.earned + earned, spent: data.xp.spent + spent, events: [...data.xp.events, ...fresh].slice(-KEEP) },
+    xp: { ...data.xp, earned: data.xp.earned + earned, spent: data.xp.spent + spent, events: [...data.xp.events, ...fresh].slice(-KEEP) },
   };
 }
 
@@ -106,17 +111,39 @@ export function wakeXp(data: AppData, ring: Extract<ActiveRing, { type: 'ring' }
 
   // Streak: mornings in a row without snoozing, counting today.
   if (noSnooze) {
-    const days = new Set(data.xp.events.filter((e) => e.reason === 'no_snooze').map((e) => dayKey(e.at)));
-    days.add(day);
-    let streak = 0;
-    for (let t = now; days.has(dayKey(t)); t -= DAY) streak++;
+    const streak = streakDays(data, now, true);
     if (streak > 0 && streak % 7 === 0) events.push({ id: id('streak'), at: now, amount: AMOUNT.streak, reason: 'streak' });
   }
   return events;
 }
 
-export function awakeCheckXp(alarmId: string, now: number): XpEvent {
-  return { id: `awake_check:${dayKey(now)}:${alarmId}`, at: now, amount: AMOUNT.awake_check, reason: 'awake_check' };
+/** Mornings in a row without snoozing (a freeze covers a missed one), up to `now`, optionally counting today. */
+export function streakDays(data: AppData, now: number, includingToday = false): number {
+  const days = new Set([...data.xp.events.filter((e) => e.reason === 'no_snooze').map((e) => dayKey(e.at)), ...(data.xp.frozenDays ?? [])]);
+  if (includingToday) days.add(dayKey(now));
+  let t = days.has(dayKey(now)) ? now : now - DAY;
+  let streak = 0;
+  for (; days.has(dayKey(t)); t -= DAY) streak++;
+  return streak;
+}
+
+/**
+ * Stopping an alarm: spends a streak freeze if yesterday was missed but the
+ * day before was on the streak, then awards the morning's XP.
+ */
+export function applyWake(data: AppData, ring: Extract<ActiveRing, { type: 'ring' }>, alarm: Alarm, respondedAt: number, missionsDone: number, now: number): AppData {
+  let d = data;
+  const freezes = d.xp.freezes ?? 0;
+  const days = new Set([...d.xp.events.filter((e) => e.reason === 'no_snooze').map((e) => dayKey(e.at)), ...(d.xp.frozenDays ?? [])]);
+  if (freezes > 0 && ring.source === 'alarm' && ring.snoozesUsed === 0 && !days.has(dayKey(now - DAY)) && days.has(dayKey(now - 2 * DAY))) {
+    d = { ...d, xp: { ...d.xp, freezes: freezes - 1, frozenDays: [...(d.xp.frozenDays ?? []), dayKey(now - DAY)].slice(-60) } };
+  }
+  return addXp(d, wakeXp(d, ring, alarm, respondedAt, missionsDone, now));
+}
+
+/** Once a day, however many alarms have an awake check. */
+export function awakeCheckXp(_alarmId: string, now: number): XpEvent {
+  return { id: `awake_check:${dayKey(now)}`, at: now, amount: AMOUNT.awake_check, reason: 'awake_check' };
 }
 
 /**
@@ -142,29 +169,65 @@ export function reconcileXp(data: AppData, now: number): AppData {
 }
 
 // ---- Shop
+//
+// XP buys a taste of Pro, not a replacement for it: short passes that cost
+// more XP per day than a subscription costs money would suggest, one pass a
+// month at most, and never while Pro or the trial is on. It also buys a
+// discount on the first year, which turns XP into a reason to subscribe, and
+// streak freezes (Duolingo found that a little slack keeps people going).
 
-/** Free Pro for XP. Free days can be held for at most a month ahead. */
-export const SHOP: { days: number; cost: number; title: string }[] = [
-  { days: 3, cost: 750, title: '3 days of Pro' },
-  { days: 7, cost: 1250, title: '1 week of Pro' },
-  { days: 30, cost: 5000, title: '1 month of Pro' },
+const PRO_COOLDOWN_DAYS = 30;
+const MAX_FREEZES = 2;
+const OFFER_DAYS = 7;
+
+export type ShopItem =
+  | { id: string; kind: 'pro'; days: number; cost: number; title: string }
+  | { id: string; kind: 'freeze'; cost: number; title: string; text: string }
+  | { id: string; kind: 'discount'; percent: number; cost: number; title: string; text: string };
+
+export const SHOP: ShopItem[] = [
+  { id: 'pro3', kind: 'pro', days: 3, cost: 1500, title: '3 days of Pro' },
+  { id: 'pro7', kind: 'pro', days: 7, cost: 3000, title: '1 week of Pro' },
+  { id: 'pro14', kind: 'pro', days: 14, cost: 5500, title: '2 weeks of Pro' },
+  { id: 'discount', kind: 'discount', percent: 40, cost: 2500, title: '40% off your first year', text: `Valid for ${OFFER_DAYS} days after you get it.` },
+  { id: 'freeze', kind: 'freeze', cost: 400, title: 'Streak freeze', text: 'Covers one missed morning, so your no-snooze streak survives.' },
 ];
-export const MAX_FREE_DAYS = 31;
 
 export function proActive(data: AppData, now: number): boolean {
   return data.proUntil !== null && data.proUntil > now;
 }
 
+/** When you last bought Pro with XP, if ever. */
+function lastProRedeem(data: AppData): number | null {
+  const e = [...data.xp.events].reverse().find((x) => x.reason === 'redeem' && x.id.startsWith('redeem:pro'));
+  return e ? e.at : null;
+}
+
 /** Why an item can't be bought right now, or null if it can. */
-export function cantRedeem(data: AppData, item: (typeof SHOP)[number], now: number): string | null {
-  if (balance(data.xp) < item.cost) return `${item.cost - balance(data.xp)} XP to go`;
-  const until = Math.max(now, data.proUntil ?? 0) + item.days * DAY;
-  if (until > now + MAX_FREE_DAYS * DAY) return 'You can hold up to a month of free Pro';
+export function cantRedeem(data: AppData, item: ShopItem, now: number): string | null {
+  const short = item.cost - balance(data.xp);
+  if (item.kind === 'pro') {
+    if (isPro(data, now)) return (trialEndsAt(data) ?? 0) > now && !proActive(data, now) ? 'After your trial' : 'While Pro is off';
+    const last = lastProRedeem(data);
+    if (last !== null && now - last < PRO_COOLDOWN_DAYS * DAY) return `Again in ${Math.ceil((last + PRO_COOLDOWN_DAYS * DAY - now) / DAY)} days`;
+  }
+  if (item.kind === 'freeze' && (data.xp.freezes ?? 0) >= MAX_FREEZES) return `You hold ${MAX_FREEZES}, the most`;
+  if (item.kind === 'discount' && data.offer && data.offer.until > now) return 'Already yours';
+  if (short > 0) return `${short.toLocaleString()} XP to go`;
   return null;
 }
 
-export function redeem(data: AppData, item: (typeof SHOP)[number], now: number): AppData {
+export function redeem(data: AppData, item: ShopItem, now: number): AppData {
   if (cantRedeem(data, item, now)) return data;
-  const spent = addXp(data, [{ id: `redeem:${now}`, at: now, amount: -item.cost, reason: 'redeem' }]);
-  return { ...spent, proUntil: Math.max(now, data.proUntil ?? 0) + item.days * DAY };
+  const spent = addXp(data, [{ id: `redeem:${item.id}:${now}`, at: now, amount: -item.cost, reason: 'redeem' }]);
+  if (item.kind === 'pro') return { ...spent, proUntil: now + item.days * DAY };
+  if (item.kind === 'freeze') return { ...spent, xp: { ...spent.xp, freezes: (spent.xp.freezes ?? 0) + 1 } };
+  return { ...spent, offer: { percent: item.percent, until: now + OFFER_DAYS * DAY } };
+}
+
+/** The cheapest Pro pass you can't afford yet, for a "you're getting closer" progress bar. */
+export function nextReward(data: AppData): { item: ShopItem; have: number } | null {
+  const have = balance(data.xp);
+  const item = SHOP.find((i) => i.kind === 'pro' && i.cost > have) ?? null;
+  return item ? { item, have } : null;
 }

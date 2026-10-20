@@ -9,7 +9,7 @@ import { Button, Txt, haptic } from '@/components/ui';
 import { MISSIONS } from '@/core/missions';
 import { phaseAt } from '@/core/plan';
 import { endSleep } from '@/core/sleep';
-import { addXp, wakeXp } from '@/core/xp';
+import { applyWake } from '@/core/xp';
 import { canSnooze, defaultAlarmFor, findActive, snooze, stop } from '@/core/ring';
 import { MINUTE, formatClock, formatClockText } from '@/core/time';
 import type { ActiveRing } from '@/core/types';
@@ -95,7 +95,7 @@ export default function RingScreen() {
     const missionsDone = phase === 'missions' && alarm ? alarm.missions.length : 0;
     // Stopping the alarm also ends a running sleep session, and earns XP for the morning.
     update((d, t) => {
-      const awarded = alarm ? addXp(d, wakeXp(d, ring, alarm, reacted, missionsDone, t)) : d;
+      const awarded = alarm ? applyWake(d, ring, alarm, reacted, missionsDone, t) : d;
       return endSleep(stop(awarded, ring, t), t).data;
     });
     clearDelivered();

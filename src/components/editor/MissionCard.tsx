@@ -3,12 +3,15 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { ProTag } from '@/components/ProTag';
 import { Sheet } from '@/components/Sheet';
 import { AmountPicker } from '@/components/AmountPicker';
 import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
 import { QrScanner } from '@/missions/QrScanner';
 import { LEVEL_NAMES, MAX_MISSIONS, MISSIONS, MISSION_GROUPS, clampAmount, defaultMission, missionsIn, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
+import { FREE_MISSIONS, FREE_MISSION_SLOTS } from '@/core/pro';
 import { MISSION_ICONS } from '@/missions/common';
+import { usePro } from '@/state/usePro';
 import { FONT, colors, radius, space } from '@/theme';
 
 interface Props {
@@ -24,6 +27,12 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
   const [editing, setEditing] = useState<number | null>(null);
   const [scanning, setScanning] = useState(false);
   const edited = editing !== null ? missions[editing] : undefined;
+  const { pro, unlock } = usePro();
+  // The paywall can't open over a sheet, so the sheet closes first.
+  const upgrade = (feature: 'missions' | 'mission_slots') => {
+    setPicking(false);
+    unlock(feature);
+  };
 
   const add = (type: MissionType) => {
     haptic('select');
@@ -45,10 +54,11 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
       {description ? <Txt variant="caption" style={styles.groupText}>{description}</Txt> : null}
       {types.map((type) => {
         const taken = missions.some((m) => m.type === type);
+        const locked = !pro && !FREE_MISSIONS.includes(type);
         return (
           <Pressable
             key={type}
-            onPress={() => !taken && add(type)}
+            onPress={() => (locked ? upgrade('missions') : !taken && add(type))}
             disabled={taken}
             accessibilityRole="button"
             accessibilityState={{ disabled: taken }}
@@ -59,7 +69,7 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
               <Ionicons name={MISSION_ICONS[type]} size={24} color={colors.text} />
             </View>
             <Txt style={[styles.pickTitle, taken && styles.pickTaken]}>{MISSIONS[type].title}</Txt>
-            {taken ? <Ionicons name="checkmark" size={26} color={colors.text} /> : null}
+            {locked ? <ProTag /> : taken ? <Ionicons name="checkmark" size={26} color={colors.text} /> : null}
           </Pressable>
         );
       })}
@@ -90,10 +100,17 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
             );
           }
           const next = i === missions.length;
+          // Free alarms take three missions; the last two slots are Pro.
+          const slotLocked = !pro && i >= FREE_MISSION_SLOTS;
           return (
             <View key={i}>
-              <Pressable onPress={() => setPicking(true)} accessibilityRole="button" accessibilityLabel="Add a mission" style={[styles.slot, next ? styles.slotNext : styles.slotEmpty]}>
-                <Ionicons name="add" size={26} color={next ? colors.text : colors.textFaint} />
+              <Pressable
+                onPress={() => (slotLocked ? unlock('mission_slots') : setPicking(true))}
+                accessibilityRole="button"
+                accessibilityLabel={slotLocked ? 'Pro: more missions' : 'Add a mission'}
+                style={[styles.slot, next ? styles.slotNext : styles.slotEmpty]}
+              >
+                <Ionicons name={slotLocked ? 'lock-closed' : 'add'} size={slotLocked ? 20 : 26} color={next ? colors.text : colors.textFaint} />
               </Pressable>
             </View>
           );

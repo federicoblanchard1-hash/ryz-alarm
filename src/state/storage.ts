@@ -46,6 +46,9 @@ export async function loadData(): Promise<AppData> {
       handled: saved.handled ?? {},
       xp: saved.xp ?? { earned: 0, spent: 0, events: [] },
       proUntil: saved.proUntil ?? null,
+      trialStartedAt: saved.trialStartedAt ?? null,
+      trialEndSeen: saved.trialEndSeen ?? false,
+      offer: saved.offer ?? null,
     };
   } catch {
     return fallback;

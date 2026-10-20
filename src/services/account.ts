@@ -13,6 +13,7 @@ export interface Profile {
   xp_earned: number;
   xp_spent: number;
   pro_until: string | null;
+  trial_started_at: string | null;
 }
 
 export function profileFromData(d: AppData): Profile {
@@ -21,6 +22,7 @@ export function profileFromData(d: AppData): Profile {
     xp_earned: d.xp.earned,
     xp_spent: d.xp.spent,
     pro_until: d.proUntil ? new Date(d.proUntil).toISOString() : null,
+    trial_started_at: d.trialStartedAt ? new Date(d.trialStartedAt).toISOString() : null,
     name: s.profile.name.slice(0, 60),
     age_group: s.profile.ageGroup,
     news_topics: s.newsTopics ?? [],
@@ -36,8 +38,11 @@ export function withProfileXp(d: AppData, p: Profile): AppData {
   const earned = Math.max(d.xp.earned, p.xp_earned ?? 0);
   const spent = Math.max(d.xp.spent, p.xp_spent ?? 0);
   const proUntil = Math.max(d.proUntil ?? 0, remotePro ?? 0) || null;
-  if (earned === d.xp.earned && spent === d.xp.spent && proUntil === d.proUntil) return d;
-  return { ...d, xp: { ...d.xp, earned, spent }, proUntil };
+  // The trial is once per account: the earliest start wins, so reinstalling doesn't restart it.
+  const remoteTrial = p.trial_started_at ? Date.parse(p.trial_started_at) : null;
+  const trialStartedAt = d.trialStartedAt === null ? remoteTrial : remoteTrial === null ? d.trialStartedAt : Math.min(d.trialStartedAt, remoteTrial);
+  if (earned === d.xp.earned && spent === d.xp.spent && proUntil === d.proUntil && trialStartedAt === d.trialStartedAt) return d;
+  return { ...d, xp: { ...d.xp, earned, spent }, proUntil, trialStartedAt };
 }
 
 export function settingsFromProfile(p: Profile, current: Settings): Partial<Settings> {
@@ -86,7 +91,7 @@ export async function logOut() {
 }
 
 export async function loadProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('name, age_group, news_topics, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until').eq('id', userId).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('name, age_group, news_topics, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until, trial_started_at').eq('id', userId).maybeSingle();
   if (error) throw error;
   return data as Profile | null;
 }

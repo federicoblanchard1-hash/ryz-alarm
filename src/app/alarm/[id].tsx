@@ -8,12 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DayPicker } from '@/components/DayPicker';
 import { AmountPicker } from '@/components/AmountPicker';
 import { MissionCard } from '@/components/editor/MissionCard';
+import { ProTag } from '@/components/ProTag';
 import { CATEGORY_ICON } from '@/components/ModeBadge';
 import { Sheet } from '@/components/Sheet';
 import { TimePicker } from '@/components/TimePicker';
 import { Slider } from '@/components/Slider';
 import { LinkRow, PressableScale, Txt, haptic, ToggleRow } from '@/components/ui';
 import { newAlarm } from '@/core/defaults';
+import { FREE_SOUNDS, FREE_VIBRATIONS, type ProFeature } from '@/core/pro';
 import { makeId } from '@/core/ring';
 import { formatSpan, nextClock, nextOccurrence } from '@/core/time';
 import { SOUNDS, SOUND_CATEGORIES, soundsIn, type SoundCategory } from '@/core/sounds';
@@ -22,6 +24,7 @@ import { requestPermissions } from '@/services/notifications';
 import { VIBRATIONS, VIBRATION_IDS } from '@/core/vibration';
 import { previewVibration, stopVibration, usePreview } from '@/services/sound';
 import { useNow } from '@/state/useNow';
+import { usePro } from '@/state/usePro';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
 import { FONT, colors, radius, space } from '@/theme';
@@ -47,6 +50,16 @@ export default function EditAlarm() {
   const [soundTab, setSoundTab] = useState<SoundCategory>(() => (SOUNDS[draft.sound] ?? SOUNDS.gentle).category);
   const playTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preview = usePreview();
+  const { pro, unlock } = usePro();
+  // Previews are free; choosing a Pro sound or pattern opens the paywall (after closing the sheet, which would cover it).
+  const upgrade = (feature: ProFeature) => {
+    preview.stop();
+    setSheet(null);
+    unlock(feature);
+  };
+  // Something already chosen (say, during the trial) stays usable.
+  const soundLocked = (id: AlarmSoundId) => !pro && !FREE_SOUNDS.includes(id) && existing?.sound !== id;
+  const vibrationLocked = (id: Alarm['vibration']) => !pro && !FREE_VIBRATIONS.includes(id) && existing?.vibration !== id;
   const permissions = usePermissions();
   const insets = useSafeAreaInsets();
   const now = useNow();
@@ -233,6 +246,7 @@ export default function EditAlarm() {
                       </Pressable>
                       <Pressable
                         onPress={() => {
+                          if (soundLocked(id)) return upgrade('sounds');
                           if (!on) haptic('select');
                           set({ sound: id, mode: SOUNDS[id].mode });
                         }}
@@ -245,7 +259,7 @@ export default function EditAlarm() {
                           <Txt style={[styles.optionTitle, on && styles.optionTitleOn]}>{SOUNDS[id].title}</Txt>
                           {SOUNDS[id].description ? <Txt variant="caption">{SOUNDS[id].description}</Txt> : null}
                         </View>
-                        {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : null}
+                        {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : soundLocked(id) ? <ProTag /> : null}
                       </Pressable>
                     </View>
                   );
@@ -281,15 +295,16 @@ export default function EditAlarm() {
                 <Pressable
                   key={id}
                   onPress={() => {
-                    set({ vibration: id });
                     previewVibration(id);
+                    if (vibrationLocked(id)) return upgrade('vibrations');
+                    set({ vibration: id });
                   }}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on }}
                   style={({ pressed }) => [styles.vibeOption, pressed && styles.pressed]}
                 >
                   <Txt style={[styles.optionTitle, on && styles.optionTitleOn, styles.flex]}>{VIBRATIONS[id].title}</Txt>
-                  {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : null}
+                  {on ? <Ionicons name="checkmark" size={24} color={colors.text} /> : vibrationLocked(id) ? <ProTag /> : null}
                 </Pressable>
               );
             })
