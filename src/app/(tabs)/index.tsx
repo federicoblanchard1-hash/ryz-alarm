@@ -11,6 +11,7 @@ import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing, sleepAdvice } from '@/core/next';
 import { scheduleTest } from '@/core/ring';
 import { HOUR, MINUTE, formatClock, formatClockText, formatHours, formatSpan } from '@/core/time';
+import { nearBottom } from '@/state/nearBottom';
 import { pullToRefresh } from '@/state/pullToRefresh';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
@@ -65,6 +66,11 @@ export default function Home() {
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{ paddingBottom: tabSpace + space.xl }}
       refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={colors.text} colors={[colors.onAccent]} progressBackgroundColor={colors.accent} />}
+      // Near the end, the news feed shows more stories and then older ones.
+      scrollEventThrottle={250}
+      onScroll={({ nativeEvent: e }) => {
+        if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - 900) nearBottom();
+      }}
     >
       <WeatherHero>
         <View style={styles.tiles}>

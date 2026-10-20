@@ -121,3 +121,23 @@ describe('mixing and search', () => {
     expect(filterArticles(list, 'sleep alps').map((a) => a.source)).toEqual(['b']);
   });
 });
+
+describe('going back in time', () => {
+  const at = (hoursAgo: number, source: string, i: number): Article => ({
+    id: `${source}${i}`,
+    title: `${source} ${i} ${hoursAgo}`,
+    summary: '',
+    url: `https://${source}.example/${i}`,
+    source,
+    published: Date.UTC(2026, 9, 20, 12) - hoursAgo * 3_600_000,
+    topic: 't',
+  });
+
+  it('puts a week-old story after this morning’s, whichever feed it is in', () => {
+    const slow = [at(1, 'slow', 1), at(170, 'slow', 2)];
+    const busy = Array.from({ length: 20 }, (_, i) => at(i * 0.5, 'busy', i));
+    const merged = mergeArticles([slow, busy]);
+    expect(merged.at(-1)!.id).toBe('slow2');
+    expect(merged.slice(0, 4).map((a) => a.source)).toContain('slow');
+  });
+});

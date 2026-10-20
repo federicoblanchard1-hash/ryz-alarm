@@ -30,7 +30,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   return (
     <Tabs style={styles.root}>
-      <TabSlot />
+      <TabSlot style={styles.slot} />
       {/* Tabs finds its routes by looking for TabList among its direct children. */}
       <TabList style={[styles.bar, { bottom: Math.max(insets.bottom, space.md) }]}>
         <TabTrigger name="index" href="/" asChild>
@@ -52,6 +52,8 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  // The screen gets a fixed height, so its own ScrollView scrolls (and reports scrolling) instead of the page.
+  slot: { flex: 1, minHeight: 0 },
   bar: {
     position: 'absolute',
     left: space.lg,

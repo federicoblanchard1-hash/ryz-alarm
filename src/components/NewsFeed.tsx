@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,6 +14,7 @@ import {
 
 import { filterArticles, timeAgo, topicById, type Article } from "@/core/news";
 import { openInAppBrowser, searchNews } from "@/services/news";
+import { onNearBottom } from "@/state/nearBottom";
 import { useNews } from "@/state/useNews";
 import { useNow } from "@/state/useNow";
 import { FONT, colors, radius, space } from "@/theme";
@@ -100,6 +101,9 @@ function Row({ article, now }: { article: Article; now: number }) {
   );
 }
 
+/** Stories added each time you reach the end. */
+const PAGE = 15;
+
 type WebResults = {
   query: string;
   status: "loading" | "ready" | "error";
@@ -181,13 +185,35 @@ function SearchResults({
 
 /** "Your news" on Morning: a search, a filter per chosen topic, a lead story, then a list. */
 export function NewsFeed({ topics }: { topics: string[] }) {
-  const { articles, status, refresh, refreshing, updatedAt } = useNews(topics);
+  const { articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus } =
+    useNews(topics);
   const [filter, setFilter] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // Stories on screen; scrolling near the end shows more, then fetches older ones.
+  const [visible, setVisible] = useState(PAGE);
   const searching = query.trim().length > 0;
   const now = useNow(60_000);
   const shown = filter ? articles.filter((a) => a.topic === filter) : articles;
   const [lead, ...rest] = shown;
+  const moreHere = rest.length > visible;
+
+  const latest = useRef({ moreHere, searching, loadOlder });
+  useLayoutEffect(() => {
+    latest.current = { moreHere, searching, loadOlder };
+  });
+  useEffect(
+    () =>
+      onNearBottom(() => {
+        const l = latest.current;
+        if (l.searching) return;
+        if (l.moreHere) setVisible((v) => v + PAGE);
+        else {
+          setVisible((v) => v + PAGE);
+          l.loadOlder();
+        }
+      }),
+    [],
+  );
 
   return (
     <View style={styles.wrap}>
@@ -270,7 +296,10 @@ export function NewsFeed({ topics }: { topics: string[] }) {
                 return (
                   <Pressable
                     key={id ?? "all"}
-                    onPress={() => setFilter(id)}
+                    onPress={() => {
+                      setFilter(id);
+                      setVisible(PAGE);
+                    }}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: on }}
                     style={[styles.filter, on && styles.filterOn]}
@@ -314,9 +343,36 @@ export function NewsFeed({ topics }: { topics: string[] }) {
                   Nothing new here yet.
                 </Txt>
               )}
-              {rest.slice(0, 40).map((a) => (
+              {rest.slice(0, visible).map((a) => (
                 <Row key={a.id} article={a} now={now} />
               ))}
+              {lead ? (
+                <View style={styles.more}>
+                  {olderStatus === "loading" ? (
+                    <>
+                      <ActivityIndicator color={colors.textMuted} />
+                      <Txt variant="caption">Loading older news…</Txt>
+                    </>
+                  ) : olderStatus === "done" && !moreHere ? (
+                    <Txt variant="caption">{"That's all the older news for now."}</Txt>
+                  ) : olderStatus === "error" && !moreHere ? (
+                    <Pressable onPress={loadOlder} hitSlop={8} accessibilityRole="button">
+                      <Txt variant="caption">{"Couldn't load older news. Tap to try again."}</Txt>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => {
+                        setVisible((v) => v + PAGE);
+                        if (!moreHere) loadOlder();
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                    >
+                      <Txt variant="caption">Scroll for more</Txt>
+                    </Pressable>
+                  )}
+                </View>
+              ) : null}
             </>
           )}
         </>
@@ -346,6 +402,7 @@ export function NewsPrompt() {
 }
 
 const styles = StyleSheet.create({
+  more: { alignItems: "center", gap: space.sm, paddingVertical: space.xl },
   wrap: { marginTop: space.lg, gap: space.md },
   header: {
     flexDirection: "row",

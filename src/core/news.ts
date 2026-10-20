@@ -499,35 +499,42 @@ export function parseFeed(xml: string, topic: string): Article[] {
 
 const DAY_MS = 24 * 60 * 60_000;
 
+/** Stories are mixed between sources within slices of this length, newest slice first. */
+const SLICE_MS = 12 * 60 * 60_000;
+
 /**
- * Feeds merged without the same story twice, taking turns between feeds so
- * one busy feed (BBC Football posts 80 stories a day) can't crowd out the
- * others. Each feed offers its newest stories first, and stories older than
- * three days only fill in when there's nothing newer.
+ * Feeds merged without the same story twice, going back in time: stories
+ * are grouped into 12-hour slices, newest first, and within a slice the
+ * feeds take turns, so one busy feed (BBC Football posts 80 stories a day)
+ * can't crowd out the others and scrolling down means going back in time.
  */
-export function mergeArticles(lists: Article[][], limit = 60): Article[] {
+export function mergeArticles(lists: Article[][], limit = 300): Article[] {
   const newest = Math.max(0, ...lists.flat().map((a) => a.published));
-  const pools = lists
-    .map((list) => [...list].sort((a, b) => b.published - a.published))
-    .map((list) => {
-      const recentOnes = list.filter((a) => !a.published || a.published > newest - 3 * DAY_MS);
-      return recentOnes.length > 0 ? recentOnes : list.slice(0, 3);
-    })
-    // The feed with the freshest story goes first in each turn.
-    .sort((a, b) => (b[0]?.published ?? 0) - (a[0]?.published ?? 0));
   const seen = new Set<string>();
-  const out: Article[] = [];
-  const longest = Math.max(0, ...pools.map((p) => p.length));
-  for (let i = 0; i < longest && out.length < limit; i++) {
-    for (const pool of pools) {
-      const a = pool[i];
-      if (!a) continue;
+  // Each feed's stories by slice, deduplicated, newest first.
+  const slices = new Map<number, Article[][]>();
+  lists.forEach((list, feed) => {
+    for (const a of [...list].sort((x, y) => y.published - x.published)) {
       const key = a.title.toLowerCase().replace(/\W+/g, ' ').trim();
       if (seen.has(a.url) || seen.has(key)) continue;
       seen.add(a.url);
       seen.add(key);
-      out.push(a);
-      if (out.length >= limit) break;
+      const slice = a.published ? Math.floor((newest - a.published) / SLICE_MS) : Number.MAX_SAFE_INTEGER;
+      const bucket = slices.get(slice) ?? lists.map(() => []);
+      bucket[feed].push(a);
+      slices.set(slice, bucket);
+    }
+  });
+  const out: Article[] = [];
+  for (const slice of [...slices.keys()].sort((x, y) => x - y)) {
+    // Within a slice, the feed with the freshest story goes first in each turn.
+    const pools = slices.get(slice)!.filter((p) => p.length > 0).sort((x, y) => y[0].published - x[0].published);
+    const longest = Math.max(...pools.map((p) => p.length));
+    for (let i = 0; i < longest; i++) {
+      for (const pool of pools) {
+        if (pool[i]) out.push(pool[i]);
+        if (out.length >= limit) return out;
+      }
     }
   }
   return out;
@@ -537,6 +544,30 @@ export function mergeArticles(lists: Article[][], limit = 60): Article[] {
 
 export function searchUrl(query: string): string {
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+}
+
+const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/** Topic names that need a clearer search to find older stories. */
+const TOPIC_QUERIES: Record<string, string> = {
+  'world.top': 'world news',
+  'world.good_news': 'good news',
+  'tech.tech': 'technology',
+  'sport.football': 'football soccer',
+  'football.womens': "women's football",
+  'football.transfers': 'football transfer',
+  'business.money': 'personal finance',
+  'ideas.opinion': 'opinion',
+  'culture.stage': 'theatre',
+};
+
+export function topicQuery(topicId: string): string {
+  return TOPIC_QUERIES[topicId] ?? topicById(topicId)?.title ?? topicId;
+}
+
+/** Google News for one topic in a window of days: how the feed goes back in time as you scroll. */
+export function olderUrl(topicId: string, before: number, days: number): string {
+  return searchUrl(`${topicQuery(topicId)} before:${ymd(before)} after:${ymd(before - days * DAY_MS)}`);
 }
 
 /** Google News titles end in " - Publisher"; the publisher goes in `source`. */
