@@ -1,5 +1,5 @@
 import { migrateTopicIds } from '@/core/news';
-import type { AgeGroup, Settings } from '@/core/types';
+import type { AgeGroup, AppData, Settings } from '@/core/types';
 import { supabase } from './supabase';
 
 /** The account's copy of what you chose, kept in the `profiles` table. */
@@ -10,10 +10,17 @@ export interface Profile {
   goals: string[];
   goal_other: string;
   sleep_goal_minutes: number;
+  xp_earned: number;
+  xp_spent: number;
+  pro_until: string | null;
 }
 
-export function profileFromSettings(s: Settings): Profile {
+export function profileFromData(d: AppData): Profile {
+  const s = d.settings;
   return {
+    xp_earned: d.xp.earned,
+    xp_spent: d.xp.spent,
+    pro_until: d.proUntil ? new Date(d.proUntil).toISOString() : null,
     name: s.profile.name.slice(0, 60),
     age_group: s.profile.ageGroup,
     news_topics: s.newsTopics ?? [],
@@ -21,6 +28,16 @@ export function profileFromSettings(s: Settings): Profile {
     goal_other: s.goalOther.slice(0, 300),
     sleep_goal_minutes: s.sleepGoalMinutes,
   };
+}
+
+/** XP and Pro from the account, keeping whichever side has more (so nothing earned on either phone is lost). */
+export function withProfileXp(d: AppData, p: Profile): AppData {
+  const remotePro = p.pro_until ? Date.parse(p.pro_until) : null;
+  const earned = Math.max(d.xp.earned, p.xp_earned ?? 0);
+  const spent = Math.max(d.xp.spent, p.xp_spent ?? 0);
+  const proUntil = Math.max(d.proUntil ?? 0, remotePro ?? 0) || null;
+  if (earned === d.xp.earned && spent === d.xp.spent && proUntil === d.proUntil) return d;
+  return { ...d, xp: { ...d.xp, earned, spent }, proUntil };
 }
 
 export function settingsFromProfile(p: Profile, current: Settings): Partial<Settings> {
@@ -69,7 +86,7 @@ export async function logOut() {
 }
 
 export async function loadProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('name, age_group, news_topics, goals, goal_other, sleep_goal_minutes').eq('id', userId).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('name, age_group, news_topics, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until').eq('id', userId).maybeSingle();
   if (error) throw error;
   return data as Profile | null;
 }

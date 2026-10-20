@@ -10,12 +10,14 @@ import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
 import { AGE_GROUPS } from '@/core/defaults';
 import { GOALS } from '@/core/goals';
+import { balance, levelOf, proActive } from '@/core/xp';
 import { topicById } from '@/core/news';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { logOut } from '@/services/account';
 import { useAuth } from '@/state/auth';
+import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
 import type { AgeGroup } from '@/core/types';
@@ -146,6 +148,8 @@ function useLocationPermission() {
 export default function SettingsScreen() {
   const { data, updateSettings, update, reset } = useStore();
   const auth = useAuth();
+  const now = useNow(60_000);
+  const pro = proActive(data, now);
   const permissions = usePermissions();
   const location = useLocationPermission();
   const insets = useSafeAreaInsets();
@@ -183,6 +187,26 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
             </Pressable>
           )}
+        </Section>
+
+        <Section label="Ryz Pro">
+          <Pressable onPress={() => router.push('/pro')} accessibilityRole="button" style={styles.status}>
+            <Ionicons name={pro ? 'diamond' : 'diamond-outline'} size={22} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="body">{pro && data.proUntil ? `Pro until ${new Date(data.proUntil).toLocaleDateString()}` : 'Free plan'}</Txt>
+              <Txt variant="caption">1, 3, 6 or 12 months, or free days with your XP</Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </Pressable>
+          <Divider />
+          <Pressable onPress={() => router.push('/xp')} accessibilityRole="button" style={styles.status}>
+            <Ionicons name="star-outline" size={22} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="body">{`${balance(data.xp).toLocaleString()} XP · level ${levelOf(data.xp.earned).level}`}</Txt>
+              <Txt variant="caption">Earn XP for good mornings and nights; spend it on free Pro</Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </Pressable>
         </Section>
 
         <Section label="Profile">

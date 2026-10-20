@@ -1,4 +1,5 @@
 import type { AgeGroup, Alarm, AppData, Settings } from './types';
+import { EMPTY_XP } from './xp';
 
 export const TEST_ALARM_ID = 'test';
 
@@ -65,7 +66,7 @@ export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, numbe
 }
 
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {
-  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {} };
+  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {}, xp: EMPTY_XP, proUntil: null };
 }
 
 /** A power-nap countdown: one ring at exactly `now + minutes`, no missions, no snooze. */

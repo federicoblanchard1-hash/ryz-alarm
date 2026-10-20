@@ -4,6 +4,7 @@ import { AppState, StyleSheet, View } from 'react-native';
 import { emptyData } from '@/core/defaults';
 import { buildPlan } from '@/core/plan';
 import { cleanup, defaultAlarmFor } from '@/core/ring';
+import { reconcileXp } from '@/core/xp';
 import { nextClock } from '@/core/time';
 import type { Alarm, AppData, Settings } from '@/core/types';
 import { setupNotifications, syncSchedule } from '@/services/notifications';
@@ -69,7 +70,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  const update = useCallback((fn: (d: AppData, now: number) => AppData) => setData((d) => fn(d, Date.now())), []);
+  // Every change also awards XP for any night that newly qualifies.
+  const update = useCallback(
+    (fn: (d: AppData, now: number) => AppData) =>
+      setData((d) => {
+        const now = Date.now();
+        return reconcileXp(fn(d, now), now);
+      }),
+    [],
+  );
 
   const store = useMemo<Store>(
     () => ({

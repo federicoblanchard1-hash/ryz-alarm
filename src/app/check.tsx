@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Txt, haptic } from '@/components/ui';
 import { confirmAwake, findActive } from '@/core/ring';
+import { addXp, awakeCheckXp } from '@/core/xp';
 import { formatClockText } from '@/core/time';
 import { clearDelivered } from '@/services/notifications';
 import { useScreenAwake } from '@/state/useScreenAwake';
@@ -46,7 +47,7 @@ export default function AwakeCheck() {
         style={styles.button}
         onPress={() => {
           haptic('success');
-          update((d) => confirmAwake(d, active.alarmId));
+          update((d, t) => addXp(confirmAwake(d, active.alarmId), [awakeCheckXp(active.alarmId, t)]));
           clearDelivered();
           router.replace('/');
         }}

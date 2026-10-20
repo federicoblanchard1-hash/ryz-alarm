@@ -9,6 +9,7 @@ import { Button, Txt, haptic } from '@/components/ui';
 import { MISSIONS } from '@/core/missions';
 import { phaseAt } from '@/core/plan';
 import { endSleep } from '@/core/sleep';
+import { addXp, wakeXp } from '@/core/xp';
 import { canSnooze, defaultAlarmFor, findActive, snooze, stop } from '@/core/ring';
 import { MINUTE, formatClock, formatClockText } from '@/core/time';
 import type { ActiveRing } from '@/core/types';
@@ -84,18 +85,26 @@ export default function RingScreen() {
     router.replace('/');
   }, [ring, update]);
 
+  // When you first reacted (Stop, or starting the missions): getting up within a minute earns XP.
+  const respondedAt = useRef<number | null>(null);
   const finish = useCallback(() => {
     if (!ring) return;
     setDone(true);
     haptic('success');
-    // Stopping the alarm also ends a running sleep session.
-    update((d, t) => endSleep(stop(d, ring, t), t).data);
+    const reacted = respondedAt.current ?? Date.now();
+    const missionsDone = phase === 'missions' && alarm ? alarm.missions.length : 0;
+    // Stopping the alarm also ends a running sleep session, and earns XP for the morning.
+    update((d, t) => {
+      const awarded = alarm ? addXp(d, wakeXp(d, ring, alarm, reacted, missionsDone, t)) : d;
+      return endSleep(stop(awarded, ring, t), t).data;
+    });
     clearDelivered();
     // A nap isn't a morning: go straight back.
     router.replace(alarm?.quick ? '/' : '/morning');
-  }, [ring, alarm, update]);
+  }, [ring, alarm, phase, update]);
 
   const startMissions = () => {
+    respondedAt.current ??= Date.now();
     haptic('light');
     setPhase('missions');
     activity();

@@ -2,7 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import { loadProfile, profileFromSettings, saveProfile, settingsFromProfile } from '@/services/account';
+import { loadProfile, profileFromData, saveProfile, settingsFromProfile, withProfileXp } from '@/services/account';
 import { accountsEnabled, supabase } from '@/services/supabase';
 import { useStore } from './store';
 
@@ -23,7 +23,7 @@ const AuthContext = createContext<Auth>({ enabled: false, session: null, email: 
  * change back to the account a moment later.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data, ready, updateSettings } = useStore();
+  const { data, ready, update } = useStore();
   const [session, setSession] = useState<Session | null>(null);
   const [checked, setChecked] = useState(!accountsEnabled);
   // The user whose profile has been pulled; saving waits for it so local defaults never overwrite the account.
@@ -56,16 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     loadProfile(userId)
       .then((profile) => {
-        if (!cancelled && profile) updateSettings(settingsFromProfile(profile, settingsRef.current));
+        if (!cancelled && profile) update((d) => withProfileXp({ ...d, settings: { ...d.settings, ...settingsFromProfile(profile, settingsRef.current) } }, profile));
       })
       .catch(() => {})
       .finally(() => !cancelled && setPulledFor(userId));
     return () => {
       cancelled = true;
     };
-  }, [userId, ready, pulledFor, updateSettings]);
+  }, [userId, ready, pulledFor, update]);
 
-  const profileJson = JSON.stringify(profileFromSettings(data.settings));
+  const profileJson = JSON.stringify(profileFromData(data));
   useEffect(() => {
     if (!userId || pulledFor !== userId) return;
     const timer = setTimeout(() => saveProfile(userId, JSON.parse(profileJson)).catch(() => {}), 1200);

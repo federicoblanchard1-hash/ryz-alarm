@@ -1,5 +1,6 @@
 import type { Mission } from './missions';
 import type { VibrationId } from './vibration';
+import type { XpState } from './xp';
 
 /** 0 = Sunday … 6 = Saturday, like `Date.getDay()`. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -156,6 +157,10 @@ export interface AppData {
   pending: PendingEvent[];
   /** Alarm id → the last occurrence (ms) that was stopped or snoozed. */
   handled: Record<string, number>;
+  /** Experience points, earned for good mornings and nights, spent on free Pro. */
+  xp: XpState;
+  /** Pro is on until then (ms); null if never. */
+  proUntil: number | null;
 }
 
 /** What should be on screen right now, if anything. */

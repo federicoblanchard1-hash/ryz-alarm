@@ -44,6 +44,8 @@ export async function loadData(): Promise<AppData> {
       sleepingSince: saved.sleepingSince ?? null,
       pending: saved.pending ?? [],
       handled: saved.handled ?? {},
+      xp: saved.xp ?? { earned: 0, spent: 0, events: [] },
+      proUntil: saved.proUntil ?? null,
     };
   } catch {
     return fallback;
