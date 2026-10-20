@@ -1,4 +1,4 @@
-import { CATEGORIES, decodeEntities, extractArticle, feedsFor, filterArticles, mergeArticles, parseFeed, parseSearch, timeAgo, type Article } from '../news';
+import { CATEGORIES, TOPIC_RENAMES, decodeEntities, extractArticle, feedsFor, filterArticles, mergeArticles, migrateTopicIds, parseFeed, parseSearch, timeAgo, type Article } from '../news';
 
 const BBC_FEED = `<rss><channel>
 <item><title><![CDATA[Wiegman signs new deal]]></title>
@@ -139,5 +139,22 @@ describe('going back in time', () => {
     const merged = mergeArticles([slow, busy]);
     expect(merged.at(-1)!.id).toBe('slow2');
     expect(merged.slice(0, 4).map((a) => a.source)).toContain('slow');
+  });
+});
+
+describe('catalog', () => {
+  it('lists every country A to Z, and none under World', () => {
+    const countries = CATEGORIES.find((c) => c.id === 'countries')!.topics.map((t) => t.title);
+    expect(countries.length).toBeGreaterThan(190);
+    expect([...countries].sort((a, b) => a.localeCompare(b))).toEqual(countries);
+    const world = CATEGORIES.find((c) => c.id === 'world')!.topics.map((t) => t.title);
+    for (const name of world) expect(countries).not.toContain(name);
+  });
+
+  it('keeps every topic id unique and renames moved ones', () => {
+    const ids = CATEGORIES.flatMap((c) => c.topics.map((t) => t.id));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(migrateTopicIds(['world.switzerland', 'tech.games', 'sport.f1'])).toEqual(['countries.switzerland', 'gaming.games', 'sport.f1']);
+    for (const to of Object.values(TOPIC_RENAMES)) expect(ids).toContain(to);
   });
 });

@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -69,7 +69,11 @@ export default function Interests() {
   const { data, updateSettings } = useStore();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState(() => new Set(data.settings.newsTopics ?? []));
-  const [open, setOpen] = useState<string | null>(first ? 'sport' : null);
+  const [open, setOpen] = useState<string | null>(first ? 'world' : null);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  // Searching shows every matching topic across all categories.
+  const matches = q ? CATEGORIES.flatMap((c) => c.topics.filter((t) => t.title.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)).map((t) => ({ topic: t, category: c }))) : [];
 
   const change = (ids: string[], on: boolean) =>
     setSelected((prev) => {
@@ -107,11 +111,51 @@ export default function Interests() {
         <Txt variant="muted" style={styles.subtitle}>
           {first ? 'What do you like to read in the morning? Pick topics, and open any category for its sub-topics. You can change them any time in Settings.' : 'Pick the topics for your morning news.'}
         </Txt>
-        {CATEGORIES.map((c) => (
+        <View style={styles.search}>
+          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search topics: a country, a team, a sport…"
+            placeholderTextColor={colors.textFaint}
+            style={styles.searchInput}
+            autoCorrect={false}
+            accessibilityLabel="Search topics"
+          />
+          {query ? (
+            <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
+        </View>
+        {q ? (
+          <View style={styles.results}>
+            {matches.length === 0 ? <Txt variant="muted">{`No topic matches “${query.trim()}”.`}</Txt> : null}
+            {matches.slice(0, 80).map(({ topic, category }) => {
+              const on = selected.has(topic.id);
+              return (
+                <Pressable
+                  key={topic.id}
+                  onPress={() => {
+                    haptic('select');
+                    change([topic.id], !on);
+                  }}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  style={[styles.chip, on && styles.chipOn]}
+                >
+                  <Text style={[styles.chipText, on && styles.chipTextOn]}>{`${topic.title} · ${category.title}`}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          CATEGORIES.map((c) => (
           <CategoryCard key={c.id} category={c} selected={selected} open={open === c.id} onToggleOpen={() => setOpen((o) => (o === c.id ? null : c.id))} onChange={change} />
-        ))}
+          ))
+        )}
         <Txt variant="caption" style={styles.sources}>
-          Stories come from over 50 free publishers (BBC, The Guardian, The New York Times, Sky, France 24, Euronews, Wired, The Verge, ESPN, Variety…), mixed evenly, and open inside Ryz in a clean reader view.
+          Stories come from over 50 free publishers plus Google News (BBC, The Guardian, The New York Times, Sky, France 24, Euronews, Wired, The Verge, ESPN, Variety…), mixed evenly, and open inside Ryz in a clean reader view.
         </Txt>
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
@@ -144,6 +188,9 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.accent, borderColor: colors.accent, borderStyle: 'solid' },
   chipText: { fontSize: 15, fontFamily: FONT.regular, color: colors.text },
   chipTextOn: { color: colors.onAccent },
+  search: { flexDirection: 'row', alignItems: 'center', gap: space.sm, height: 46, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.surface, marginBottom: space.xs },
+  searchInput: { flex: 1, height: '100%', fontSize: 16, fontFamily: FONT.regular, color: colors.text, paddingVertical: 0 },
+  results: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   sources: { textAlign: 'center', marginTop: space.md, paddingHorizontal: space.lg },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
   save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },

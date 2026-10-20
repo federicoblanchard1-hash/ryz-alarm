@@ -1,3 +1,4 @@
+import { migrateTopicIds } from '@/core/news';
 import type { AgeGroup, Settings } from '@/core/types';
 import { supabase } from './supabase';
 
@@ -25,7 +26,7 @@ export function profileFromSettings(s: Settings): Profile {
 export function settingsFromProfile(p: Profile, current: Settings): Partial<Settings> {
   return {
     profile: { name: p.name || current.profile.name, ageGroup: p.age_group ?? current.profile.ageGroup },
-    newsTopics: p.news_topics.length ? p.news_topics : current.newsTopics,
+    newsTopics: p.news_topics.length ? migrateTopicIds(p.news_topics) : current.newsTopics,
     goals: p.goals.length ? p.goals : current.goals,
     goalOther: p.goal_other || current.goalOther,
     sleepGoalMinutes: p.sleep_goal_minutes || current.sleepGoalMinutes,

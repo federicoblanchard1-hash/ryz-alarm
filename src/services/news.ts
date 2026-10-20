@@ -73,7 +73,8 @@ export async function fetchNews(topics: string[], onProgress?: (articles: Articl
     for (const f of feeds) {
       get(f.url, FEED_MS, true)
         .then((xml) => {
-          const items = parseFeed(xml, f.topic);
+          // Topics without a publisher feed read a Google News search instead.
+          const items = f.url.includes('news.google.com') ? parseSearch(xml).map((a) => ({ ...a, topic: f.topic })) : parseFeed(xml, f.topic);
           if (items.length === 0) return;
           lists.push(items);
           if (onProgress && Date.now() - lastSent > 300) {

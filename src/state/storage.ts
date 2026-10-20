@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { defaultSettings, emptyData, newAlarm } from '@/core/defaults';
+import { migrateTopicIds } from '@/core/news';
 import type { AppData, Settings } from '@/core/types';
 
 const KEY = 'ryz/data/v1';
@@ -35,7 +36,9 @@ export async function loadData(): Promise<AppData> {
       alarms: (saved.alarms ?? []).map((a) => ({ ...newAlarm(a.id), ...a })),
       settings: (() => {
         const defaults = defaultSettings(prefers24h(), preferredTempUnit());
-        return { ...defaults, ...saved.settings, profile: { ...defaults.profile, ...saved.settings?.profile } };
+        const settings = { ...defaults, ...saved.settings, profile: { ...defaults.profile, ...saved.settings?.profile } };
+        // Topics that moved category keep working.
+        return settings.newsTopics ? { ...settings, newsTopics: migrateTopicIds(settings.newsTopics) } : settings;
       })(),
       sleep: saved.sleep ?? [],
       sleepingSince: saved.sleepingSince ?? null,
