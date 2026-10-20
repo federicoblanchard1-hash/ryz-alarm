@@ -12,8 +12,11 @@ import {
   View,
 } from "react-native";
 
-import { filterArticles, timeAgo, topicById, type Article } from "@/core/news";
+import { filterArticles, timeAgo, type Article, type ArticleFormat } from "@/core/news";
+import { FEED_MODES, type FeedMode } from "@/core/newsFeeds";
+import type { Story } from "@/core/stories";
 import { openInAppBrowser, searchNews } from "@/services/news";
+import { useStore } from "@/state/store";
 import { onNearBottom } from "@/state/nearBottom";
 import { useNews } from "@/state/useNews";
 import { useNow } from "@/state/useNow";
@@ -39,18 +42,35 @@ function openArticle(a: Article) {
   });
 }
 
-function Meta({ article, now }: { article: Article; now: number }) {
+/** A story covered by several publishers opens its own page; a single article opens directly. */
+function openStory(story: Story) {
+  if (story.articles.length > 1) router.push({ pathname: "/story/[id]", params: { id: story.id, q: story.query, title: story.lead.title } });
+  else openArticle(story.lead);
+}
+
+const FORMAT_BADGE: Partial<Record<ArticleFormat, string>> = {
+  video: "▶ Video",
+  audio: "🎧 Audio",
+  live: "● Live",
+  gallery: "Photos",
+  longread: "Long read",
+};
+
+function Meta({ article, now, sources = 1 }: { article: Article; now: number; sources?: number }) {
+  const badge = article.tags ? FORMAT_BADGE[article.tags.format] : undefined;
   return (
     <Text style={styles.meta} numberOfLines={1}>
-      {`${article.source} · ${timeAgo(article.published, now)}`}
+      {badge ? <Text style={article.tags?.format === "live" ? styles.live : styles.badge}>{`${badge} · `}</Text> : null}
+      {`${article.source}${sources > 1 ? ` + ${sources - 1} more` : ""} · ${timeAgo(article.published, now)}${article.paywall ? " · Paywall" : ""}`}
     </Text>
   );
 }
 
-function Lead({ article, now }: { article: Article; now: number }) {
+function Lead({ story, now }: { story: Story; now: number }) {
+  const article = story.lead;
   return (
     <PressableScale
-      onPress={() => openArticle(article)}
+      onPress={() => openStory(story)}
       style={styles.lead}
       accessibilityLabel={`${article.title}. ${article.source}`}
     >
@@ -63,7 +83,7 @@ function Lead({ article, now }: { article: Article; now: number }) {
         />
       ) : null}
       <View style={styles.leadText}>
-        <Meta article={article} now={now} />
+        <Meta article={article} now={now} sources={story.sources.length} />
         <Text style={styles.leadTitle}>{article.title}</Text>
         {article.summary ? (
           <Text style={styles.summary} numberOfLines={2}>
@@ -75,19 +95,26 @@ function Lead({ article, now }: { article: Article; now: number }) {
   );
 }
 
-function Row({ article, now }: { article: Article; now: number }) {
+function Row({ story, now, rank }: { story: Story; now: number; rank?: number }) {
+  const article = story.lead;
   return (
     <Pressable
-      onPress={() => openArticle(article)}
+      onPress={() => openStory(story)}
       accessibilityRole="button"
       accessibilityLabel={`${article.title}. ${article.source}`}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
+      {rank ? <Text style={styles.rank}>{rank}</Text> : null}
       <View style={styles.rowText}>
         <Text style={styles.rowTitle} numberOfLines={3}>
           {article.title}
         </Text>
-        <Meta article={article} now={now} />
+        {rank && article.summary ? (
+          <Text style={styles.summary} numberOfLines={2}>
+            {article.summary}
+          </Text>
+        ) : null}
+        <Meta article={article} now={now} sources={story.sources.length} />
       </View>
       {article.image ? (
         <Image
@@ -101,6 +128,8 @@ function Row({ article, now }: { article: Article; now: number }) {
   );
 }
 
+const single = (a: Article): Story => ({ id: a.id, lead: a, articles: [a], sources: [a.source], first: a.published, last: a.published, query: a.title, hub: false });
+
 /** Stories added each time you reach the end. */
 const PAGE = 15;
 
@@ -111,7 +140,7 @@ type WebResults = {
 };
 
 /** Searches every publisher a moment after typing stops. */
-function useWebSearch(query: string): WebResults | null {
+function useWebSearch(query: string, edition: string): WebResults | null {
   const q = query.trim();
   const [results, setResults] = useState<WebResults | null>(null);
   useEffect(() => {
@@ -119,7 +148,7 @@ function useWebSearch(query: string): WebResults | null {
     let cancelled = false;
     const timer = setTimeout(() => {
       setResults({ query: q, status: "loading", articles: [] });
-      searchNews(q)
+      searchNews(q, edition)
         .then(
           (articles) =>
             !cancelled && setResults({ query: q, status: "ready", articles }),
@@ -134,7 +163,7 @@ function useWebSearch(query: string): WebResults | null {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [q]);
+  }, [q, edition]);
   return results && results.query === q
     ? results
     : q.length >= 2
@@ -151,7 +180,8 @@ function SearchResults({
   mine: Article[];
   now: number;
 }) {
-  const web = useWebSearch(query);
+  const { data } = useStore();
+  const web = useWebSearch(query, data.settings.news.editions[0]);
   const ids = new Set(mine.map((a) => a.title.toLowerCase()));
   const others = (web?.articles ?? []).filter(
     (a) => !ids.has(a.title.toLowerCase()),
@@ -160,7 +190,7 @@ function SearchResults({
     <>
       {mine.length > 0 ? <Txt variant="label">In your news</Txt> : null}
       {mine.slice(0, 10).map((a) => (
-        <Row key={a.id} article={a} now={now} />
+        <Row key={a.id} story={single(a)} now={now} />
       ))}
       <Txt variant="label" style={styles.searchLabel}>
         From everywhere
@@ -177,40 +207,72 @@ function SearchResults({
       ) : others.length === 0 ? (
         <Txt variant="muted">{`Nothing found for “${query.trim()}”.`}</Txt>
       ) : (
-        others.map((a) => <Row key={a.id} article={a} now={now} />)
+        others.map((a) => <Row key={a.id} story={single(a)} now={now} />)
       )}
     </>
   );
 }
 
-/** "Your news" on Morning: a search, a filter per chosen topic, a lead story, then a list. */
-export function NewsFeed({ topics }: { topics: string[] }) {
-  const { articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus } =
-    useNews(topics);
-  const [filter, setFilter] = useState<string | null>(null);
+const FORMATS: { id: ArticleFormat | "all"; title: string }[] = [
+  { id: "all", title: "All" },
+  { id: "article", title: "Articles" },
+  { id: "video", title: "Videos" },
+  { id: "audio", title: "Podcasts" },
+  { id: "live", title: "Live" },
+  { id: "gallery", title: "Photos" },
+  { id: "longread", title: "Long reads" },
+  { id: "brief", title: "Briefs" },
+];
+
+function ChipRow<T extends string>({ items, value, onChange, small }: { items: { id: T; title: string }[]; value: T; onChange: (v: T) => void; small?: boolean }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filters}>
+      {items.map((it) => {
+        const on = value === it.id;
+        return (
+          <Pressable key={it.id} onPress={() => onChange(it.id)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={[styles.filter, small && styles.filterSmall, on && styles.filterOn]}>
+            <Text style={[styles.filterText, small && styles.filterTextSmall, on && styles.filterTextOn]}>{it.title}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+const EMPTY: Record<FeedMode, string> = {
+  foryou: "Nothing new here yet.",
+  following: "Nothing new from what you follow yet.",
+  top: "No top stories right now.",
+  breaking: "No breaking news in the last few hours.",
+  trending: "Nothing is trending right now.",
+  digest: "Your digest fills up as the day’s news comes in.",
+};
+
+/** "Your news" on Morning: feed modes (For you, Following, Top, Breaking, Trending, Digest), formats, a search, then stories. */
+export function NewsFeed({ follows }: { follows: string[] }) {
+  const [mode, setMode] = useState<FeedMode>("foryou");
+  const [format, setFormat] = useState<ArticleFormat | "all">("all");
+  const { stories, articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus, scrollsBack } = useNews(mode, follows, format);
   const [query, setQuery] = useState("");
   // Stories on screen; scrolling near the end shows more, then fetches older ones.
   const [visible, setVisible] = useState(PAGE);
   const searching = query.trim().length > 0;
   const now = useNow(60_000);
-  const shown = filter ? articles.filter((a) => a.topic === filter) : articles;
-  const [lead, ...rest] = shown;
+  const digest = mode === "digest";
+  const [lead, ...rest] = stories;
   const moreHere = rest.length > visible;
 
-  const latest = useRef({ moreHere, searching, loadOlder });
+  const latest = useRef({ moreHere, searching, loadOlder, scrollsBack });
   useLayoutEffect(() => {
-    latest.current = { moreHere, searching, loadOlder };
+    latest.current = { moreHere, searching, loadOlder, scrollsBack };
   });
   useEffect(
     () =>
       onNearBottom(() => {
         const l = latest.current;
         if (l.searching) return;
-        if (l.moreHere) setVisible((v) => v + PAGE);
-        else {
-          setVisible((v) => v + PAGE);
-          l.loadOlder();
-        }
+        setVisible((v) => v + PAGE);
+        if (!l.moreHere && l.scrollsBack) l.loadOlder();
       }),
     [],
   );
@@ -221,14 +283,14 @@ export function NewsFeed({ topics }: { topics: string[] }) {
         <Txt style={styles.title} accessibilityRole="header">
           Your news
         </Txt>
-        <Pressable
-          onPress={() => router.push("/interests")}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Edit news topics"
-        >
-          <Txt style={styles.edit}>Edit</Txt>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push("/news-settings")} hitSlop={10} accessibilityRole="button" accessibilityLabel="News settings">
+            <Ionicons name="options-outline" size={22} color={colors.textMuted} />
+          </Pressable>
+          <Pressable onPress={() => router.push("/interests")} hitSlop={10} accessibilityRole="button" accessibilityLabel="Edit what you follow">
+            <Txt style={styles.edit}>Edit</Txt>
+          </Pressable>
+        </View>
       </View>
       {updatedAt > 0 ? (
         <Pressable
@@ -284,42 +346,29 @@ export function NewsFeed({ topics }: { topics: string[] }) {
         />
       ) : (
         <>
-          {topics.length > 1 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterScroll}
-              contentContainerStyle={styles.filters}
-            >
-              {[null, ...topics].map((id) => {
-                const on = filter === id;
-                return (
-                  <Pressable
-                    key={id ?? "all"}
-                    onPress={() => {
-                      setFilter(id);
-                      setVisible(PAGE);
-                    }}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: on }}
-                    style={[styles.filter, on && styles.filterOn]}
-                  >
-                    <Text
-                      style={[styles.filterText, on && styles.filterTextOn]}
-                    >
-                      {id ? (topicById(id)?.title ?? id) : "All"}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          ) : null}
+          <ChipRow
+            items={FEED_MODES}
+            value={mode}
+            onChange={(m) => {
+              setMode(m);
+              setVisible(PAGE);
+            }}
+          />
+          <ChipRow
+            small
+            items={FORMATS}
+            value={format}
+            onChange={(f) => {
+              setFormat(f);
+              setVisible(PAGE);
+            }}
+          />
 
-          {status === "loading" && articles.length === 0 ? (
+          {status === "loading" && stories.length === 0 ? (
             <View style={styles.state}>
               <ActivityIndicator color={colors.textMuted} />
             </View>
-          ) : status === "error" && articles.length === 0 ? (
+          ) : status === "error" && stories.length === 0 ? (
             <Pressable
               onPress={refresh}
               style={styles.state}
@@ -334,17 +383,25 @@ export function NewsFeed({ topics }: { topics: string[] }) {
                 {"Couldn't load the news. Tap to try again."}
               </Txt>
             </Pressable>
+          ) : digest ? (
+            <>
+              <Txt variant="muted">{`The day’s ${stories.length} biggest stories from what you follow, ${new Date(now).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}.`}</Txt>
+              {stories.length === 0 ? <Txt variant="muted" style={styles.empty}>{EMPTY.digest}</Txt> : null}
+              {stories.map((st, i) => (
+                <Row key={st.id} story={st} now={now} rank={i + 1} />
+              ))}
+            </>
           ) : (
             <>
               {lead ? (
-                <Lead article={lead} now={now} />
+                <Lead story={lead} now={now} />
               ) : (
                 <Txt variant="muted" style={styles.empty}>
-                  Nothing new here yet.
+                  {format === "all" ? EMPTY[mode] : "Nothing in this format right now."}
                 </Txt>
               )}
-              {rest.slice(0, visible).map((a) => (
-                <Row key={a.id} article={a} now={now} />
+              {rest.slice(0, visible).map((st) => (
+                <Row key={st.id} story={st} now={now} />
               ))}
               {lead ? (
                 <View style={styles.more}>
@@ -353,8 +410,8 @@ export function NewsFeed({ topics }: { topics: string[] }) {
                       <ActivityIndicator color={colors.textMuted} />
                       <Txt variant="caption">Loading older news…</Txt>
                     </>
-                  ) : olderStatus === "done" && !moreHere ? (
-                    <Txt variant="caption">{"That's all the older news for now."}</Txt>
+                  ) : (olderStatus === "done" || !scrollsBack) && !moreHere ? (
+                    <Txt variant="caption">{scrollsBack ? "That's all the older news for now." : "That's everything for now."}</Txt>
                   ) : olderStatus === "error" && !moreHere ? (
                     <Pressable onPress={loadOlder} hitSlop={8} accessibilityRole="button">
                       <Txt variant="caption">{"Couldn't load older news. Tap to try again."}</Txt>
@@ -363,7 +420,7 @@ export function NewsFeed({ topics }: { topics: string[] }) {
                     <Pressable
                       onPress={() => {
                         setVisible((v) => v + PAGE);
-                        if (!moreHere) loadOlder();
+                        if (!moreHere && scrollsBack) loadOlder();
                       }}
                       hitSlop={8}
                       accessibilityRole="button"
@@ -393,7 +450,7 @@ export function NewsPrompt() {
       <View style={styles.rowText}>
         <Txt variant="heading">Your morning news</Txt>
         <Txt variant="caption">
-          Pick what you like to read: sport, tech, world and more.
+          Follow what you like: 31 categories, 850 topics, teams, people and more.
         </Txt>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
@@ -406,9 +463,15 @@ const styles = StyleSheet.create({
   wrap: { marginTop: space.lg, gap: space.md },
   header: {
     flexDirection: "row",
-    alignItems: "baseline",
+    alignItems: "center",
     justifyContent: "space-between",
   },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: space.lg },
+  filterSmall: { height: 28, paddingHorizontal: space.md, backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
+  filterTextSmall: { fontSize: 13 },
+  badge: { color: colors.text, fontFamily: FONT.medium },
+  live: { color: colors.danger, fontFamily: FONT.medium },
+  rank: { fontSize: 28, lineHeight: 32, fontFamily: FONT.display, color: colors.textFaint, width: 30, alignSelf: "flex-start" },
   search: {
     flexDirection: "row",
     alignItems: "center",

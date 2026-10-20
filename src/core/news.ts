@@ -1,49 +1,12 @@
-// News for the Morning screen: the topics you can follow, an RSS parser, and a
-// reader view that pulls an article's text out of its page so it can be shown
-// in Ryz, without the site's pop-ups, cookie banners or sign-up walls.
+// News parsing: RSS 2.0 and Atom feeds, Google News searches, and mixing
+// feeds evenly. What to read comes from taxonomy.ts and newsFeeds.ts; which
+// publisher a feed is, in which language and country, from sources.ts.
 //
-// Each topic reads several publishers (BBC, The Guardian, NYT, Sky, France 24,
-// Euronews, Wired, The Verge, ESPN, Autosport, Variety…), all free RSS feeds
-// that were checked to return stories, and the feed mixes them evenly.
+// Ryz shows a story's headline, a short summary, its picture and a link to
+// the publisher. It never copies the full text: the story itself is read on
+// the publisher's site.
 
-import { CATEGORIES, searchUrl, type Topic } from './newsCatalog';
-
-export { CATEGORIES, TOPIC_RENAMES, migrateTopicIds, searchUrl, type Category, type Topic } from './newsCatalog';
-
-
-const TOPICS = new Map(CATEGORIES.flatMap((c) => c.topics.map((t) => [t.id, t] as const)));
-
-export function topicById(id: string): Topic | undefined {
-  return TOPICS.get(id);
-}
-
-const host = (url: string) => url.replace(/^https?:\/\/(www\.|feeds\.|rss\.)?/, '').split('/')[0];
-
-/**
- * The feeds to read for these topics, up to `max`: one per topic first, so
- * every interest shows up, then more publishers per topic. Within a round,
- * publishers used least so far come first, so no one source takes over.
- */
-export function feedsFor(topicIds: string[], max = 24): { url: string; topic: string }[] {
-  const chosen = topicIds.map(topicById).filter((t): t is Topic => Boolean(t));
-  const out: { url: string; topic: string }[] = [];
-  const seen = new Set<string>();
-  const uses = new Map<string, number>();
-  const longest = Math.max(0, ...chosen.map((t) => t.feeds.length));
-  for (let round = 0; round < longest && out.length < max; round++) {
-    // In each round, a topic may pick any feed it hasn't used yet; it takes the least-used publisher.
-    for (const t of chosen) {
-      if (out.length >= max) break;
-      const options = t.feeds.filter((u) => !seen.has(u));
-      if (options.length === 0) continue;
-      const pick = options.reduce((best, u) => ((uses.get(host(u)) ?? 0) < (uses.get(host(best)) ?? 0) ? u : best));
-      seen.add(pick);
-      uses.set(host(pick), (uses.get(host(pick)) ?? 0) + 1);
-      out.push({ url: pick, topic: t.id });
-    }
-  }
-  return out;
-}
+import { PAYWALLED_PUBLISHERS, sourceForFeed } from './sources';
 
 // ---- Text helpers
 
@@ -74,6 +37,23 @@ export function htmlToText(html: string): string {
 
 // ---- RSS
 
+export type ArticleFormat = 'article' | 'video' | 'audio' | 'live' | 'gallery' | 'longread' | 'brief';
+
+export interface ArticleTags {
+  /** Category ids, e.g. "sports". A story can be in several. */
+  categories: string[];
+  /** Taxonomy node ids at any level, e.g. "sports.football.premier-league". */
+  topics: string[];
+  /** World region ids. */
+  regions: string[];
+  /** ISO country codes the story is about or from. */
+  countries: string[];
+  language: string;
+  /** People, teams, companies, places and tickers named in it. */
+  entities: string[];
+  format: ArticleFormat;
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -83,7 +63,16 @@ export interface Article {
   source: string;
   /** ms */
   published: number;
+  /** The follow (node id, entity key or mode) whose feed it came from. */
   topic: string;
+  /** The source registry entry, when the feed is a known publisher. */
+  sourceId?: string;
+  language?: string;
+  country?: string;
+  paywall?: boolean;
+  /** Video or podcast: where to play it. */
+  media?: { kind: 'video' | 'audio'; url?: string };
+  tags?: ArticleTags;
 }
 
 function tag(xml: string, name: string): string | undefined {
@@ -96,63 +85,7 @@ function attr(element: string, name: string): string | undefined {
   return m ? decodeEntities(m[1]) : undefined;
 }
 
-const SOURCES: [string, string][] = [
-  ['bbc.', 'BBC'],
-  ['theguardian.com', 'The Guardian'],
-  ['arstechnica.com', 'Ars Technica'],
-  ['nytimes.com', 'The New York Times'],
-  ['news.sky.com', 'Sky News'],
-  ['skysports.com', 'Sky Sports'],
-  ['france24.com', 'France 24'],
-  ['euronews.com', 'Euronews'],
-  ['abcnews', 'ABC News'],
-  ['aljazeera.com', 'Al Jazeera'],
-  ['dw.com', 'DW'],
-  ['lemonde.fr', 'Le Monde'],
-  ['rts.ch', 'RTS'],
-  ['letemps.ch', 'Le Temps'],
-  ['theverge.com', 'The Verge'],
-  ['wired.com', 'Wired'],
-  ['engadget.com', 'Engadget'],
-  ['techcrunch.com', 'TechCrunch'],
-  ['9to5mac.com', '9to5Mac'],
-  ['technologyreview.com', 'MIT Technology Review'],
-  ['ign.com', 'IGN'],
-  ['polygon.com', 'Polygon'],
-  ['kotaku.com', 'Kotaku'],
-  ['fortune.com', 'Fortune'],
-  ['inc.com', 'Inc.'],
-  ['fastcompany.com', 'Fast Company'],
-  ['marketwatch.com', 'MarketWatch'],
-  ['coindesk.com', 'CoinDesk'],
-  ['sciencedaily.com', 'ScienceDaily'],
-  ['phys.org', 'Phys.org'],
-  ['livescience.com', 'Live Science'],
-  ['smithsonianmag.com', 'Smithsonian'],
-  ['nature.com', 'Nature'],
-  ['space.com', 'Space.com'],
-  ['nasa.gov', 'NASA'],
-  ['psychologytoday.com', 'Psychology Today'],
-  ['carbonbrief.org', 'Carbon Brief'],
-  ['insideclimatenews.org', 'Inside Climate News'],
-  ['runnersworld.com', "Runner's World"],
-  ['menshealth.com', "Men's Health"],
-  ['espn.', 'ESPN'],
-  ['autosport.com', 'Autosport'],
-  ['motorsport.com', 'Motorsport.com'],
-  ['cyclingnews.com', 'Cyclingnews'],
-  ['variety.com', 'Variety'],
-  ['hollywoodreporter.com', 'The Hollywood Reporter'],
-  ['pitchfork.com', 'Pitchfork'],
-  ['rollingstone.com', 'Rolling Stone'],
-  ['vogue.com', 'Vogue'],
-  ['bonappetit.com', 'Bon Appétit'],
-  ['dezeen.com', 'Dezeen'],
-];
-
-function sourceName(url: string): string {
-  const known = SOURCES.find(([part]) => url.includes(part));
-  if (known) return known[1];
+function hostName(url: string): string {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
   } catch {
@@ -180,10 +113,19 @@ function atomLink(entry: string): string | undefined {
   return page ? attr(page, 'href') : undefined;
 }
 
-/** Articles in an RSS 2.0 or Atom feed, newest first. */
-export function parseFeed(xml: string, topic: string): Article[] {
+/** A podcast episode or video in an item. */
+function mediaOf(item: string, link: string): Article['media'] {
+  const enclosure = [...item.matchAll(/<(enclosure|media:content)\b[^>]*>/gi)].map((m) => m[0]).find((e) => /type="(audio|video)\//i.test(e));
+  if (enclosure) return { kind: /type="audio/i.test(enclosure) ? 'audio' : 'video', url: attr(enclosure, 'url') };
+  if (/youtube\.com\/watch|youtu\.be\//.test(link) || /<yt:videoId>/.test(item)) return { kind: 'video', url: link };
+  return undefined;
+}
+
+/** Articles in an RSS 2.0 or Atom feed, newest first, each marked with its publisher from the source registry. */
+export function parseFeed(xml: string, topic: string, feedUrl?: string): Article[] {
   const atom = !/<item\b/i.test(xml) && /<entry\b/i.test(xml);
   const items = (atom ? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) : xml.match(/<item\b[\s\S]*?<\/item>/gi)) ?? [];
+  const src = feedUrl ? sourceForFeed(feedUrl) : null;
   const out: Article[] = [];
   for (const item of items) {
     const title = htmlToText(decodeEntities(tag(item, 'title') ?? ''));
@@ -191,16 +133,37 @@ export function parseFeed(xml: string, topic: string): Article[] {
     const url = htmlToText(link ?? '').replace(/\?at_medium=RSS.*$/, '');
     if (!title || !url.startsWith('http')) continue;
     const published = Date.parse(htmlToText(tag(item, 'pubDate') ?? tag(item, 'dc:date') ?? tag(item, 'published') ?? tag(item, 'updated') ?? '')) || 0;
-    const summary = htmlToText(decodeEntities(tag(item, 'description') ?? tag(item, 'summary') ?? tag(item, 'content') ?? '').replace(/<\/p>/gi, '\n'))
+    const summary = htmlToText(decodeEntities(tag(item, 'description') ?? tag(item, 'summary') ?? tag(item, 'media:description') ?? tag(item, 'content') ?? '').replace(/<\/p>/gi, '\n'))
       .replace(/\s*Continue reading\.*\s*$/i, '')
       .split('\n')[0]
       .slice(0, 280);
-    out.push({ id: url, title, summary, url, image: bestImage(item), source: sourceName(url), published, topic });
+    const thumb = item.match(/<media:thumbnail\b[^>]*>/i);
+    // The feed's publisher, or the one the story's own address belongs to.
+    const byUrl = src && src.kind !== 'aggregator' ? null : sourceForFeed(url);
+    const s = byUrl && byUrl.kind !== 'aggregator' ? byUrl : (src ?? byUrl);
+    // Video titles often end with the channel: "… | BBC News".
+    const name = s && s.kind !== 'aggregator' ? s.name : '';
+    const firstWord = name.split(/[\s(]/)[0].toLowerCase();
+    const clean = firstWord ? title.replace(/\s+[|–-]\s+([^|–-]{2,40})$/, (m, tail: string) => (tail.toLowerCase().includes(firstWord) ? '' : m)) : title;
+    out.push({
+      id: url,
+      title: clean,
+      summary,
+      url,
+      image: bestImage(item) ?? (thumb ? attr(thumb[0], 'url') : undefined),
+      source: s && s.kind !== 'aggregator' ? s.name : hostName(url),
+      published,
+      topic,
+      sourceId: s?.id,
+      language: s?.language,
+      country: s?.country,
+      paywall: s?.paywall,
+      media: mediaOf(item, url) ?? (s?.kind === 'podcast' ? { kind: 'audio' } : s?.kind === 'video' ? { kind: 'video', url } : undefined),
+    });
   }
   return out.sort((a, b) => b.published - a.published);
 }
 
-const DAY_MS = 24 * 60 * 60_000;
 
 /** Stories are mixed between sources within slices of this length, newest slice first. */
 const SLICE_MS = 12 * 60 * 60_000;
@@ -243,38 +206,14 @@ export function mergeArticles(lists: Article[][], limit = 300): Article[] {
   return out;
 }
 
-// ---- Search (Google News): every publisher, for anything the topics don't cover.
+// ---- Search (Google News): every publisher, for anything.
 
-
-const ymd = (ms: number) => new Date(ms).toISOString().slice(0, 10);
-
-/** Topic names that need a clearer search to find older stories. */
-const TOPIC_QUERIES: Record<string, string> = {
-  'world.top': 'world news',
-  'world.good_news': 'good news',
-  'tech.tech': 'technology',
-  'sport.football': 'football soccer',
-  'football.womens': "women's football",
-  'football.transfers': 'football transfer',
-  'business.money': 'personal finance',
-  'ideas.opinion': 'opinion',
-  'culture.stage': 'theatre',
-};
-
-export function topicQuery(topicId: string): string {
-  return TOPIC_QUERIES[topicId] ?? topicById(topicId)?.title ?? topicId;
-}
-
-/** Google News for one topic in a window of days: how the feed goes back in time as you scroll. */
-export function olderUrl(topicId: string, before: number, days: number): string {
-  return searchUrl(`${topicQuery(topicId)} before:${ymd(before)} after:${ymd(before - days * DAY_MS)}`);
-}
-
-/** Google News titles end in " - Publisher"; the publisher goes in `source`. */
-export function parseSearch(xml: string): Article[] {
-  return parseFeed(xml, 'search').map((a) => {
+/** Google News titles end in " - Publisher"; the publisher goes in `source`, and the edition gives the language. */
+export function parseSearch(xml: string, topic = 'search', feedUrl?: string): Article[] {
+  return parseFeed(xml, topic, feedUrl).map((a) => {
     const m = a.title.match(/^(.*) - ([^-]+)$/);
-    return { ...a, title: m ? m[1] : a.title, source: m ? m[2].trim() : a.source, summary: '' };
+    const source = m ? m[2].trim() : a.source;
+    return { ...a, title: m ? m[1] : a.title, source, sourceId: undefined, summary: '', paywall: PAYWALLED_PUBLISHERS.has(source) };
   });
 }
 
@@ -288,88 +227,7 @@ export function filterArticles(list: Article[], query: string): Article[] {
   });
 }
 
-// ---- Reader view
-
-export type Block = { type: 'p' | 'h' | 'quote'; text: string } | { type: 'img'; src: string; caption?: string };
-
-export interface ReadableArticle {
-  title: string;
-  image?: string;
-  byline?: string;
-  blocks: Block[];
-}
-
-/** The same picture in another size has the same file name. */
-function pictureKey(url: string | undefined): string {
-  return (url ?? '').split('?')[0].split('/').pop() ?? '';
-}
-
-function meta(html: string, key: string): string | undefined {
-  const re = new RegExp(`<meta[^>]+(?:property|name)="${key}"[^>]*>`, 'i');
-  const m = html.match(re);
-  return m ? attr(m[0], 'content') : undefined;
-}
-
-/** Things that are never part of the story: scripts, menus, sign-up boxes, share buttons. */
-const NOISE = /<(script|style|noscript|svg|nav|aside|footer|form|button|iframe|template)\b[\s\S]*?<\/\1>/gi;
-const BOILERPLATE = /(cookie|sign up|sign in|subscribe|newsletter|advertisement|related topics|follow us|share this|copyright|all rights reserved|download the app|get in touch|click here|support the guardian|privacy (policy|notice))/i;
-
-/**
- * The readable part of an article page: its title, main picture, and the
- * paragraphs, sub-headings, quotes and pictures inside <article> (or <main>).
- * Returns null when there isn't enough text to be worth showing.
- */
-export function extractArticle(html: string): ReadableArticle | null {
-  const title = htmlToText(meta(html, 'og:title') ?? tag(html, 'title') ?? '');
-  let image = meta(html, 'og:image');
-  const author = meta(html, 'author') ?? meta(html, 'article:author');
-  // Some sites give a profile link as the author: make a name of it.
-  const byline = author && /^https?:/.test(author) ? titleCase((author.split('/').filter(Boolean).pop() ?? '').replace(/-/g, ' ')) : author;
-  /** The lead picture as it appears in the article, without the logo stamped on share images. */
-  let cleanHero: string | undefined;
-
-  const start = html.search(/<article\b/i);
-  const end = html.lastIndexOf('</article>');
-  let body = start >= 0 && end > start ? html.slice(start, end) : (tag(html, 'main') ?? tag(html, 'body') ?? html);
-  body = body.replace(/<!--[\s\S]*?-->/g, '').replace(NOISE, '');
-
-  const blocks: Block[] = [];
-  const seen = new Set<string>();
-  const re = /<(p|h2|h3|blockquote|figure)\b[^>]*>([\s\S]*?)<\/\1>/gi;
-  for (const m of body.matchAll(re)) {
-    const kind = m[1].toLowerCase();
-    if (kind === 'figure') {
-      const img = m[2].match(/<img[^>]+?(?:src|data-src)="([^"]+)"/i);
-      const src = img ? decodeEntities(img[1]) : undefined;
-      if (src && !cleanHero && pictureKey(src) === pictureKey(image)) cleanHero = src;
-      if (src && /^https?:/.test(src) && !src.endsWith('.svg') && !seen.has(src) && pictureKey(src) !== pictureKey(image)) {
-        seen.add(src);
-        const caption = htmlToText(tag(m[2], 'figcaption') ?? '');
-        blocks.push({ type: 'img', src, caption: caption || undefined });
-      }
-      continue;
-    }
-    const text = htmlToText(m[2]);
-    if (!text || seen.has(text)) continue;
-    if (kind === 'p' && text.length < 40) continue;
-    if (text.length < 160 && BOILERPLATE.test(text)) continue;
-    seen.add(text);
-    blocks.push({ type: kind === 'p' ? 'p' : kind === 'blockquote' ? 'quote' : 'h', text });
-  }
-  // Headings and pictures with no text after them are page furniture, not story.
-  while (blocks.length && blocks[blocks.length - 1].type !== 'p') blocks.pop();
-  const paragraphs = blocks.filter((b) => b.type === 'p').length;
-  if (paragraphs < 2) return null;
-  // An unsigned Guardian picture can be asked for wider.
-  if (cleanHero) image = /[?&]s=none/.test(cleanHero) ? cleanHero.replace(/width=\d+/, 'width=1000') : cleanHero;
-  return { title, image, byline, blocks };
-}
-
 // ---- Formatting
-
-function titleCase(text: string): string {
-  return text.replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 export function timeAgo(ms: number, now: number): string {
   const minutes = Math.max(0, Math.round((now - ms) / 60_000));

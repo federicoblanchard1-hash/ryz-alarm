@@ -12,7 +12,8 @@ import { AGE_GROUPS } from '@/core/defaults';
 import { GOALS } from '@/core/goals';
 import { proStatus } from '@/core/pro';
 import { balance, levelOf } from '@/core/xp';
-import { topicById } from '@/core/news';
+import { entityTitle } from '@/core/newsPrefs';
+import { nodeById } from '@/core/taxonomy';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
@@ -335,10 +336,21 @@ export default function SettingsScreen() {
           <Pressable onPress={() => router.push('/interests')} accessibilityRole="button" style={styles.status}>
             <Ionicons name="newspaper-outline" size={22} color={colors.text} />
             <View style={styles.flex}>
-              <Txt variant="body">Topics</Txt>
+              <Txt variant="body">Following</Txt>
               <Txt variant="caption">
-                {settings.newsTopics && settings.newsTopics.length > 0 ? `${settings.newsTopics.length} picked: ${settings.newsTopics.map((id) => topicById(id)?.title ?? id).slice(0, 4).join(', ')}${settings.newsTopics.length > 4 ? '…' : ''}` : 'Off — tap to pick what you like to read'}
+                {(() => {
+                  const names = [...(settings.newsTopics ?? []).map((id) => nodeById(id)?.title ?? id), ...settings.news.entities.map(entityTitle)];
+                  return names.length > 0 ? `${names.length}: ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}${settings.news.muted.length ? ` · ${settings.news.muted.length} muted` : ''}` : 'Off — tap to pick what you like to read';
+                })()}
               </Txt>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
+          </Pressable>
+          <Pressable onPress={() => router.push('/news-settings')} accessibilityRole="button" style={styles.status}>
+            <Ionicons name="options-outline" size={22} color={colors.text} />
+            <View style={styles.flex}>
+              <Txt variant="body">News settings</Txt>
+              <Txt variant="caption">{`Languages, where you live, regions, sources, paywalls, muted words · ${settings.news.editions.length} ${settings.news.editions.length === 1 ? 'edition' : 'editions'}`}</Txt>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
           </Pressable>

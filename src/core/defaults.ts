@@ -1,4 +1,5 @@
 import type { AgeGroup, Alarm, AppData, Settings } from './types';
+import { defaultNewsPrefs } from './newsPrefs';
 import { EMPTY_XP } from './xp';
 
 export const TEST_ALARM_ID = 'test';
@@ -32,7 +33,7 @@ export function testAlarm(): Alarm {
   return { ...newAlarm(TEST_ALARM_ID), label: 'Test alarm', days: [], mode: 'deep', sound: 'deep', ringMinutes: 2, snooze: { enabled: false, minutes: 9, limit: 0 } };
 }
 
-export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): Settings {
+export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C', locale?: string): Settings {
   // Adults need at least 7 hours (AASM/SRS consensus, 2015); 8 leaves room to fall asleep.
   return {
     sleepGoalMinutes: 8 * 60,
@@ -41,6 +42,7 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
     use24h,
     tempUnit,
     newsTopics: null,
+    news: defaultNewsPrefs(locale),
     profile: { name: '', ageGroup: null },
     missionIdleSeconds: 15,
     missionTimeLimitSeconds: 0,
@@ -65,8 +67,8 @@ export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, numbe
   older: { title: '65+', range: [7, 8], goal: 7.5 * 60 },
 }
 
-export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {
-  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {}, xp: EMPTY_XP, proUntil: null, trialStartedAt: null, trialEndSeen: false, offer: null };
+export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C', locale?: string): AppData {
+  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit, locale), pending: [], handled: {}, xp: EMPTY_XP, proUntil: null, trialStartedAt: null, trialEndSeen: false, offer: null };
 }
 
 /** A power-nap countdown: one ring at exactly `now + minutes`, no missions, no snooze. */

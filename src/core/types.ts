@@ -1,4 +1,5 @@
 import type { Mission } from './missions';
+import type { NewsPrefs } from './newsPrefs';
 import type { VibrationId } from './vibration';
 import type { XpState } from './xp';
 
@@ -97,8 +98,10 @@ export interface Settings {
   reminderLeadMinutes: number;
   use24h: boolean;
   tempUnit: 'C' | 'F';
-  /** News topic ids ("sport.football"). null until you've picked (or skipped) them. */
+  /** Followed news topics: taxonomy ids at any level ("sports.football.premier-league"). null until you've picked (or skipped) them. */
   newsTopics: string[] | null;
+  /** Mutes, followed entities, languages, regions, sources and other news filters. */
+  news: NewsPrefs;
   /** Kept on this phone only. */
   profile: { name: string; ageGroup: AgeGroup | null };
   /** Seconds without a tap, shake or step before a turned-down alarm goes back to full volume. */

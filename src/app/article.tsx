@@ -1,92 +1,115 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Txt } from '@/components/ui';
-import { timeAgo, type ReadableArticle } from '@/core/news';
-import { fetchReadable, openInAppBrowser } from '@/services/news';
+import { Button, Txt, haptic } from '@/components/ui';
+import { timeAgo, type Article } from '@/core/news';
+import { followState, toggleFollow, toggleMute } from '@/core/newsPrefs';
+import { PAYWALLED_PUBLISHERS } from '@/core/sources';
+import { tagArticle } from '@/core/tagging';
+import { nodeById } from '@/core/taxonomy';
+import { openInAppBrowser } from '@/services/news';
+import { storyById, storyOfArticle } from '@/state/storyCache';
+import { useStore } from '@/state/store';
 import { useNow } from '@/state/useNow';
 import { FONT, colors, radius, space } from '@/theme';
 
-type Params = { url: string; title?: string; image?: string; source?: string; summary?: string; published?: string };
+type Params = { url: string; title?: string; image?: string; source?: string; summary?: string; published?: string; story?: string };
+
+const READ_VERB: Record<string, string> = { video: 'Watch', audio: 'Listen', live: 'Follow live', gallery: 'See the photos' };
 
 /**
- * A story in Ryz's own reader view: the text and pictures only, so the site's
- * pop-ups, cookie banners and sign-up walls never appear. If the page can't
- * be read here, the original opens in an in-app browser (Safari Reader on iPhone).
+ * A story's card: headline, summary, picture, where it's from and how it's
+ * tagged, and every other publisher covering it. The story itself is read on
+ * the publisher's site (in Ryz's in-app browser): Ryz doesn't copy articles.
  */
 export default function ArticleScreen() {
-  const { url, title, image, source, summary, published } = useLocalSearchParams<Params>();
+  const { url, title, image, source, summary, published, story: storyId } = useLocalSearchParams<Params>();
   const insets = useSafeAreaInsets();
   const now = useNow(60_000);
-  const [article, setArticle] = useState<ReadableArticle | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
+  const { data, updateSettings } = useStore();
+  const story = storyOfArticle(url) ?? (storyId ? storyById(storyId) : undefined);
+  // Opened from somewhere the article wasn't tagged yet (a story page's extra coverage): tag it now.
+  const article: Article = useMemo(
+    () => story?.articles.find((a) => a.url === url) ?? { id: url, url, title: title ?? '', summary: summary ?? '', image: image || undefined, source: source ?? '', published: Number(published) || 0, topic: 'search', paywall: PAYWALLED_PUBLISHERS.has(source ?? '') },
+    [story, url, title, summary, image, source, published],
+  );
+  const tags = useMemo(() => article.tags ?? tagArticle(article, data.settings.news.entities), [article, data.settings.news.entities]);
+  const others = story ? story.articles.filter((a) => a.url !== url) : [];
+  const when = published ? timeAgo(Number(published), now) : '';
+  const format = tags.format;
+  const verb = READ_VERB[format] ?? 'Read the full story';
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchReadable(url).then((result) => {
-      if (cancelled) return;
-      setArticle(result);
-      setState(result ? 'ready' : 'failed');
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [url]);
+  const follows = data.settings.newsTopics ?? [];
+  const news = data.settings.news;
+  // The most specific topic it's tagged with, for one-tap follow or mute.
+  const topic = tags.topics.map((id) => nodeById(id)).filter((n) => n && !n.local).sort((a, b) => b!.depth - a!.depth)[0];
+  const state = topic ? followState(topic.id, follows, news.muted) : null;
+  const blocked = news.blockedSources.includes(source ?? '');
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
-  const heading = article?.title || title || '';
-  const hero = article?.image || image || undefined;
-  const when = published ? timeAgo(Number(published), now) : '';
+  const setChoice = (next: { follows: string[]; muted: string[] }) => {
+    haptic('select');
+    updateSettings({ newsTopics: next.follows, news: { ...news, muted: next.muted } });
+  };
 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.xxl }}>
-        {hero ? <Image source={hero} style={styles.hero} contentFit="cover" transition={200} accessibilityIgnoresInvertColors /> : <View style={{ height: insets.top + 56 }} />}
+        {image ? <Image source={image} style={styles.hero} contentFit="cover" transition={200} accessibilityIgnoresInvertColors /> : <View style={{ height: insets.top + 56 }} />}
         <View style={styles.body}>
-          <Text style={styles.meta}>{[source, when].filter(Boolean).join(' · ')}</Text>
+          <Text style={styles.meta}>{[source, when, article.paywall ? 'Paywall' : null].filter(Boolean).join(' · ')}</Text>
           <Text style={styles.title} accessibilityRole="header">
-            {heading}
+            {title}
           </Text>
-          {article?.byline ? <Text style={styles.byline}>{article.byline}</Text> : null}
+          {summary ? <Text style={styles.p}>{summary}</Text> : null}
 
-          {state === 'loading' ? (
-            <View style={styles.loading}>
-              <ActivityIndicator color={colors.textMuted} />
+          <Button title={`${verb} on ${source || 'the publisher’s site'}`} icon="open-outline" onPress={() => openInAppBrowser(url)} />
+          <Txt variant="caption">Ryz shows the headline, a short summary and the picture. The story belongs to its publisher and opens on their site.</Txt>
+
+          {tags.categories.length || tags.entities.length ? (
+            <View style={styles.tags}>
+              {[...tags.categories.map((id) => nodeById(id)?.title), ...tags.entities.slice(0, 5), ...tags.regions.map((r) => r.replace('-', ' '))]
+                .filter(Boolean)
+                .map((label, i) => (
+                  <View key={`${label}${i}`} style={styles.tag}>
+                    <Text style={styles.tagText}>{label}</Text>
+                  </View>
+                ))}
             </View>
           ) : null}
 
-          {article?.blocks.map((b, i) => {
-            if (b.type === 'img') {
-              return (
-                <View key={i} style={styles.figure}>
-                  <Image source={b.src} style={styles.figureImage} contentFit="cover" transition={200} />
-                  {b.caption ? <Text style={styles.caption}>{b.caption}</Text> : null}
-                </View>
-              );
-            }
-            if (b.type === 'h') return <Text key={i} style={styles.h}>{b.text}</Text>;
-            if (b.type === 'quote') return <Text key={i} style={styles.quote}>{b.text}</Text>;
-            return <Text key={i} style={styles.p}>{b.text}</Text>;
-          })}
-
-          {state === 'failed' ? (
-            <View style={styles.failed}>
-              {summary ? <Text style={styles.p}>{summary}</Text> : null}
-              <Txt variant="caption">
-                {"Ryz couldn't read the full story here: it may be a video, or the site doesn't share it outside a browser in your region."}
-              </Txt>
-              <Button title="Read it in Ryz's browser" icon="reader-outline" variant="secondary" onPress={() => openInAppBrowser(url)} />
+          {topic ? (
+            <View style={styles.actions}>
+              <Pressable onPress={() => setChoice(toggleFollow(topic.id, follows, news.muted))} style={[styles.action, state === 'followed' && styles.actionOn]} accessibilityRole="button">
+                <Text style={[styles.actionText, state === 'followed' && styles.actionTextOn]}>{state === 'followed' ? `Following ${topic.title}` : `Follow ${topic.title}`}</Text>
+              </Pressable>
+              <Pressable onPress={() => setChoice(toggleMute(topic.id, follows, news.muted))} style={styles.action} accessibilityRole="button">
+                <Text style={styles.actionText}>{state === 'muted' ? `Unmute ${topic.title}` : `Mute ${topic.title}`}</Text>
+              </Pressable>
+              {source ? (
+                <Pressable onPress={() => updateSettings({ news: { ...news, blockedSources: blocked ? news.blockedSources.filter((s) => s !== source) : [...news.blockedSources, source] } })} style={styles.action} accessibilityRole="button">
+                  <Text style={styles.actionText}>{blocked ? `Unblock ${source}` : `Block ${source}`}</Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
 
-          {state === 'ready' ? (
-            <Pressable onPress={() => openInAppBrowser(url)} accessibilityRole="button" style={styles.original}>
-              <Txt variant="caption">{`Source: ${source ?? 'original article'}. Open the original page`}</Txt>
-            </Pressable>
+          {others.length ? (
+            <View style={styles.others}>
+              <Txt variant="label">{`Also covered by ${others.length}`}</Txt>
+              {others.map((a) => (
+                <Pressable key={a.url} onPress={() => openInAppBrowser(a.url)} style={({ pressed }) => [styles.other, pressed && styles.pressed]} accessibilityRole="link">
+                  <Text style={styles.otherSource}>{`${a.source} · ${timeAgo(a.published, now)}`}</Text>
+                  <Text style={styles.otherTitle} numberOfLines={2}>
+                    {a.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           ) : null}
         </View>
       </ScrollView>
@@ -95,7 +118,7 @@ export default function ArticleScreen() {
         <Pressable onPress={close} hitSlop={10} accessibilityRole="button" accessibilityLabel="Back" style={styles.round}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
-        <Pressable onPress={() => Share.share({ message: `${heading} ${url}`, url })} hitSlop={10} accessibilityRole="button" accessibilityLabel="Share" style={styles.round}>
+        <Pressable onPress={() => Share.share({ message: `${title} ${url}`, url })} hitSlop={10} accessibilityRole="button" accessibilityLabel="Share" style={styles.round}>
           <Ionicons name="share-outline" size={22} color={colors.text} />
         </Pressable>
       </View>
@@ -109,16 +132,20 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: space.xl, paddingTop: space.xl, gap: space.lg },
   meta: { fontSize: 14, lineHeight: 19, fontFamily: FONT.regular, color: colors.textMuted },
   title: { fontSize: 34, lineHeight: 39, fontFamily: FONT.display, color: colors.text, marginTop: -space.sm },
-  byline: { fontSize: 15, lineHeight: 20, fontFamily: FONT.regular, color: colors.textMuted, marginTop: -space.sm },
-  loading: { paddingVertical: space.xxl },
-  p: { fontSize: 18, lineHeight: 29, fontFamily: FONT.light, color: colors.text },
-  h: { fontSize: 21, lineHeight: 28, fontFamily: FONT.medium, color: colors.text, marginTop: space.sm },
-  quote: { fontSize: 22, lineHeight: 30, fontFamily: FONT.displayItalic, color: colors.text, borderLeftWidth: 3, borderLeftColor: colors.text, paddingLeft: space.lg },
-  figure: { gap: space.sm, marginHorizontal: -space.xl },
-  figureImage: { width: '100%', aspectRatio: 16 / 10, backgroundColor: colors.surface },
-  caption: { fontSize: 13, lineHeight: 18, fontFamily: FONT.light, color: colors.textMuted, paddingHorizontal: space.xl },
-  failed: { gap: space.lg },
-  original: { paddingVertical: space.lg, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  p: { fontSize: 18, lineHeight: 28, fontFamily: FONT.light, color: colors.text },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  tag: { paddingHorizontal: space.sm + 2, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surface },
+  tagText: { fontSize: 13, fontFamily: FONT.regular, color: colors.textMuted, textTransform: 'capitalize' },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  action: { minHeight: 36, paddingHorizontal: space.md + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, justifyContent: 'center' },
+  actionOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  actionText: { fontSize: 14, fontFamily: FONT.regular, color: colors.text },
+  actionTextOn: { color: colors.onAccent },
+  others: { gap: space.xs, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, paddingTop: space.lg },
+  other: { paddingVertical: space.sm, gap: 2 },
+  pressed: { opacity: 0.6 },
+  otherSource: { fontSize: 13, fontFamily: FONT.regular, color: colors.textMuted },
+  otherTitle: { fontSize: 16, lineHeight: 21, fontFamily: FONT.regular, color: colors.text },
   bar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row', justifyContent: 'space-between' },
   round: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
 });

@@ -1,10 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as WebBrowser from 'expo-web-browser';
 
-import { extractArticle, feedsFor, mergeArticles, olderUrl, parseFeed, parseSearch, searchUrl, type Article, type ReadableArticle } from '@/core/news';
+import { mergeArticles, parseFeed, parseSearch, type Article } from '@/core/news';
+import { olderUrl, type FeedRef } from '@/core/newsFeeds';
+import type { FollowedEntity } from '@/core/newsPrefs';
+import { gnews } from '@/core/sources';
+import { tagAll } from '@/core/tagging';
 import { colors } from '@/theme';
 
-const CACHE_KEY = 'ryz/news/v2';
+const CACHE_KEY = 'ryz/news/v3';
 /** Older than this, the feed is fetched again when Morning opens. */
 export const NEWS_FRESH_MS = 5 * 60_000;
 /** One feed gets this long; a slow one is skipped, never waited for. */
@@ -46,24 +50,34 @@ interface Cached {
   articles: Article[];
 }
 
-export async function cachedNews(topics: string[]): Promise<Cached | null> {
+/** The last stories for this feed key (mode + follows + preferences), for an instant start. */
+export async function cachedNews(key: string): Promise<Cached | null> {
   try {
-    const raw = await AsyncStorage.getItem(CACHE_KEY);
+    const raw = await AsyncStorage.getItem(`${CACHE_KEY}/${key.length > 120 ? hashKey(key) : key}`);
     const cached = raw ? (JSON.parse(raw) as Cached) : null;
-    return cached && cached.key === topics.join(',') ? cached : null;
+    return cached && cached.key === key ? cached : null;
   } catch {
     return null;
   }
 }
 
+function hashKey(s: string): string {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+function parse(xml: string, f: FeedRef): Article[] {
+  return f.url.includes('news.google.com') ? parseSearch(xml, f.follow, f.url) : parseFeed(xml, f.follow, f.url);
+}
+
 /**
- * The latest stories for these topics. Feeds load in parallel; `onProgress`
- * gets the stories so far as they arrive, so the first ones show in a second
- * or two, and the whole thing ends after ten seconds even if a site hangs.
- * Throws only if no feed answered.
+ * The latest stories from these feeds, tagged. Feeds load in parallel;
+ * `onProgress` gets the stories so far as they arrive, so the first ones
+ * show in a second or two, and the whole thing ends after ten seconds even if
+ * a site hangs. Throws only if no feed answered.
  */
-export async function fetchNews(topics: string[], onProgress?: (articles: Article[]) => void): Promise<Article[]> {
-  const feeds = feedsFor(topics);
+export async function fetchNews(key: string, feeds: FeedRef[], entities: FollowedEntity[], onProgress?: (articles: Article[]) => void): Promise<Article[]> {
   const lists: Article[][] = [];
   await new Promise<void>((resolve) => {
     let pending = feeds.length;
@@ -73,13 +87,12 @@ export async function fetchNews(topics: string[], onProgress?: (articles: Articl
     for (const f of feeds) {
       get(f.url, FEED_MS, true)
         .then((xml) => {
-          // Topics without a publisher feed read a Google News search instead.
-          const items = f.url.includes('news.google.com') ? parseSearch(xml).map((a) => ({ ...a, topic: f.topic })) : parseFeed(xml, f.topic);
+          const items = parse(xml, f);
           if (items.length === 0) return;
           lists.push(items);
           if (onProgress && Date.now() - lastSent > 300) {
             lastSent = Date.now();
-            onProgress(mergeArticles(lists));
+            onProgress(tagAll(mergeArticles(lists), entities));
           }
         })
         .catch(() => {})
@@ -93,37 +106,32 @@ export async function fetchNews(topics: string[], onProgress?: (articles: Articl
     }
   });
   if (feeds.length > 0 && lists.length === 0) throw new Error('No news feed answered');
-  const articles = mergeArticles(lists);
-  AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ key: topics.join(','), at: Date.now(), articles: articles.slice(0, CACHE_SIZE) } satisfies Cached)).catch(() => {});
+  const articles = tagAll(mergeArticles(lists), entities);
+  AsyncStorage.setItem(`${CACHE_KEY}/${key.length > 120 ? hashKey(key) : key}`, JSON.stringify({ key, at: Date.now(), articles: articles.slice(0, CACHE_SIZE) } satisfies Cached)).catch(() => {});
   return articles;
 }
 
 /**
- * Older stories for the topics, from before `before` (ms): a few days at a
- * time from Google News, one search per topic (up to six), mixed evenly.
+ * Older stories from before `before` (ms): a few days at a time from Google
+ * News, one search per follow (up to six), mixed evenly.
  */
-export async function fetchOlder(topics: string[], before: number, days = 3): Promise<Article[]> {
-  const picked = topics.slice(0, 6);
+export async function fetchOlder(searches: { follow: string; query: string }[], edition: string, before: number, entities: FollowedEntity[], days = 3): Promise<Article[]> {
+  const picked = searches.slice(0, 6);
   const results = await Promise.allSettled(
-    picked.map((topic) => get(olderUrl(topic, before, days), FEED_MS, true).then((xml) => parseSearch(xml).map((a) => ({ ...a, topic })))),
+    picked.map(({ follow, query }) => {
+      const url = olderUrl(query, before, days, edition);
+      return get(url, FEED_MS, true).then((xml) => parseSearch(xml, follow, url));
+    }),
   );
   const lists = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value.filter((a) => a.published < before).slice(0, 12)] : []));
   if (lists.length === 0) throw new Error('No older news');
-  return mergeArticles(lists);
+  return tagAll(mergeArticles(lists), entities);
 }
 
-/** Stories about anything, from every publisher Google News knows. */
-export async function searchNews(query: string): Promise<Article[]> {
-  return parseSearch(await get(searchUrl(query), 10_000, true)).slice(0, 30);
-}
-
-/** The story's text, for the reader view; null if the page can't be read (blocked, video, or no text). */
-export async function fetchReadable(url: string): Promise<ReadableArticle | null> {
-  try {
-    return extractArticle(await get(url, 15_000));
-  } catch {
-    return null;
-  }
+/** Stories about anything, from every publisher Google News knows, in an edition. */
+export async function searchNews(query: string, edition?: string): Promise<Article[]> {
+  const url = gnews(query, edition);
+  return tagAll(parseSearch(await get(url, 10_000, true), 'search', url).slice(0, 30));
 }
 
 /** The original page in an in-app browser: Safari's Reader on iPhone, Custom Tabs on Android. */

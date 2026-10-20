@@ -1,10 +1,16 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-import type { Article } from '@/core/news';
+import type { Article, ArticleFormat } from '@/core/news';
+import { feedsForMode, followQuery, type FeedMode } from '@/core/newsFeeds';
+import { entityKey } from '@/core/newsPrefs';
+import { applyFilters, clusterArticles, orderStories, type Story } from '@/core/stories';
 import { NEWS_FRESH_MS, cachedNews, fetchNews, fetchOlder } from '@/services/news';
 import { onPullToRefresh } from './pullToRefresh';
+import { rememberStories } from './storyCache';
+import { useStore } from './store';
+import { useNow } from './useNow';
 
 export type NewsStatus = 'loading' | 'ready' | 'error';
 export type OlderStatus = 'idle' | 'loading' | 'done' | 'error';
@@ -14,21 +20,35 @@ const OLDER_DAYS = 3;
 const MAX_EMPTY_PAGES = 3;
 const DAY = 24 * 60 * 60_000;
 
+/** Modes that can go back in time as you scroll: they're about your follows. */
+const SCROLLS_BACK: FeedMode[] = ['foryou', 'following'];
+const NONE: Article[] = [];
+
 /**
- * Stories for the chosen topics: the cached ones straight away, then fresh
- * ones as each feed arrives. Kept up to date: re-fetched when the screen
- * comes into focus, when the app returns to the foreground, every few
- * minutes while it's open, and on pull-to-refresh. `loadOlder` goes back in
- * time a few days per call, for endless scrolling.
+ * Stories for a feed mode, from your follows and preferences: the cached ones
+ * straight away, then fresh ones as each feed arrives, tagged, filtered,
+ * grouped into stories and put in the mode's order. Kept up to date:
+ * re-fetched when the screen comes into focus, when the app returns to the
+ * foreground, every few minutes while it's open, and on pull-to-refresh.
+ * `loadOlder` goes back in time a few days per call, for endless scrolling.
  */
-export function useNews(topics: string[]) {
-  const key = topics.join(',');
+export function useNews(mode: FeedMode, follows: string[], format: ArticleFormat | 'all' = 'all') {
+  const { data } = useStore();
+  const prefs = data.settings.news;
+  const now = useNow(60_000);
+  // Everything that changes which feeds are read. Filters that only hide stories don't refetch.
+  const plan = JSON.stringify({ mode, follows, e: prefs.entities, ed: prefs.editions, c: prefs.country, r: prefs.region, ci: prefs.city, b: prefs.blockedSources, p: prefs.showPaywalled, m: prefs.muted });
+  const key = follows.length || prefs.entities.length || mode === 'top' || mode === 'breaking' || mode === 'trending' ? plan : '';
+  const latestPlan = useRef({ follows, prefs });
+  useLayoutEffect(() => {
+    latestPlan.current = { follows, prefs };
+  });
   // Stories are kept with the topics they're for, so changing topics never shows the old list.
   const [loaded, setLoaded] = useState<{ key: string; articles: Article[]; at: number }>({ key: '', articles: [], at: 0 });
   const [older, setOlder] = useState<{ key: string; articles: Article[]; status: OlderStatus; before: number }>({ key: '', articles: [], status: 'idle', before: 0 });
-  const fresh = loaded.key === key ? loaded.articles : [];
+  const fresh = loaded.key === key ? loaded.articles : NONE;
   const updatedAt = loaded.key === key ? loaded.at : 0;
-  const olderHere = older.key === key ? older : { articles: [] as Article[], status: 'idle' as OlderStatus, before: 0 };
+  const olderHere = older.key === key ? older : { articles: NONE, status: 'idle' as OlderStatus, before: 0 };
   const [status, setStatus] = useState<NewsStatus>('loading');
   const [refreshing, setRefreshing] = useState(false);
   const fetchedAt = useRef(0);
@@ -40,7 +60,8 @@ export function useNews(topics: string[]) {
       if (!force && Date.now() - fetchedAt.current < NEWS_FRESH_MS) return Promise.resolve();
       if (inFlight.current) return inFlight.current;
       setRefreshing(true);
-      const run = fetchNews(key.split(','), (partial) => {
+      const { follows: f, prefs: p } = latestPlan.current;
+      const run = fetchNews(key, feedsForMode(mode, f, p), p.entities, (partial) => {
         // Show the first stories as soon as they arrive, but don't reshuffle a list already on screen.
         setLoaded((prev) => (prev.key === key && prev.articles.length > 0 ? prev : { key, articles: partial, at: Date.now() }));
         setStatus('ready');
@@ -58,7 +79,7 @@ export function useNews(topics: string[]) {
       inFlight.current = run;
       return run;
     },
-    [key],
+    [key, mode],
   );
 
   useEffect(() => {
@@ -66,7 +87,7 @@ export function useNews(topics: string[]) {
     fetchedAt.current = 0;
     inFlight.current = null;
     if (!key) return;
-    cachedNews(key.split(','))
+    cachedNews(key)
       .then((cached) => {
         if (cancelled) return;
         if (cached) {
@@ -102,6 +123,15 @@ export function useNews(topics: string[]) {
   const loadOlder = useCallback(() => {
     const { fresh, olderHere } = latest.current;
     if (!key || loadingOlder.current || olderHere.status === 'done') return;
+    const { follows: f, prefs: p } = latestPlan.current;
+    if (!SCROLLS_BACK.includes(mode)) {
+      setOlder({ key, articles: [], before: 0, status: 'done' });
+      return;
+    }
+    const searches = [...f, ...p.entities.map(entityKey)].flatMap((follow) => {
+      const query = followQuery(follow, p);
+      return query ? [{ follow, query }] : [];
+    });
     const have = [...fresh, ...olderHere.articles];
     const seen = new Set(have.flatMap((a) => [a.url, a.title.toLowerCase()]));
     const times = have.map((a) => a.published).filter((t) => t > 0);
@@ -113,7 +143,7 @@ export function useNews(topics: string[]) {
       let before = start;
       // A quiet few days can come back empty; keep going back a little before giving up.
       for (let i = 0; i < MAX_EMPTY_PAGES; i++) {
-        const page = await fetchOlder(key.split(','), before, OLDER_DAYS);
+        const page = await fetchOlder(searches, p.editions[0], before, p.entities, OLDER_DAYS);
         before -= OLDER_DAYS * DAY;
         const added = page.filter((a) => !seen.has(a.url) && !seen.has(a.title.toLowerCase()));
         if (added.length > 0) return { added, before, done: false };
@@ -127,9 +157,16 @@ export function useNews(topics: string[]) {
       .finally(() => {
         loadingOlder.current = false;
       });
-  }, [key]);
+  }, [key, mode]);
 
   const refresh = useCallback(() => load(true), [load]);
-  const articles = olderHere.articles.length ? [...fresh, ...olderHere.articles] : fresh;
-  return { articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus: olderHere.status };
+  const olderArticles = olderHere.articles;
+  const all = useMemo(() => (olderArticles.length ? [...fresh, ...olderArticles] : fresh), [fresh, olderArticles]);
+  const articles = useMemo(() => applyFilters(all, { prefs, follows, format }), [all, prefs, follows, format]);
+  const stories = useMemo<Story[]>(() => {
+    const list = orderStories(mode, clusterArticles(articles, prefs.preferredSources), prefs, follows, now);
+    rememberStories(list);
+    return list;
+  }, [articles, mode, prefs, follows, now]);
+  return { articles, stories, status, refresh, refreshing, updatedAt, loadOlder, olderStatus: olderHere.status, scrollsBack: SCROLLS_BACK.includes(mode) };
 }

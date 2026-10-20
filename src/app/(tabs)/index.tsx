@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
@@ -42,6 +42,10 @@ function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string
 export default function Home() {
   const { data, ready } = useStore();
   const { pro, status } = usePro();
+  // The free plan reads its first few follows (topics and names together).
+  const allFollows = data.settings.newsTopics;
+  const entityCount = data.settings.news.entities.length;
+  const newsFollows = useMemo(() => (pro ? (allFollows ?? []) : (allFollows ?? []).slice(0, Math.max(0, FREE_NEWS_TOPICS - entityCount))), [pro, allFollows, entityCount]);
   const permissions = usePermissions();
   const tabSpace = useTabBarSpace();
   const now = useNow();
@@ -170,7 +174,7 @@ export default function Home() {
           </PressableScale>
         ) : null}
 
-        {data.settings.newsTopics && data.settings.newsTopics.length > 0 ? <NewsFeed topics={pro ? data.settings.newsTopics : data.settings.newsTopics.slice(0, FREE_NEWS_TOPICS)} /> : ready ? <NewsPrompt /> : null}
+        {newsFollows.length > 0 || data.settings.news.entities.length > 0 ? <NewsFeed follows={newsFollows} /> : ready ? <NewsPrompt /> : null}
 
         {awakeCheck ? (
           <Card style={styles.inline}>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { defaultSettings, emptyData, newAlarm } from '@/core/defaults';
-import { migrateTopicIds } from '@/core/news';
+import { upgradeNewsSettings } from '@/core/newsMigration';
 import type { AppData, Settings } from '@/core/types';
 
 const KEY = 'ryz/data/v1';
@@ -25,8 +25,17 @@ export function preferredTempUnit(): Settings['tempUnit'] {
   }
 }
 
+/** The phone's language and region, e.g. "fr-CH". */
+export function deviceLocale(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().locale;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function loadData(): Promise<AppData> {
-  const fallback = emptyData(prefers24h(), preferredTempUnit());
+  const fallback = emptyData(prefers24h(), preferredTempUnit(), deviceLocale());
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return fallback;
@@ -35,10 +44,10 @@ export async function loadData(): Promise<AppData> {
       // Fill in fields added since the alarm was saved.
       alarms: (saved.alarms ?? []).map((a) => ({ ...newAlarm(a.id), ...a })),
       settings: (() => {
-        const defaults = defaultSettings(prefers24h(), preferredTempUnit());
+        const defaults = defaultSettings(prefers24h(), preferredTempUnit(), deviceLocale());
         const settings = { ...defaults, ...saved.settings, profile: { ...defaults.profile, ...saved.settings?.profile } };
-        // Topics that moved category keep working.
-        return settings.newsTopics ? { ...settings, newsTopics: migrateTopicIds(settings.newsTopics) } : settings;
+        // Topics from older versions move to the new taxonomy; new news preferences get their defaults.
+        return upgradeNewsSettings(settings, deviceLocale());
       })(),
       sleep: saved.sleep ?? [],
       sleepingSince: saved.sleepingSince ?? null,

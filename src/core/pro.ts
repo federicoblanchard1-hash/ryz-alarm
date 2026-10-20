@@ -37,6 +37,11 @@ export const FEATURE_COPY: Record<ProFeature, { title: string; text: string }> =
   trial_ended: { title: 'Your Pro trial has ended', text: 'You’re back on the free plan. Your alarms keep working exactly as you set them.' },
 };
 
+/** Followed topics and entities: the free plan follows up to FREE_NEWS_TOPICS. */
+export function newsFollowCount(settings: AppData['settings']): number {
+  return (settings.newsTopics?.length ?? 0) + settings.news.entities.length;
+}
+
 export function trialEndsAt(data: AppData): number | null {
   return data.trialStartedAt === null ? null : data.trialStartedAt + TRIAL_DAYS * DAY;
 }
@@ -74,7 +79,7 @@ export function proThingsInUse(data: AppData): string[] {
   const sounds = new Set(data.alarms.map((a) => a.sound).filter((s) => !FREE_SOUNDS.includes(s)));
   if (sounds.size) out.push(`${sounds.size} Pro ${sounds.size === 1 ? 'sound' : 'sounds'}`);
   if (data.settings.smartwatch) out.push('Automatic sleep from your watch');
-  const topics = data.settings.newsTopics?.length ?? 0;
+  const topics = newsFollowCount(data.settings);
   if (topics > FREE_NEWS_TOPICS) out.push(`${topics} news topics (free follows ${FREE_NEWS_TOPICS})`);
   return out;
 }
