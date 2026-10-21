@@ -87,12 +87,13 @@ export async function fetchNews(key: string, feeds: FeedRef[], entities: Followe
     for (const f of feeds) {
       get(f.url, FEED_MS, true)
         .then((xml) => {
-          const items = parse(xml, f);
+          // Tagged once, as each feed arrives, so merging never re-tags.
+          const items = tagAll(parse(xml, f), entities);
           if (items.length === 0) return;
           lists.push(items);
           if (onProgress && Date.now() - lastSent > 300) {
             lastSent = Date.now();
-            onProgress(tagAll(mergeArticles(lists), entities));
+            onProgress(mergeArticles(lists));
           }
         })
         .catch(() => {})
@@ -106,7 +107,7 @@ export async function fetchNews(key: string, feeds: FeedRef[], entities: Followe
     }
   });
   if (feeds.length > 0 && lists.length === 0) throw new Error('No news feed answered');
-  const articles = tagAll(mergeArticles(lists), entities);
+  const articles = mergeArticles(lists);
   AsyncStorage.setItem(`${CACHE_KEY}/${key.length > 120 ? hashKey(key) : key}`, JSON.stringify({ key, at: Date.now(), articles: articles.slice(0, CACHE_SIZE) } satisfies Cached)).catch(() => {});
   return articles;
 }
@@ -120,12 +121,12 @@ export async function fetchOlder(searches: { follow: string; query: string }[], 
   const results = await Promise.allSettled(
     picked.map(({ follow, query }) => {
       const url = olderUrl(query, before, days, edition);
-      return get(url, FEED_MS, true).then((xml) => parseSearch(xml, follow, url));
+      return get(url, FEED_MS, true).then((xml) => tagAll(parseSearch(xml, follow, url), entities));
     }),
   );
   const lists = results.flatMap((r) => (r.status === 'fulfilled' ? [r.value.filter((a) => a.published < before).slice(0, 12)] : []));
   if (lists.length === 0) throw new Error('No older news');
-  return tagAll(mergeArticles(lists), entities);
+  return mergeArticles(lists);
 }
 
 /** Stories about anything, from every publisher Google News knows, in an edition. */

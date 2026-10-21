@@ -46,12 +46,15 @@ export function titleTokens(title: string): string[] {
 
 const HOURS_48 = 48 * 60 * 60_000;
 
-function similar(a: string[], b: string[]): boolean {
-  if (a.length === 0 || b.length === 0) return false;
-  const B = new Set(b);
-  const shared = a.filter((w) => B.has(w)).length;
-  const union = new Set([...a, ...b]).size;
-  return (shared >= 2 && shared / union >= 0.4) || shared >= 4 || (shared >= 3 && shared / Math.min(a.length, b.length) >= 0.6);
+/** Do two headlines (as word sets) tell the same news? No allocation: this runs thousands of times. */
+function similar(a: Set<string>, b: Set<string>): boolean {
+  if (a.size === 0 || b.size === 0) return false;
+  const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+  let shared = 0;
+  for (const w of small) if (big.has(w)) shared++;
+  if (shared < 2) return false;
+  const union = a.size + b.size - shared;
+  return shared / union >= 0.4 || shared >= 4 || (shared >= 3 && shared / small.size >= 0.6);
 }
 
 function hash(s: string): string {
@@ -66,42 +69,90 @@ function pickLead(list: Article[], preferred: string[]): Article {
   return [...list].sort((x, y) => score(y) - score(x) || y.published - x.published)[0];
 }
 
+interface Group {
+  sets: Set<string>[];
+  articles: Article[];
+  urls: Set<string>;
+}
+
+const within48h = (x: Article[], y: Article[]) => x.some((a) => y.some((b) => Math.abs((a.published || 0) - (b.published || 0)) < HOURS_48));
+
 /**
  * Groups the same news from different publishers into stories. Articles are
  * compared by headline words, within two days of each other. Keeps the input
- * order: a story sits where its first article was.
+ * order: a story sits where its first article was. Groups are found through
+ * an index of their words, so only groups sharing a word are compared.
  */
 export function clusterArticles(list: Article[], preferred: string[] = []): Story[] {
-  const groups: { tokens: string[][]; articles: Article[] }[] = [];
+  const groups: Group[] = [];
+  // Word → groups whose first six headlines use it (only those are compared, as before).
+  const byWord = new Map<string, number[]>();
+  const file = (gi: number, set: Set<string>) =>
+    set.forEach((w) => {
+      const l = byWord.get(w);
+      if (!l) byWord.set(w, [gi]);
+      else if (!l.includes(gi)) l.push(gi);
+    });
   for (const a of list) {
-    const tokens = titleTokens(a.title);
-    const home = groups.find((g) => g.articles.some((b) => Math.abs((b.published || 0) - (a.published || 0)) < HOURS_48) && g.tokens.slice(0, 6).some((t) => similar(tokens, t)));
-    if (home) {
-      if (home.articles.some((b) => b.url === a.url)) continue;
-      home.tokens.push(tokens);
-      home.articles.push(a);
-    } else groups.push({ tokens: [tokens], articles: [a] });
+    const set = new Set(titleTokens(a.title));
+    const candidates = new Set<number>();
+    set.forEach((w) => byWord.get(w)?.forEach((gi) => candidates.add(gi)));
+    let home = -1;
+    for (const gi of [...candidates].sort((x, y) => x - y)) {
+      const g = groups[gi];
+      if (within48h(g.articles, [a]) && g.sets.slice(0, 6).some((t) => similar(set, t))) {
+        home = gi;
+        break;
+      }
+    }
+    if (home < 0) {
+      groups.push({ sets: [set], articles: [a], urls: new Set([a.url]) });
+      file(groups.length - 1, set);
+      continue;
+    }
+    const g = groups[home];
+    if (g.urls.has(a.url)) continue;
+    g.sets.push(set);
+    g.articles.push(a);
+    g.urls.add(a.url);
+    if (g.sets.length <= 6) file(home, set);
   }
-  // A later article can bridge two groups that started apart: join them.
-  const near = (x: (typeof groups)[number], y: (typeof groups)[number]) =>
-    x.articles.some((a) => y.articles.some((b) => Math.abs((a.published || 0) - (b.published || 0)) < HOURS_48)) && x.tokens.slice(0, 3).some((t) => y.tokens.slice(0, 3).some((u) => similar(t, u)));
+
+  // A later article can bridge two groups that started apart: join them (union-find over groups sharing words).
+  const root = groups.map((_, i) => i);
+  const find = (i: number): number => (root[i] === i ? i : (root[i] = find(root[i])));
+  const lead3 = new Map<string, number[]>();
+  groups.forEach((g, i) => new Set(g.sets.slice(0, 3).flatMap((s) => [...s])).forEach((w) => lead3.set(w, [...(lead3.get(w) ?? []), i])));
   for (let i = 0; i < groups.length; i++) {
-    for (let j = i + 1; j < groups.length; j++) {
-      if (!near(groups[i], groups[j])) continue;
-      const urls = new Set(groups[i].articles.map((a) => a.url));
-      groups[j].articles.forEach((a, k) => {
-        if (urls.has(a.url)) return;
-        groups[i].articles.push(a);
-        groups[i].tokens.push(groups[j].tokens[k]);
-      });
-      groups.splice(j, 1);
-      j = i;
+    const others = new Set<number>();
+    groups[i].sets.slice(0, 3).forEach((s) => s.forEach((w) => lead3.get(w)?.forEach((j) => j > i && others.add(j))));
+    for (const j of others) {
+      if (find(i) === find(j)) continue;
+      const x = groups[i];
+      const y = groups[j];
+      if (within48h(x.articles, y.articles) && x.sets.slice(0, 3).some((t) => y.sets.slice(0, 3).some((u) => similar(t, u)))) root[find(j)] = find(i);
     }
   }
-  return groups.map((g) => {
+  const merged = new Map<number, Group>();
+  groups.forEach((g, i) => {
+    const r = find(i);
+    const into = merged.get(r);
+    if (!into) {
+      merged.set(r, { sets: [...g.sets], articles: [...g.articles], urls: new Set(g.urls) });
+      return;
+    }
+    g.articles.forEach((a, k) => {
+      if (into.urls.has(a.url)) return;
+      into.urls.add(a.url);
+      into.articles.push(a);
+      into.sets.push(g.sets[k]);
+    });
+  });
+
+  return [...merged.values()].map((g) => {
     const lead = pickLead(g.articles, preferred);
     const counts = new Map<string, number>();
-    g.tokens.flat().forEach((w) => counts.set(w, (counts.get(w) ?? 0) + 1));
+    g.sets.forEach((set) => set.forEach((w) => counts.set(w, (counts.get(w) ?? 0) + 1)));
     const key = titleTokens(lead.title)
       .sort((x, y) => (counts.get(y) ?? 0) - (counts.get(x) ?? 0) || x.localeCompare(y))
       .slice(0, 4);

@@ -2,12 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmountPicker } from '@/components/AmountPicker';
 import { useTabBarSpace } from '@/components/tabBarSpace';
-import { Button, Chips, Divider, Section, ToggleRow, Txt, haptic } from '@/components/ui';
+import { Button, Chips, Divider, Section, ToggleRow, Txt, confirm, haptic } from '@/components/ui';
 import { AGE_GROUPS } from '@/core/defaults';
 import { GOALS } from '@/core/goals';
 import { proStatus } from '@/core/pro';
@@ -40,16 +40,6 @@ const SOURCES = [
 ];
 
 
-function confirm(title: string, message: string, action: string, onYes: () => void) {
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) onYes();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: action, style: 'destructive', onPress: onYes },
-  ]);
-}
 
 /** Name and age, kept on this phone. Age sets the recommended sleep goal. */
 function Profile() {

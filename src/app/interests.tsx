@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PressableScale, Segmented, Txt, haptic } from '@/components/ui';
+import { PressableScale, Segmented, Txt, confirm, haptic } from '@/components/ui';
 import { COUNTRIES } from '@/core/countries';
 import { ENTITY_KINDS, entityTitle, followState, toggleFollow, toggleMute, type EntityKind, type FollowedEntity, type FollowState } from '@/core/newsPrefs';
 import { FREE_NEWS_TOPICS } from '@/core/pro';
@@ -81,7 +81,6 @@ function CategoryCard({ category, choices, open, onToggleOpen, onFollow, onMute 
     <View style={[styles.card, state === 'followed' && styles.cardOn]}>
       <View style={styles.cardHead}>
         <Pressable onPress={onToggleOpen} style={styles.cardTitleWrap} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={`${category.title}, ${category.children.length} topics`}>
-          <Text style={styles.emoji}>{category.emoji}</Text>
           <View style={styles.flex}>
             <Text style={styles.cardTitle}>{category.title}</Text>
             <Text style={styles.cardCount}>{state ? STATE_TEXT[state] : inside > 0 ? `${inside} chosen inside` : `${category.children.length} topics`}</Text>
@@ -217,6 +216,16 @@ export default function Interests() {
     setEntities((list) => [...list, e]);
   };
   const removeEntity = (e: FollowedEntity) => setEntities((list) => list.filter((x) => !(x.kind === e.kind && x.name === e.name)));
+  // Start over: nothing followed, nothing muted. Saved when you tap Done, so closing with ✕ keeps your old picks.
+  const eraseAll = () =>
+    confirm('Erase your news choices?', 'Every topic, name and mute is cleared so you can choose again. Nothing changes until you tap Done.', 'Erase', () => {
+      haptic('success');
+      setChoices({ follows: [], muted: [] });
+      setEntities([]);
+      setQuery('');
+      setOpen(null);
+    });
+  const anything = choices.follows.length + choices.muted.length + entities.length > 0;
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const save = (follows: string[]) => {
@@ -296,6 +305,12 @@ export default function Interests() {
             )}
           </>
         )}
+        {anything ? (
+          <Pressable onPress={eraseAll} style={styles.erase} accessibilityRole="button" accessibilityLabel="Erase all your news choices">
+            <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            <Text style={styles.eraseText}>Erase all my choices</Text>
+          </Pressable>
+        ) : null}
         <Txt variant="caption" style={styles.sources}>
           Over 350 publishers, broadcasters and official sources in many languages, plus Google News in 23 editions. Ryz shows headlines, short summaries and pictures, and every story opens on its publisher’s site.
         </Txt>
@@ -321,7 +336,6 @@ const styles = StyleSheet.create({
   cardOn: { borderWidth: 1, borderColor: colors.borderStrong },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: space.md },
   cardTitleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, paddingRight: space.xs },
-  emoji: { fontSize: 26, width: 34, textAlign: 'center' },
   cardTitle: { fontSize: 17, lineHeight: 22, fontFamily: FONT.medium, color: colors.text },
   cardCount: { fontSize: 13, lineHeight: 18, fontFamily: FONT.light, color: colors.textMuted },
   tree: { paddingBottom: space.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
@@ -357,6 +371,8 @@ const styles = StyleSheet.create({
   countryList: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   entityRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   sources: { textAlign: 'center', marginTop: space.md, paddingHorizontal: space.lg },
+  erase: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, height: 50, marginTop: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.dangerSoft },
+  eraseText: { fontSize: 16, fontFamily: FONT.medium, color: colors.danger },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
   save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   saveText: { fontSize: 17, fontFamily: FONT.semibold, color: colors.onAccent },

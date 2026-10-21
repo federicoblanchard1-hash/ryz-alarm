@@ -85,12 +85,9 @@ function attr(element: string, name: string): string | undefined {
   return m ? decodeEntities(m[1]) : undefined;
 }
 
+/** "www.example.com/a/b" → "example.com", without building a URL object (slow on phones). */
 function hostName(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, '');
-  } catch {
-    return '';
-  }
+  return url.replace(/^[a-z]+:\/\/(www\.)?/i, '').split(/[/?#]/)[0];
 }
 
 /** The biggest picture an item offers. BBC lists a 240 px thumbnail; its CDN serves the same picture wider. */
@@ -122,7 +119,7 @@ function mediaOf(item: string, link: string): Article['media'] {
 }
 
 /** Articles in an RSS 2.0 or Atom feed, newest first, each marked with its publisher from the source registry. */
-export function parseFeed(xml: string, topic: string, feedUrl?: string): Article[] {
+export function parseFeed(xml: string, topic: string, feedUrl?: string, withSummaries = true): Article[] {
   const atom = !/<item\b/i.test(xml) && /<entry\b/i.test(xml);
   const items = (atom ? xml.match(/<entry\b[\s\S]*?<\/entry>/gi) : xml.match(/<item\b[\s\S]*?<\/item>/gi)) ?? [];
   const src = feedUrl ? sourceForFeed(feedUrl) : null;
@@ -133,7 +130,8 @@ export function parseFeed(xml: string, topic: string, feedUrl?: string): Article
     const url = htmlToText(link ?? '').replace(/\?at_medium=RSS.*$/, '');
     if (!title || !url.startsWith('http')) continue;
     const published = Date.parse(htmlToText(tag(item, 'pubDate') ?? tag(item, 'dc:date') ?? tag(item, 'published') ?? tag(item, 'updated') ?? '')) || 0;
-    const summary = htmlToText(decodeEntities(tag(item, 'description') ?? tag(item, 'summary') ?? tag(item, 'media:description') ?? tag(item, 'content') ?? '').replace(/<\/p>/gi, '\n'))
+    // Google News descriptions are only a list of links: not worth reading.
+    const summary = !withSummaries ? '' : htmlToText(decodeEntities(tag(item, 'description') ?? tag(item, 'summary') ?? tag(item, 'media:description') ?? tag(item, 'content') ?? '').replace(/<\/p>/gi, '\n'))
       .replace(/\s*Continue reading\.*\s*$/i, '')
       .split('\n')[0]
       .slice(0, 280);
@@ -210,7 +208,7 @@ export function mergeArticles(lists: Article[][], limit = 300): Article[] {
 
 /** Google News titles end in " - Publisher"; the publisher goes in `source`, and the edition gives the language. */
 export function parseSearch(xml: string, topic = 'search', feedUrl?: string): Article[] {
-  return parseFeed(xml, topic, feedUrl).map((a) => {
+  return parseFeed(xml, topic, feedUrl, false).map((a) => {
     const m = a.title.match(/^(.*) - ([^-]+)$/);
     const source = m ? m[2].trim() : a.source;
     return { ...a, title: m ? m[1] : a.title, source, sourceId: undefined, summary: '', paywall: PAYWALLED_PUBLISHERS.has(source) };

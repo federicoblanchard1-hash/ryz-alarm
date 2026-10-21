@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, Switch, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, Switch, Text, View, type StyleProp, type TextProps, type ViewStyle } from 'react-native';
 import Animated, { useReducedMotion, type CSSTransitionProperties } from 'react-native-reanimated';
 
 import { EASE_OUT, FONT, colors, radius, space } from '@/theme';
@@ -24,6 +24,18 @@ const variants = StyleSheet.create({
 
 export function Txt({ variant = 'body', style, ...props }: TextProps & { variant?: keyof typeof variants }) {
   return <Text {...props} style={[variants[variant], style]} />;
+}
+
+/** Asks before something that can't be undone: the system alert on phones, the browser's on the web. */
+export function confirm(title: string, message: string, action: string, onYes: () => void) {
+  if (Platform.OS === 'web') {
+    if (globalThis.confirm?.(`${title}\n\n${message}`)) onYes();
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: 'Cancel', style: 'cancel' },
+    { text: action, style: 'destructive', onPress: onYes },
+  ]);
 }
 
 export function haptic(kind: 'select' | 'light' | 'success' | 'error') {

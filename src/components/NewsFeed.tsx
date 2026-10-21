@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -49,8 +49,8 @@ function openStory(story: Story) {
 }
 
 const FORMAT_BADGE: Partial<Record<ArticleFormat, string>> = {
-  video: "▶ Video",
-  audio: "🎧 Audio",
+  video: "Video",
+  audio: "Audio",
   live: "● Live",
   gallery: "Photos",
   longread: "Long read",
@@ -66,7 +66,7 @@ function Meta({ article, now, sources = 1 }: { article: Article; now: number; so
   );
 }
 
-function Lead({ story, now }: { story: Story; now: number }) {
+const Lead = memo(function Lead({ story, now }: { story: Story; now: number }) {
   const article = story.lead;
   return (
     <PressableScale
@@ -93,9 +93,9 @@ function Lead({ story, now }: { story: Story; now: number }) {
       </View>
     </PressableScale>
   );
-}
+});
 
-function Row({ story, now, rank }: { story: Story; now: number; rank?: number }) {
+const Row = memo(function Row({ story, now, rank }: { story: Story; now: number; rank?: number }) {
   const article = story.lead;
   return (
     <Pressable
@@ -126,7 +126,7 @@ function Row({ story, now, rank }: { story: Story; now: number; rank?: number })
       ) : null}
     </Pressable>
   );
-}
+});
 
 const single = (a: Article): Story => ({ id: a.id, lead: a, articles: [a], sources: [a.source], first: a.published, last: a.published, query: a.title, hub: false });
 
@@ -248,8 +248,8 @@ const EMPTY: Record<FeedMode, string> = {
   digest: "Your digest fills up as the day’s news comes in.",
 };
 
-/** "Your news" on Morning: feed modes (For you, Following, Top, Breaking, Trending, Digest), formats, a search, then stories. */
-export function NewsFeed({ follows }: { follows: string[] }) {
+/** "Your news" on Morning: feed modes (For you, Following, Top, Breaking, Trending, Digest), formats, a search, then stories. Memoized: Morning redraws for its clock, the feed only when its follows change. */
+export const NewsFeed = memo(function NewsFeed({ follows }: { follows: string[] }) {
   const [mode, setMode] = useState<FeedMode>("foryou");
   const [format, setFormat] = useState<ArticleFormat | "all">("all");
   const { stories, articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus, scrollsBack } = useNews(mode, follows, format);
@@ -436,7 +436,7 @@ export function NewsFeed({ follows }: { follows: string[] }) {
       )}
     </View>
   );
-}
+});
 
 /** Shown on Morning until topics are picked. */
 export function NewsPrompt() {
