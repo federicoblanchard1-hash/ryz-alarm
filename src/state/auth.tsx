@@ -2,7 +2,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import { loadProfile, profileFromData, saveProfile, settingsFromProfile, withProfileXp } from '@/services/account';
+import { loadProfile, profileFromData, saveProfile, settingsFromProfile, withProfileData, withProfileXp } from '@/services/account';
 import { accountsEnabled, supabase } from '@/services/supabase';
 import { useStore } from './store';
 
@@ -19,7 +19,7 @@ const AuthContext = createContext<Auth>({ enabled: false, session: null, email: 
 
 /**
  * Keeps you signed in and your account in step with the app: on sign-in it
- * pulls your profile (name, age, news topics, goals) once, then saves any
+ * pulls your profile (name, goals, XP) and backups (alarms, nights, moods) once, then saves any
  * change back to the account a moment later.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     loadProfile(userId)
       .then((profile) => {
-        if (!cancelled && profile) update((d) => withProfileXp({ ...d, settings: { ...d.settings, ...settingsFromProfile(profile, settingsRef.current) } }, profile));
+        if (!cancelled && profile) update((d) => withProfileData(withProfileXp({ ...d, settings: { ...d.settings, ...settingsFromProfile(profile, settingsRef.current) } }, profile), profile));
       })
       .catch(() => {})
       .finally(() => !cancelled && setPulledFor(userId));

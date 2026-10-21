@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Accelerometer, Gyroscope, LightSensor, Pedometer } from 'expo-sensors';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { haptic, Txt } from '@/components/ui';
@@ -66,6 +66,9 @@ interface Props {
   onTimeout?: () => void;
 }
 
+/** After this long on one mission, a way out appears: the camera can't find the code, the steps won't count… */
+const STUCK_MS = 2 * 60_000;
+
 const COUNTDOWN = { from: { transform: [{ scaleX: 1 }] }, to: { transform: [{ scaleX: 0 }] } };
 
 /** Runs the missions one after another. */
@@ -73,7 +76,7 @@ export function MissionRunner({ missions, onActivity, onComplete, timeLimitSecon
   const [index, setIndex] = useState(0);
   // Bumped when time runs out, which remounts the mission with a fresh puzzle.
   const [attempt, setAttempt] = useState(0);
-  const [resolved, setResolved] = useState<{ index: number; mission: Mission; swapped: boolean } | null>(null);
+  const [resolved, setResolved] = useState<{ index: number; mission: Mission; swapped: boolean; manual?: boolean } | null>(null);
   const wanted = missions[index];
   // Until the sensor check for this mission answers, show a spinner.
   const current = resolved?.index === index ? resolved : null;
@@ -89,6 +92,20 @@ export function MissionRunner({ missions, onActivity, onComplete, timeLimitSecon
   }, [wanted, index]);
 
   const ready = Boolean(current);
+  // Stuck for two minutes on a mission that isn't sums already? Offer to switch to sums, so a broken
+  // sensor or a lost QR code never leaves you with an alarm you can't stop.
+  const [stuck, setStuck] = useState<number | null>(null);
+  useEffect(() => {
+    if (!ready || current?.mission.type === FALLBACK_MISSION.type) return;
+    const timer = setTimeout(() => setStuck(index), STUCK_MS);
+    return () => clearTimeout(timer);
+  }, [ready, index, current?.mission.type]);
+  const switchToSums = () => {
+    haptic('light');
+    setStuck(null);
+    setAttempt((a) => a + 1);
+    setResolved({ index, mission: FALLBACK_MISSION, swapped: true, manual: true });
+  };
   useEffect(() => {
     if (!ready || timeLimitSeconds <= 0) return;
     const timer = setTimeout(() => {
@@ -124,7 +141,13 @@ export function MissionRunner({ missions, onActivity, onComplete, timeLimitSecon
         ) : null}
         {attempt > 0 ? <Txt variant="caption" accessibilityLiveRegion="polite">{"Out of time, so here's a fresh one."}</Txt> : null}
         {current?.swapped ? (
-          <Txt variant="caption">{`This phone can't count ${MISSIONS[wanted.type].unit(2).replace(/^\d+ /, '')}, so here are some sums instead.`}</Txt>
+          <Txt variant="caption">{!current.manual ? `This phone can't count ${MISSIONS[wanted.type].unit(2).replace(/^\d+ /, '')}, so here are some sums instead.` : 'Sums instead. Finish them to turn the alarm off.'}</Txt>
+        ) : null}
+        {stuck === index && !current?.swapped ? (
+          <Pressable onPress={switchToSums} hitSlop={8} accessibilityRole="button" style={styles.stuck}>
+            <Ionicons name="help-circle-outline" size={16} color={colors.text} />
+            <Txt variant="caption" style={styles.stuckText}>Stuck? Do sums instead</Txt>
+          </Pressable>
         ) : null}
       </View>
       {current && Screen ? (
@@ -142,5 +165,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   loading: { flex: 1 },
   timer: { height: 4, borderRadius: 2, backgroundColor: colors.surfaceRaised, overflow: 'hidden', marginTop: space.sm },
+  stuck: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: space.xs, paddingHorizontal: space.md, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong },
+  stuckText: { color: colors.text },
   timerFill: { height: '100%', width: '100%', backgroundColor: colors.text, transformOrigin: 'left' },
 });

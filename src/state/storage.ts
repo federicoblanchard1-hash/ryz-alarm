@@ -57,6 +57,7 @@ export async function loadData(): Promise<AppData> {
       trialStartedAt: saved.trialStartedAt ?? null,
       trialEndSeen: saved.trialEndSeen ?? false,
       offer: saved.offer ?? null,
+      moods: saved.moods ?? [],
     };
   } catch {
     return fallback;

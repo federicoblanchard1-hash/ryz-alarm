@@ -71,7 +71,7 @@ function AccountPage() {
   };
   return (
     <Page title="Account">
-      <Group note="Your name, goals, sleep goal and XP are saved to your account.">
+      <Group note="Your alarms, nights, moods, goals and XP are backed up to your account, so a new phone or a reinstall gets them back.">
         <Line title="Name">
           <TextInput
             value={name}

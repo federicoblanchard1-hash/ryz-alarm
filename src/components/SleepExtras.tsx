@@ -1,13 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { MoodId } from '@/core/mood';
+import { nextRing } from '@/core/next';
 import { RATINGS, SLEEP_SOUNDS, SLEEP_TAGS, SLEEP_TIMERS, formatDuration, minutesAsleep, type SleepDebt, type SleepTag, type TagEffect } from '@/core/sleep';
+import { formatClockText } from '@/core/time';
 import type { SleepRecord } from '@/core/types';
 import { setSleepSoundVolume, startSleepSound, stopSleepSound, useSleepSound } from '@/services/sound';
 import { useNow } from '@/state/useNow';
+import { usePermissions } from '@/state/usePermissions';
 import { useStore } from '@/state/store';
 import { FONT, colors, radius, space } from '@/theme';
+import { MoodPicker } from './MoodPicker';
 import { Sheet } from './Sheet';
 import { Slider } from './Slider';
 import { Button, Txt, haptic } from './ui';
@@ -150,8 +156,69 @@ export function TagEffects({ effects, tagged }: { effects: TagEffect[]; tagged: 
   );
 }
 
+/**
+ * Before Start sleep: how your day was (for the Mood calendar), and a quick
+ * look at whether tomorrow's alarm will ring, so you can sleep without
+ * wondering.
+ */
+export function BedtimeSheet({ visible, onClose, onStart }: { visible: boolean; onClose: () => void; onStart: (mood: MoodId | null) => void }) {
+  const { data } = useStore();
+  const now = useNow(60_000);
+  const permissions = usePermissions();
+  const [mood, setMood] = useState<MoodId | null>(null);
+  const next = nextRing(data, now);
+  const soon = next && next.at - now < 24 * 60 * 60_000 ? next : null;
+  const ringsClosed = !permissions.supported || permissions.state?.notifications === 'granted';
+  const at = soon ? new Date(soon.at) : null;
+  const checks: { ok: boolean; text: string; fix?: () => void; fixLabel?: string }[] = [
+    {
+      ok: Boolean(soon),
+      text: at ? `Alarm at ${formatClockText(at.getHours(), at.getMinutes(), data.settings.use24h)}` : 'No alarm for tomorrow',
+      fix: soon ? undefined : () => {
+        onClose();
+        router.push({ pathname: '/alarm/[id]', params: { id: 'new' } });
+      },
+      fixLabel: 'Set one',
+    },
+    { ok: ringsClosed, text: ringsClosed ? 'Notifications on: it rings even if Ryz is closed' : 'Notifications off: keep Ryz open tonight', fix: ringsClosed ? undefined : permissions.fix, fixLabel: 'Fix' },
+  ];
+  return (
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title="Before you sleep"
+      footer={
+        <Button
+          title="Start sleep"
+          icon="bed-outline"
+          onPress={() => {
+            onStart(mood);
+            setMood(null);
+          }}
+        />
+      }
+    >
+      <Txt variant="label">How was your day?</Txt>
+      <MoodPicker label="Your mood tonight" value={mood} onPick={setMood} />
+      <Txt variant="label">Tomorrow</Txt>
+      {checks.map((c) => (
+        <View key={c.text} style={styles.check}>
+          <Ionicons name={c.ok ? 'checkmark-circle' : 'alert-circle'} size={20} color={c.ok ? colors.text : colors.danger} />
+          <Txt variant="body" style={styles.flex}>{c.text}</Txt>
+          {c.fix ? (
+            <Pressable onPress={c.fix} hitSlop={8} accessibilityRole="button">
+              <Text style={styles.fix}>{c.fixLabel}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ))}
+      {Platform.OS === 'ios' && soon ? <Txt variant="caption">On iPhone, keep the ring/silent switch on, or leave Ryz open, so the alarm makes sound.</Txt> : null}
+    </Sheet>
+  );
+}
+
 /** A night's details: how rested you felt, what happened that day, and delete. */
-export function NightSheet({ night, onClose, onRate, onTags, onDelete }: { night: SleepRecord | null; onClose: () => void; onRate: (r: SleepRecord['rating']) => void; onTags: (tags: SleepTag[]) => void; onDelete: () => void }) {
+export function NightSheet({ night, onClose, onRate, onTags, onDelete, onEdit }: { night: SleepRecord | null; onClose: () => void; onRate: (r: SleepRecord['rating']) => void; onTags: (tags: SleepTag[]) => void; onDelete: () => void; onEdit: () => void }) {
   const tags = night?.tags ?? [];
   return (
     <Sheet visible={night !== null} onClose={onClose} title={night ? `${formatDuration(minutesAsleep(night))} · ${new Date(night.end).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}>
@@ -176,6 +243,7 @@ export function NightSheet({ night, onClose, onRate, onTags, onDelete }: { night
               ))}
             </View>
           ) : null}
+          <Button title="Edit times" icon="time-outline" variant="secondary" onPress={onEdit} />
           <Button title="Delete this night" icon="trash-outline" variant="secondary" onPress={onDelete} />
         </View>
       ) : null}
@@ -202,4 +270,6 @@ const styles = StyleSheet.create({
   worse: { color: colors.danger },
   sheet: { gap: space.md, paddingBottom: space.md },
   why: { gap: space.xs },
+  check: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  fix: { fontSize: 14, fontFamily: FONT.medium, color: colors.text, textDecorationLine: 'underline' },
 });

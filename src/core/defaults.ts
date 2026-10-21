@@ -72,7 +72,7 @@ export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, numbe
 }
 
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {
-  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {}, xp: EMPTY_XP, proUntil: null, trialStartedAt: null, trialEndSeen: false, offer: null };
+  return { alarms: [], sleep: [], sleepingSince: null, settings: defaultSettings(use24h, tempUnit), pending: [], handled: {}, xp: EMPTY_XP, proUntil: null, trialStartedAt: null, trialEndSeen: false, offer: null, moods: [] };
 }
 
 /** A power-nap countdown: one ring at exactly `now + minutes`, no missions, no snooze. */

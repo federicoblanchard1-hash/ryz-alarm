@@ -1,3 +1,4 @@
+import { sampleMoods, type MoodEntry } from './mood';
 import { nextRing } from './next';
 import { minutesAsleep, sleepDebt, type SleepTag } from './sleep';
 import { HOUR, MINUTE } from './time';
@@ -157,6 +158,26 @@ export function planSteps(plan: DayPlan, now: number): PlanStep[] {
   });
 }
 
+/** What's happening now and what comes next, in plain words for the top of Today. */
+export interface NowNext {
+  /** A plan step, "steady" between steps, "early" before you're up, or "night" after bedtime. */
+  now: PlanStep['id'] | 'steady' | 'early' | 'night';
+  /** When the current part ends. */
+  until: number | null;
+  next: PlanStep | null;
+}
+
+export function nowAndNext(plan: DayPlan, now: number): NowNext {
+  const steps = planSteps(plan, now);
+  const next = steps.find((s) => s.state === 'next') ?? null;
+  if (now < plan.wake) return { now: 'early', until: plan.wake, next };
+  if (now >= plan.bed) return { now: 'night', until: null, next: null };
+  // Wind down runs until bed, so it's "now" rather than a step still to come.
+  const current = steps.filter((s) => s.state === 'now' && s.id !== 'bed').at(-1);
+  if (current) return { now: current.id, until: current.to ?? null, next: steps.find((s) => s.from > current.from && s.state === 'next') ?? null };
+  return { now: 'steady', until: next?.from ?? null, next };
+}
+
 // ---- Wake-up rhythm
 
 export interface WakeRhythm {
@@ -216,6 +237,13 @@ export function sampleNights(now: number, goalMinutes: number): SleepRecord[] {
     out.push({ id: `sample-${i}`, start: end - minutes * MINUTE, end, rating, source: i % 3 === 0 ? 'watch' : 'button', tags: tags[i] });
   }
   return out.reverse();
+}
+
+/** Mood check-ins to show: yours, or sample ones alongside the sample nights while you have none. */
+export function moodsToShow(data: AppData, now: number): { moods: MoodEntry[]; sample: boolean } {
+  const { nights, sample } = nightsToShow(data, now);
+  if (sample && data.moods.length === 0) return { moods: sampleMoods(nights, data.settings.sleepGoalMinutes), sample: true };
+  return { moods: data.moods, sample: false };
 }
 
 /** The nights to show: yours, or sample ones while the preview is on and you have fewer than three. */

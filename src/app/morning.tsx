@@ -4,6 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Txt, type IconName } from '@/components/ui';
+import { MoodPicker } from '@/components/MoodPicker';
+import { addMood, moodsOn, startOfDay } from '@/core/mood';
 import { RATINGS, formatDuration, minutesAsleep, rateSleep } from '@/core/sleep';
 import { formatClockText } from '@/core/time';
 import { useNow } from '@/state/useNow';
@@ -39,6 +41,8 @@ export default function Morning() {
   const insets = useSafeAreaInsets();
   const check = data.pending.find((e) => e.kind === 'awakeCheck');
   const checkAt = check ? new Date(check.at) : null;
+  // After the missions: how you feel now, for the Mood calendar.
+  const mood = moodsOn(data.moods, startOfDay(now)).morning;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top + space.xl }]}>
@@ -51,6 +55,11 @@ export default function Morning() {
         ) : (
           <Txt variant="muted">What helps in the first few minutes:</Txt>
         )}
+        <Card style={styles.rate}>
+          <Txt variant="heading">How’s your mood now?</Txt>
+          <MoodPicker label="Your mood this morning" value={mood?.mood} onPick={(m) => update((d, t) => addMood(d, m, 'morning', t))} />
+          {mood ? <Txt variant="caption">Saved. See every day on the Mood calendar.</Txt> : null}
+        </Card>
         {toRate ? (
           <Card style={styles.rate}>
             <Txt variant="heading">{`You slept ${formatDuration(minutesAsleep(toRate))}. How do you feel?`}</Txt>

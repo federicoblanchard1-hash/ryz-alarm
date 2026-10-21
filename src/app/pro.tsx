@@ -20,6 +20,8 @@ const PLANS = [
   { id: '6m', title: '6 months', price: 21.99, months: 6 },
   { id: '3m', title: '3 months', price: 12.99, months: 3 },
   { id: '1m', title: '1 month', price: 4.99, months: 1 },
+  // "I'd pay a flat fee for an alarm, not $100 a year": the most repeated complaint in alarm-app reviews.
+  { id: 'life', title: 'Lifetime', price: 59.99, months: 0 },
 ];
 const MONTHLY = 4.99;
 const money = (n: number) => `$${n.toFixed(2)}`;
@@ -137,8 +139,8 @@ export default function ProScreen() {
           {PLANS.map((p) => {
             const on = plan === p.id;
             const discounted = offer && p.id === '12m' ? p.price * (1 - offer.percent / 100) : null;
-            const perMonth = (discounted ?? p.price) / p.months;
-            const save = Math.round((1 - perMonth / MONTHLY) * 100);
+            const perMonth = p.months ? (discounted ?? p.price) / p.months : 0;
+            const save = p.months ? Math.round((1 - perMonth / MONTHLY) * 100) : 0;
             return (
               <Pressable
                 key={p.id}
@@ -153,7 +155,7 @@ export default function ProScreen() {
                 {p.best ? <Text style={[styles.badge, on && styles.badgeOn]}>{save > 0 ? `Best value · save ${save}%` : 'Best value'}</Text> : null}
                 <View style={styles.flex}>
                   <Text style={[styles.planTitle, on && styles.textOn]}>{p.title}</Text>
-                  <Text style={[styles.planNote, on && styles.noteOn]}>{p.months > 1 ? `${money(perMonth)} a month${!p.best && save > 0 ? ` · save ${save}%` : ''}` : 'Billed monthly'}</Text>
+                  <Text style={[styles.planNote, on && styles.noteOn]}>{p.months === 0 ? 'Pay once, Pro forever. No subscription' : p.months > 1 ? `${money(perMonth)} a month${!p.best && save > 0 ? ` · save ${save}%` : ''}` : 'Billed monthly'}</Text>
                 </View>
                 <View style={styles.prices}>
                   {discounted ? <Text style={[styles.was, on && styles.noteOn]}>{money(p.price)}</Text> : null}

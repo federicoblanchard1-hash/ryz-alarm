@@ -21,20 +21,21 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 
 ## Getting started
 
-On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are required; your name, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms and sleep history stay on the phone, so alarms always work offline.
+On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are required; your name, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms work offline; your alarms, nights and moods are also backed up to the account, so a new phone or a reinstall gets them back (a phone that already has alarms keeps its own).
 
 ## Morning (home)
 
 - **Weather where you wake up**, laid out like Alarmy's morning screen: your town (tap to refresh), the temperature on the left, conditions and today's high and low on the right, and the next 24 hours with white weather icons underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
 - **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
-- **Shortcut tiles** on the scene: your **XP** (tap to see how to earn more), **Add alarm**, **Power nap** (the quick alarm) and **Last night**'s sleep.
-- **Next alarm** card with how long until it rings, its sound and missions.
-- **Today**, from your own sleep, in place of a news feed (reading the news right after waking goes with more stress, and Alarmy's own morning panel is just weather, news and horoscopes):
-  - **Your energy through the day** as a small bar chart, from wake-up to bedtime, with the bar for now highlighted.
-  - **When to do what**: groggy until (sleep inertia, longer after a short night or sleep debt), best focus, the afternoon dip (a short nap or walk), last coffee (at least 6 h before bed, or your *Last call for coffee* setting), second wind, wind down and bed (your sleep goal before tomorrow's alarm). Past steps fade; the current one says *Now*.
+- **Shortcut tiles** on the scene: your **XP** (tap to see how to earn more), **Mood** (today's emoji; tap for the calendar), **Power nap** (the quick alarm) and **Last night**'s sleep.
+- **Next alarm** as one slim row: the time, how long until it rings, its name and missions. Tap to edit.
+- **Mood**: Ryz asks *How's your mood now?* after you finish your morning missions, and *How was your day?* when you tap Start sleep. Seven emojis: 😄 Happy, 😌 Calm, 😐 Okay, 😴 Tired, 😢 Sad, 😣 Stressed, 😠 Angry. The Mood screen is a month calendar (big emoji: morning, small: evening), a day's details with the sleep before it, the month's counts, and how your morning mood compares after full and short nights. You can also log a mood there any time.
+- **Today**, from your own sleep, in place of a news feed (reading the news right after waking goes with more stress, and Alarmy's own morning panel is just weather, news and horoscopes). It reads top to bottom:
+  - **Right now**: what your energy is like at this moment in plain words (*Best focus until 11:30 AM: your sharpest hours, do the hardest thing first*), and what's next.
+  - **Your day**: a small bar chart from wake-up to bedtime (taller = more energy, the white bar is now, with Noon and 6 PM marked) and the times in a list, time first: waking up (sleep inertia, longer after a short night or sleep debt), best focus, the afternoon dip (a short nap or walk), last coffee (at least 6 h before bed, or your *Last call for coffee* setting), second wind, wind down and bed (your sleep goal before tomorrow's alarm). Past steps fade; the current one says *Now*.
   - It starts from this morning's wake-up and last night's sleep; before you're up, from your usual wake-up time or today's alarm. It's an estimate built on well-studied patterns (Hilditch & McHill, 2019; Monk, 2005; Drake et al., 2013; Van Dongen et al., 2003), and says so.
   - **Get daylight**: 10 minutes outside in the first two hours, ticked off for 10 XP once a day (Burns et al., 2023: more daytime light, lower depression risk).
-  - **Wake-up rhythm**: your streak of mornings within 30 minutes of your usual time, the last 7 days as dots, and how much your wake-up moves (Windred et al., 2024).
+  - **Wake-up streak**: your streak of mornings within 30 minutes of your usual time, the last 7 days as dots, and how much your wake-up moves (Windred et al., 2024).
   - **Sample nights** fill Sleep and Today until you've tracked 3 nights of your own, with a *Sample* tag and a one-tap *Hide* (or Settings → Sleep → Sample nights).
 
 Four tabs: **Morning**, **Alarms**, **Sleep** and **Settings**, in the native iOS tab bar on iPhone (a floating pill on web). **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
@@ -43,7 +44,7 @@ The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Rin
 
 ## Missions
 
-Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the boxed number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. **While you work, the alarm is silent.** If you stop for a while (5 s to 2 min, Settings → Alarms) it rings again, and an optional **time limit per mission** restarts the mission with a new puzzle and rings again when it runs out. It only stops for good when every mission is done. There's no *new puzzle* button, so you can't skip one.
+Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the boxed number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. **While you work, the alarm is silent.** If you stop for a while (5 s to 2 min, Settings → Alarms) it rings again, and an optional **time limit per mission** restarts the mission with a new puzzle and rings again when it runs out. It only stops for good when every mission is done. There's no *new puzzle* button, so you can't skip one. But if a mission can't be done (the camera won't read your code, the phone won't count steps), after 2 minutes a **Stuck? Do sums instead** button appears, so you're never left with an alarm you can't stop.
 
 | Wake your brain | Wake your body | Scientific |
 | --- | --- | --- |
@@ -118,6 +119,18 @@ We read Alarmy's recent low-star App Store reviews and made sure Ryz doesn't hav
 - **"I go back to sleep"** and re-rolling puzzles: there's no *new puzzle* button, missions are silent only while you're working on them, and the awake check rings again if you don't answer.
 - **Alarms that don't go off**: alarms repeat on weekly system triggers (they ring even if Ryz isn't opened for weeks), with follow-up notifications that keep ringing, within iOS's 64-notification limit.
 
+**Round two.** We then read 5,693 recent 1–3 star reviews across 7 alarm and sleep apps: Alarmy, Alarm Clock for Me, Sleep Cycle, Alarm Clock: Wake Up Music, Rise, Pillow and SuperAlarm. That's 5,511 from the US, UK, Canadian and Australian App Stores plus 182 from Alarmy on Google Play. The most common complaints were prices and paywalls (about 2,200), sleep tracking that's wrong and can't be fixed (about 780), ads (about 670), watch sync, bugs, and alarms that don't ring. What Ryz does about each one:
+
+- **"It says it's not the right code" / "the step counter doesn't count" / "I had to restart my phone to stop it"**: *Stuck? Do sums instead* after 2 minutes on a mission.
+- **"I can no longer edit the duration of my tracked sleep"** (Pillow) and wrong watch data: **Edit times** on any night, free; delete works too.
+- **"I'd pay a flat fee, not $100 a year for an alarm"**: a **Lifetime** plan, pay once.
+- **"Deleted the app by accident and lost everything"** (and Alarmy's 5-star reviews for restoring alarms): alarms, nights and moods are **backed up to your account** and come back on a new phone.
+- **"Time zone change woke me at 4 am instead of 9"** (Pillow): one-time alarms keep their clock time when you travel.
+- **"It doesn't work on silent / Do Not Disturb"** and *will it ring?* anxiety: Start sleep now shows tomorrow's alarm and whether notifications are on, with a one-tap fix, and on iPhone a reminder about the silent switch.
+- **"Ads flash in the middle of the night"**, **forced trials on launch**: no ads, and the trial needs no card.
+
+Still not possible in an Expo app, and the most-asked: Spotify or Apple Music songs as alarms, and Home Screen widgets. Both need extra native code.
+
 ## Settings
 
 A short list, like iOS Settings; each row opens its own page.
@@ -190,7 +203,6 @@ assets/weather/   the rendered sky backgrounds
 - **Android lock screen**: Ryz rings from a notification; it doesn't yet take over the lock screen with a full-screen alarm (that needs the full-screen intent, also a native module).
 - **When the app is in the background on Android**, in-app playback uses media volume. Notifications use alarm volume.
 - **Sign-up emails**: Supabase's built-in email service only sends to the project team's addresses. Before other people sign up, either turn off **Confirm email** (Supabase dashboard → Authentication → Sign In / Providers → Email) or add your own SMTP server.
-- **Alarms and sleep history** are kept on the phone, not in the account yet.
 - **Squat counting** uses a simple motion pattern (a dip then a peak), tuned on synthetic data. It needs testing on real phones and people.
 - **Not built yet**, from the research list: a voice alarm (record a familiar voice), a smart wake window from Apple Health / Health Connect sleep data, smart-bulb dawn light, and a study with a sleep researcher to measure whether Ryz actually reduces grogginess.
 - The bundle identifier `com.ryzalarm.app` in `app.json` is a placeholder. Change it to your own before publishing.

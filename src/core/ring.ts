@@ -1,5 +1,5 @@
 import { TEST_ALARM_ID, testAlarm } from './defaults';
-import { MINUTE, previousOccurrence } from './time';
+import { MINUTE, nextClock, previousOccurrence } from './time';
 import type { ActiveRing, Alarm, AppData, PendingEvent } from './types';
 
 /** A notification can land a moment before its time; treat that as on time. */
@@ -122,6 +122,14 @@ export function cleanup(data: AppData, now: number): AppData {
     if (a.enabled && a.days.length === 0 && (a.date === undefined || now >= a.date + a.ringMinutes * MINUTE)) {
       alarmsChanged = true;
       return { ...a, enabled: false, date: undefined };
+    }
+    // After a time-zone change, a one-time 7:00 alarm is still 7:00 here, not 7:00 back home.
+    if (a.enabled && !a.quick && a.days.length === 0 && a.date !== undefined && a.date > now) {
+      const at = new Date(a.date);
+      if (at.getHours() !== a.hour || at.getMinutes() !== a.minute) {
+        alarmsChanged = true;
+        return { ...a, date: nextClock(a.hour, a.minute, now) };
+      }
     }
     return a;
   });

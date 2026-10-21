@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
-import { AlarmTags } from '@/components/ModeBadge';
 import { Button, Card, PressableScale, Txt, type IconName } from '@/components/ui';
 import { Today } from '@/components/Today';
 import { WeatherHero } from '@/components/WeatherHero';
-import { nextRing, sleepAdvice } from '@/core/next';
+import { nextRing } from '@/core/next';
 import { formatDuration, minutesAsleep } from '@/core/sleep';
 import { HOUR, formatClock, formatClockText, formatSpan } from '@/core/time';
 import { trialJustEnded } from '@/core/pro';
-import { nightsToShow } from '@/core/today';
+import { MOOD, latestToday } from '@/core/mood';
+import { moodsToShow, nightsToShow } from '@/core/today';
 import { balance, levelOf, nextReward } from '@/core/xp';
 import { useAuth } from '@/state/auth';
 import { usePro } from '@/state/usePro';
@@ -46,14 +46,14 @@ export default function Home() {
   const permissions = usePermissions();
   const tabSpace = useTabBarSpace();
   const now = useNow();
-  const { use24h, sleepGoalMinutes } = data.settings;
+  const { use24h } = data.settings;
   const next = nextRing(data, now);
   const nextDate = next ? new Date(next.at) : null;
   const clock = nextDate ? formatClock(nextDate.getHours(), nextDate.getMinutes(), use24h) : null;
-  const advice = next && !next.snoozed ? sleepAdvice(next.at, now, sleepGoalMinutes, use24h) : null;
   // The most recent night (or a sample one, while those show), if it ended in the last day and a half.
   const latest = nightsToShow(data, now).nights.at(-1);
   const lastNight = latest && now - latest.end < 36 * HOUR ? latest : null;
+  const mood = latestToday(moodsToShow(data, now).moods, now);
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
   // Ryz needs an account: when you're signed out (or new), the welcome screen comes back.
   const auth = useAuth();
@@ -86,7 +86,7 @@ export default function Home() {
       <WeatherHero>
         <View style={styles.tiles}>
           <Tile label={`XP · level ${levelOf(data.xp.earned).level}`} value={String(balance(data.xp))} onPress={() => router.push('/xp')} />
-          <Tile label="Add alarm" icon="add" onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: 'new' } })} />
+          <Tile label="Mood" value={mood ? MOOD[mood.mood].emoji : undefined} icon="happy-outline" onPress={() => router.push('/mood')} />
           <Tile label="Power nap" icon="timer-outline" onPress={() => router.push({ pathname: '/alarms', params: { quick: '1' } })} />
           <Tile
             label="Last night"
@@ -138,24 +138,12 @@ export default function Home() {
             style={styles.next}
             accessibilityLabel={`${next.snoozed ? 'Snoozed until' : 'Next alarm'} ${clock.time} ${clock.period}, in ${formatSpan(next.at - now)}. Edit`}
           >
-            <View style={styles.nextTop}>
-              <Txt variant="label">{next.snoozed ? 'Snoozed until' : 'Next alarm'}</Txt>
-              <View style={styles.pill}>
-                <Txt style={styles.pillText}>{`in ${formatSpan(next.at - now)}`}</Txt>
-              </View>
-            </View>
-            <View style={styles.clockRow}>
-              <Txt style={styles.clock}>{clock.time}</Txt>
-              {clock.period ? <Txt style={styles.period}>{clock.period}</Txt> : null}
-            </View>
-            {next.alarm.label ? <Txt variant="muted">{next.alarm.label}</Txt> : null}
-            <AlarmTags alarm={next.alarm} />
-            {advice ? (
-              <View style={styles.advice}>
-                <Ionicons name="moon-outline" size={18} color={colors.textMuted} />
-                <Txt variant="caption" style={styles.flex}>{advice}</Txt>
-              </View>
-            ) : null}
+            <Ionicons name={next.snoozed ? 'timer-outline' : 'alarm-outline'} size={20} color={colors.text} />
+            <Txt style={styles.clock}>{`${clock.time}${clock.period ? ` ${clock.period}` : ''}`}</Txt>
+            <Txt variant="caption" style={styles.flex} numberOfLines={1}>
+              {`${next.snoozed ? 'Snoozed · ' : ''}in ${formatSpan(next.at - now)}${next.alarm.label ? ` · ${next.alarm.label}` : ''}${next.alarm.missions.length ? ` · ${next.alarm.missions.length} ${next.alarm.missions.length === 1 ? 'mission' : 'missions'}` : ''}`}
+            </Txt>
+            <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
           </PressableScale>
         ) : ready ? (
           <PressableScale onPress={() => router.push({ pathname: '/alarm/[id]', params: { id: 'new' } })} style={styles.emptyCard} accessibilityLabel="No alarm set. Set an alarm">
@@ -197,27 +185,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   warning: { gap: space.md, paddingVertical: space.lg },
   warningRow: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
-  next: {
-    padding: space.xl,
-    gap: space.xs,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-  },
-  nextTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  pill: { paddingHorizontal: space.md, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
-  pillText: { fontSize: 13, lineHeight: 18, fontFamily: FONT.medium, color: colors.text },
-  clockRow: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  clock: { fontSize: 64, lineHeight: 74, fontFamily: FONT.thin, color: colors.text, fontVariant: ['tabular-nums'], letterSpacing: -2 },
-  period: { fontSize: 20, lineHeight: 26, fontFamily: FONT.regular, color: colors.textMuted },
-  advice: {
-    flexDirection: 'row',
-    gap: space.sm,
-    alignItems: 'center',
-    marginTop: space.md,
-    paddingTop: space.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
+  next: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, height: 52, borderRadius: radius.md, backgroundColor: colors.surface },
+  clock: { fontSize: 18, lineHeight: 22, fontFamily: FONT.medium, color: colors.text, fontVariant: ['tabular-nums'] },
   emptyCard: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md + 4, backgroundColor: colors.surface },
   emptyIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   tiles: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: space.sm, paddingTop: space.xxl, paddingBottom: space.xl },

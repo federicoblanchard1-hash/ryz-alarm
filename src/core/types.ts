@@ -1,4 +1,5 @@
 import type { Mission } from './missions';
+import type { MoodEntry } from './mood';
 import type { SleepSoundId, SleepTag } from './sleep';
 import type { VibrationId } from './vibration';
 import type { XpState } from './xp';
@@ -182,6 +183,8 @@ export interface AppData {
   trialEndSeen: boolean;
   /** A first-subscription discount bought with XP, shown on the paywall until it expires. */
   offer: { percent: number; until: number } | null;
+  /** Mood check-ins, morning and night, oldest first. */
+  moods: MoodEntry[];
 }
 
 /** What should be on screen right now, if anything. */

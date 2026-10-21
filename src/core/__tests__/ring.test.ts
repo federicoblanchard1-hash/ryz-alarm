@@ -136,3 +136,19 @@ describe('quick alarms', () => {
     expect(cleanup({ ...data, alarms: [{ ...nap, enabled: false }] }, now).alarms).toHaveLength(0);
   });
 });
+
+describe('time zones', () => {
+  it('keeps a one-time alarm at its clock time after the time zone changes', () => {
+    // Saved for 7:00, but the stored moment now reads 4:00 here (three hours west).
+    const alarm: Alarm = { ...newAlarm('t'), hour: 7, minute: 0, days: [], enabled: true, date: at(20, 4) };
+    const fixed = cleanup(data([alarm]), at(19, 22)).alarms[0];
+    expect(new Date(fixed.date!).getHours()).toBe(7);
+    expect(fixed.date).toBe(at(20, 7));
+  });
+
+  it('leaves a correct one-time alarm alone', () => {
+    const alarm: Alarm = { ...newAlarm('t'), hour: 7, minute: 0, days: [], enabled: true, date: at(20, 7) };
+    const d = data([alarm]);
+    expect(cleanup(d, at(19, 22)).alarms[0]).toBe(alarm);
+  });
+});

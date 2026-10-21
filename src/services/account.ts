@@ -1,4 +1,6 @@
-import type { AgeGroup, AppData, Settings } from '@/core/types';
+import type { MoodEntry } from '@/core/mood';
+import { KEEP_NIGHTS } from '@/core/sleep';
+import type { AgeGroup, Alarm, AppData, Settings, SleepRecord } from '@/core/types';
 import { supabase } from './supabase';
 
 /** The account's copy of what you chose, kept in the `profiles` table. */
@@ -12,6 +14,10 @@ export interface Profile {
   xp_spent: number;
   pro_until: string | null;
   trial_started_at: string | null;
+  /** Backups, so a new phone or a reinstall gets everything back. */
+  alarms: Alarm[];
+  sleep: SleepRecord[];
+  moods: MoodEntry[];
 }
 
 export function profileFromData(d: AppData): Profile {
@@ -26,7 +32,29 @@ export function profileFromData(d: AppData): Profile {
     goals: s.goals,
     goal_other: s.goalOther.slice(0, 300),
     sleep_goal_minutes: s.sleepGoalMinutes,
+    // Quick naps are moments, not settings worth restoring.
+    alarms: d.alarms.filter((a) => !a.quick),
+    sleep: d.sleep,
+    moods: d.moods,
   };
+}
+
+/**
+ * Alarms, nights and moods from the account's backup. Alarms come back only
+ * on a phone that has none (so a backup never overwrites what you set here);
+ * nights and moods are merged, this phone winning on the same one.
+ */
+export function withProfileData(d: AppData, p: Profile): AppData {
+  const alarms = d.alarms.some((a) => !a.quick) || !p.alarms?.length ? d.alarms : [...p.alarms, ...d.alarms];
+  const mergeById = <T extends { id: string }>(mine: T[], theirs: T[] | undefined, key: (x: T) => number) => {
+    if (!theirs?.length) return mine;
+    const ids = new Set(mine.map((x) => x.id));
+    return [...mine, ...theirs.filter((x) => !ids.has(x.id))].sort((a, b) => key(a) - key(b));
+  };
+  const sleep = mergeById(d.sleep, p.sleep, (r) => r.end).slice(-KEEP_NIGHTS);
+  const moods = mergeById(d.moods, p.moods, (m) => m.at).slice(-800);
+  if (alarms === d.alarms && sleep.length === d.sleep.length && moods.length === d.moods.length) return d;
+  return { ...d, alarms, sleep, moods };
 }
 
 /** XP and Pro from the account, keeping whichever side has more (so nothing earned on either phone is lost). */
@@ -87,7 +115,7 @@ export async function logOut() {
 }
 
 export async function loadProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('name, age_group, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until, trial_started_at').eq('id', userId).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('name, age_group, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until, trial_started_at, alarms, sleep, moods').eq('id', userId).maybeSingle();
   if (error) throw error;
   return data as Profile | null;
 }

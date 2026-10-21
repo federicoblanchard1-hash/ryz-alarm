@@ -1,5 +1,5 @@
 import { emptyData } from '../defaults';
-import { energyAt, nightsToShow, planDay, planSteps, sampleNights, usualWake, wakeRhythm } from '../today';
+import { energyAt, nightsToShow, nowAndNext, planDay, planSteps, sampleNights, usualWake, wakeRhythm } from '../today';
 import type { SleepRecord } from '../types';
 
 const at = (day: number, h: number, m = 0) => new Date(2026, 9, day, h, m).getTime();
@@ -94,5 +94,26 @@ describe('sample nights', () => {
     expect(nightsToShow(d, at(21, 12)).sample).toBe(true);
     expect(nightsToShow({ ...d, sleep: [night(18, 7), night(19, 7), night(20, 7)] }, at(21, 12)).sample).toBe(false);
     expect(nightsToShow({ ...d, settings: { ...d.settings, sampleSleep: false } }, at(21, 12)).sample).toBe(false);
+  });
+});
+
+describe('right now', () => {
+  const data = { ...emptyData(true), sleep: [night(18, 7), night(19, 7), night(20, 7), night(21, 7)] };
+
+  it('names what’s happening and what comes next', () => {
+    const plan = planDay(data, at(21, 10));
+    const nn = nowAndNext(plan, at(21, 10));
+    expect(nn.now).toBe('focus');
+    expect(nn.next?.id).toBe('dip');
+  });
+
+  it('calls the gaps between steps steady', () => {
+    const plan = planDay(data, at(21, 12));
+    expect(nowAndNext(plan, at(21, 12)).now).toBe('steady');
+  });
+
+  it('says it’s time to sleep after bedtime', () => {
+    const plan = planDay(data, at(21, 23, 30));
+    expect(nowAndNext(plan, at(21, 23, 30)).now).toBe('night');
   });
 });

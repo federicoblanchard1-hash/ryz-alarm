@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RangeCalendar } from '@/components/RangeCalendar';
 import { Sheet } from '@/components/Sheet';
 import { SleepChart, bucketLabel } from '@/components/SleepChart';
-import { DebtCard, NightSheet, SleepSounds, TagEffects } from '@/components/SleepExtras';
+import { BedtimeSheet, DebtCard, NightSheet, SleepSounds, TagEffects } from '@/components/SleepExtras';
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { TimePicker } from '@/components/TimePicker';
 import { Button, Chips, Segmented, ThemedSwitch, Txt, haptic } from '@/components/ui';
@@ -32,6 +32,7 @@ import {
   wrapDay,
 } from '@/core/sleep';
 import { formatClockText } from '@/core/time';
+import { addMood, type MoodId } from '@/core/mood';
 import { nightsToShow } from '@/core/today';
 import type { SleepRecord } from '@/core/types';
 import { HEALTH_APP, connectHealth, healthState, readWatchNights, type HealthState } from '@/services/health';
@@ -133,6 +134,8 @@ export default function SleepScreen() {
   const [picking, setPicking] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  /** A night whose times are being fixed. */
+  const [editing, setEditing] = useState<SleepRecord | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [allStats, setAllStats] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -165,10 +168,13 @@ export default function SleepScreen() {
   const advice = next ? sleepAdvice(next.at, now, goal, use24h) : null;
   const sleeping = data.sleepingSince !== null;
 
-  const start = () => {
+  // Start sleep first asks how your day was and checks tomorrow's alarm.
+  const [bedtime, setBedtime] = useState(false);
+  const start = (mood: MoodId | null) => {
     haptic('success');
     setNote(null);
-    update((d, t) => startSleep(d, t));
+    setBedtime(false);
+    update((d, t) => startSleep(mood ? addMood(d, mood, 'night', t) : d, t));
   };
   const wake = () => {
     haptic('success');
@@ -263,7 +269,7 @@ export default function SleepScreen() {
             <>
               {!automatic ? <Txt variant="heading">Going to bed?</Txt> : null}
               {!automatic ? <Txt variant="muted">{advice ?? 'Tap Start sleep when you lie down. Ryz ends it when you stop your alarm.'}</Txt> : null}
-              <Button title="Start sleep" icon="bed-outline" onPress={start} disabled={automatic} variant={automatic ? 'secondary' : 'primary'} />
+              <Button title="Start sleep" icon="bed-outline" onPress={() => setBedtime(true)} disabled={automatic} variant={automatic ? 'secondary' : 'primary'} />
               {automatic ? <Txt variant="caption" style={styles.center}>Not wearing your watch tonight? Turn Smartwatch off to use the button.</Txt> : null}
               {note ? <Txt variant="caption">{note}</Txt> : null}
             </>
@@ -412,6 +418,11 @@ export default function SleepScreen() {
           setOpenNight(null);
           if (r) remove(r);
         }}
+        onEdit={() => {
+          setEditing(nightOpen);
+          setOpenNight(null);
+          setAdding(true);
+        }}
       />
 
       <Sheet
@@ -439,24 +450,40 @@ export default function SleepScreen() {
         <Txt variant="caption">{`Next, your phone asks you to allow it: turn on Sleep for Ryz.`}</Txt>
       </Sheet>
 
-      <AddNight visible={adding} onClose={() => setAdding(false)} use24h={use24h} onSave={(r) => update((d) => ({ ...d, sleep: addRecord(d.sleep.filter((x) => x.id !== r.id), r) }))} />
+      <BedtimeSheet visible={bedtime} onClose={() => setBedtime(false)} onStart={start} />
+
+      <AddNight
+        key={editing?.id ?? 'new'}
+        visible={adding}
+        initial={editing}
+        onClose={() => {
+          setAdding(false);
+          setEditing(null);
+        }}
+        use24h={use24h}
+        onSave={(r) => update((d) => ({ ...d, sleep: addRecord(d.sleep.filter((x) => x.id !== r.id && x.id !== editing?.id), r) }))}
+      />
     </View>
   );
 }
 
-function AddNight({ visible, onClose, onSave, use24h }: { visible: boolean; onClose: () => void; onSave: (r: SleepRecord) => void; use24h: boolean }) {
-  const [daysAgo, setDaysAgo] = useState(0);
-  const [bed, setBed] = useState({ hour: 23, minute: 0 });
-  const [wake, setWake] = useState({ hour: 7, minute: 0 });
-  const [rating, setRating] = useState<SleepRecord['rating']>(undefined);
+/** Add a night by hand, or fix the times of one (`initial`): a watch that was off, a session started late… */
+function AddNight({ visible, onClose, onSave, use24h, initial }: { visible: boolean; onClose: () => void; onSave: (r: SleepRecord) => void; use24h: boolean; initial?: SleepRecord | null }) {
   const [now] = useState(() => Date.now());
+  const at = (ms: number) => ({ hour: new Date(ms).getHours(), minute: new Date(ms).getMinutes() });
+  const [daysAgo, setDaysAgo] = useState(() => (initial ? Math.max(0, Math.round((new Date(now).setHours(0, 0, 0, 0) - new Date(initial.end).setHours(0, 0, 0, 0)) / DAY)) : 0));
+  const [bed, setBed] = useState(() => (initial ? at(initial.start) : { hour: 23, minute: 0 }));
+  const [wake, setWake] = useState(() => (initial ? at(initial.end) : { hour: 7, minute: 0 }));
+  const [rating, setRating] = useState<SleepRecord['rating']>(initial?.rating);
   const record = manualRecord(now - daysAgo * DAY, bed, wake);
+  const days = [0, 1, 2, 3, 4, 5, 6];
+  if (!days.includes(daysAgo)) days.push(daysAgo);
 
   return (
     <Sheet
       visible={visible}
       onClose={onClose}
-      title="Add a night"
+      title={initial ? 'Edit this night' : 'Add a night'}
       footer={
         <Button
           title={record ? `Save · ${formatDuration(minutesAsleep(record))}` : 'Check the times'}
@@ -464,7 +491,7 @@ function AddNight({ visible, onClose, onSave, use24h }: { visible: boolean; onCl
           onPress={() => {
             if (!record) return;
             haptic('success');
-            onSave({ ...record, rating });
+            onSave({ ...record, rating, tags: initial?.tags });
             onClose();
           }}
         />
@@ -474,7 +501,7 @@ function AddNight({ visible, onClose, onSave, use24h }: { visible: boolean; onCl
         title="Woke up"
         value={daysAgo}
         onChange={setDaysAgo}
-        options={[0, 1, 2, 3, 4, 5, 6].map((n) => ({ value: n, label: n === 0 ? 'Today' : n === 1 ? 'Yesterday' : DATE.format(now - n * DAY) }))}
+        options={days.map((n) => ({ value: n, label: n === 0 ? 'Today' : n === 1 ? 'Yesterday' : DATE.format(now - n * DAY) }))}
       />
       <Txt variant="caption">Went to sleep</Txt>
       <TimePicker hour={bed.hour} minute={bed.minute} use24h={use24h} onChange={(hour, minute) => setBed({ hour, minute })} />
