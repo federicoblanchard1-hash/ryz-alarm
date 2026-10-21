@@ -29,7 +29,7 @@ const PERKS: { icon: IconName; text: string }[] = [
   { icon: 'musical-notes-outline', text: 'All 39 sounds and every vibration pattern' },
   { icon: 'analytics-outline', text: 'Your whole sleep history: a year, any dates' },
   { icon: 'watch-outline', text: 'Automatic sleep from your smartwatch' },
-  { icon: 'newspaper-outline', text: 'Follow as many news topics as you like' },
+  { icon: 'people-outline', text: 'Family Sharing: one plan for up to 6 people' },
 ];
 
 const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'long' });
@@ -167,7 +167,7 @@ export default function ProScreen() {
           title={status.kind === 'trial' ? 'Keep Pro' : 'Continue'}
           onPress={() => notice('Payments aren’t on yet', 'Subscriptions start once Ryz is in the App Store and Google Play. Until then, you can earn Pro with XP below.')}
         />
-        <Txt variant="caption" style={styles.center}>Cancel anytime in your App Store or Google Play settings.</Txt>
+        <Txt variant="caption" style={styles.center}>The price shown is the whole price. No ads on any plan, free included. Cancel anytime in your App Store or Google Play settings.</Txt>
 
         <Txt variant="section" style={styles.section}>XP shop</Txt>
         <Pressable onPress={() => router.push('/xp')} accessibilityRole="button" style={styles.coins}>

@@ -12,7 +12,7 @@ import { FONT, colors, space } from '@/theme';
 const POINTS: { icon: IconName; text: string }[] = [
   { icon: 'alarm-outline', text: 'Alarms you can’t sleep through, with sounds chosen from sleep research' },
   { icon: 'flash-outline', text: 'Missions that wake up your brain and body before the alarm stops' },
-  { icon: 'analytics-outline', text: 'Sleep tracking, a power-nap timer, the weather and your news' },
+  { icon: 'analytics-outline', text: 'Sleep tracking, and a plan for your day: when you’ll focus best and when to wind down' },
 ];
 
 /** First launch (or after logging out): what Ryz is, then create an account or log in. */
@@ -51,9 +51,9 @@ export default function Welcome() {
             <Button title="I already have an account" variant="secondary" onPress={() => router.push({ pathname: '/account', params: { mode: 'login', onboarding: '1' } })} />
           </>
         ) : (
-          <Button title="Get started" onPress={() => router.replace({ pathname: '/interests', params: { first: '1' } })} />
+          <Button title="Get started" onPress={() => router.replace({ pathname: '/goals', params: { first: '1' } })} />
         )}
-        <Txt variant="caption" style={styles.center}>Your alarms always work, even offline. Your account keeps your news, goals and XP.</Txt>
+        <Txt variant="caption" style={styles.center}>Your alarms always work, even offline. Your account keeps your goals and XP.</Txt>
       </View>
     </View>
   );

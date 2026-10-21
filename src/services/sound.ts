@@ -4,7 +4,7 @@ import { Platform, Vibration } from 'react-native';
 
 import { DEEP_RAMP_SECONDS, DEEP_START_DB, GENTLE_START_DB, fadeVolume } from '@/core/fade';
 import { phaseAt, soundAt } from '@/core/plan';
-import { SLEEP_SOUNDS, sleepSoundVolume, type SleepSoundId } from '@/core/sleep';
+import { SLEEP_FADE_MS, SLEEP_SOUNDS, sleepSoundVolume, type SleepSoundId } from '@/core/sleep';
 import type { Alarm, SoundId } from '@/core/types';
 import { patternLength, vibrationPattern, type VibrationId } from '@/core/vibration';
 
@@ -52,8 +52,8 @@ export const SOUND_SOURCES: Record<SoundId, number> = {
   chime: require('../../assets/sounds/chime.wav'),
 };
 
-/** Volume while you're busy with a mission: low enough to think, loud enough to remind you. */
-const DUCKED = 0.15;
+/** Volume while you're busy with a mission: silent, so you can think. The player keeps running, so it can ring again instantly. */
+const DUCKED = 0;
 
 // expo-audio players are configured by assigning properties.
 function configure(player: AudioPlayer, options: { loop?: boolean; volume?: number }) {
@@ -78,8 +78,8 @@ async function setAlarmAudioMode() {
  * Plays an alarm while `active`: the gentle melody fades in and switches to
  * the deep tone if it escalates; the deep tone ramps up over a few seconds.
  * `startedAt` is when the ring began, so reopening the screen mid-ring picks
- * up at the right volume and tone. `ducked` turns it down without restarting
- * it, for while you do a mission.
+ * up at the right volume and tone. `ducked` silences it without stopping
+ * it, for while you do a mission; it rings again the moment you stop.
  */
 export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' | 'recheck' | 'test', startedAt: number, active: boolean, ducked = false) {
   // The alarm's own sound, plus the 520 Hz tone for when a soft alarm escalates (or the melody, for a loud one).
@@ -101,8 +101,11 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
     for (const p of [own, deep, melody]) configure(p, { loop: true });
     const players: Partial<Record<SoundId, AudioPlayer>> = { gentle: melody, deep, [alarm.sound]: own };
 
+    // "Wake only me": vibration alone at first; the sound starts (from the beginning of its fade) after that.
+    const lead = kind === 'alarm' ? (alarm.quietStartSeconds ?? 0) : 0;
     const tick = () => {
-      const seconds = Math.max(0, (Date.now() - startedAt) / 1000);
+      const raw = (Date.now() - startedAt) / 1000;
+      const seconds = Math.max(0, raw - lead);
       const want = players[soundAt(alarm, kind, seconds)] ?? own;
       if (current !== want) {
         current?.pause();
@@ -115,7 +118,7 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
       const volume =
         phaseAt(alarm, kind, seconds) === 'gentle' ? fadeVolume(seconds, alarm.fadeInSeconds, GENTLE_START_DB) : fadeVolume(seconds - switchedAt, DEEP_RAMP_SECONDS, DEEP_START_DB);
       const max = alarm.volume ?? 1;
-      configure(want, { volume: (duckRef.current ? volume * DUCKED : volume) * max });
+      configure(want, { volume: raw < lead ? 0 : (duckRef.current ? volume * DUCKED : volume) * max });
     };
     tick();
     const timer = setInterval(tick, 200);
@@ -128,7 +131,8 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
   }, [active, alarm, kind, startedAt, own, deep, melody]);
 
   // Vibration stops during a mission: it's distracting, and it would count as shakes and squats.
-  const vibrate = Boolean(active && alarm?.vibrate && !ducked);
+  // "Wake only me" always buzzes, since the buzz is all there is at first.
+  const vibrate = Boolean(active && (alarm?.vibrate || (kind === 'alarm' && alarm?.quietStartSeconds)) && !ducked);
   useEffect(() => {
     if (!vibrate) return;
     Vibration.vibrate(vibrationPattern(alarm?.vibration), true);
@@ -195,6 +199,7 @@ export interface SleepSoundState {
 
 let sleepPlayer: AudioPlayer | null = null;
 let sleepTimer: ReturnType<typeof setInterval> | null = null;
+let sleepWait: ReturnType<typeof setTimeout> | null = null;
 let sleepState: SleepSoundState = { id: null, startedAt: 0, minutes: 0, volume: 0.6 };
 const sleepListeners = new Set<() => void>();
 const emitSleep = () => sleepListeners.forEach((l) => l());
@@ -210,18 +215,29 @@ export function startSleepSound(id: SleepSoundId, minutes: number, volume: numbe
   // Android stops background audio after a few minutes without lock screen controls.
   safely(() => player.setActiveForLockScreen(true, { title: SLEEP_SOUNDS.find((s) => s.id === id)?.title ?? 'Sleep sounds', artist: 'Ryz' }));
   sleepState = { id, startedAt: Date.now(), minutes, volume };
-  if (sleepTimer) clearInterval(sleepTimer);
-  sleepTimer = setInterval(() => {
-    const v = sleepSoundVolume(Date.now() - sleepState.startedAt, sleepState.minutes, sleepState.volume);
-    if (v <= 0) stopSleepSound();
-    else safely(() => configure(player, { volume: v }));
-  }, 2000);
+  clearSleepTimers();
+  // Easy on the battery: nothing runs until the fade-out starts, and nothing at all for "all night".
+  if (minutes > 0) {
+    sleepWait = setTimeout(() => {
+      sleepTimer = setInterval(() => {
+        const v = sleepSoundVolume(Date.now() - sleepState.startedAt, sleepState.minutes, sleepState.volume);
+        if (v <= 0) stopSleepSound();
+        else safely(() => configure(player, { volume: v }));
+      }, 2000);
+    }, Math.max(0, minutes * 60_000 - SLEEP_FADE_MS));
+  }
   emitSleep();
 }
 
-export function stopSleepSound() {
+function clearSleepTimers() {
+  if (sleepWait) clearTimeout(sleepWait);
   if (sleepTimer) clearInterval(sleepTimer);
+  sleepWait = null;
   sleepTimer = null;
+}
+
+export function stopSleepSound() {
+  clearSleepTimers();
   if (sleepPlayer) {
     const player = sleepPlayer;
     safely(() => player.pause());

@@ -1,5 +1,4 @@
 import type { Mission } from './missions';
-import type { NewsPrefs } from './newsPrefs';
 import type { SleepSoundId, SleepTag } from './sleep';
 import type { VibrationId } from './vibration';
 import type { XpState } from './xp';
@@ -79,6 +78,8 @@ export interface Alarm {
   vibrate: boolean;
   /** The buzz rhythm while Ryz rings; see core/vibration.ts. */
   vibration: VibrationId;
+  /** "Wake only me": seconds of vibration alone before any sound, so a partner or roommate can sleep on. 0 or missing is off. Only while Ryz is open. */
+  quietStartSeconds?: number;
   /** 0.1–1: the loudest the alarm gets while Ryz plays it. Notifications use the phone's alarm volume. */
   volume: number;
   /** How long it keeps ringing if nobody touches it. */
@@ -105,10 +106,6 @@ export interface Settings {
   reminderLeadMinutes: number;
   use24h: boolean;
   tempUnit: 'C' | 'F';
-  /** Followed news topics: taxonomy ids at any level ("sports.football.premier-league"). null until you've picked (or skipped) them. */
-  newsTopics: string[] | null;
-  /** Mutes, followed entities, languages, regions, sources and other news filters. */
-  news: NewsPrefs;
   /** Kept on this phone only. */
   profile: { name: string; ageGroup: AgeGroup | null };
   /** Seconds without a tap, shake or step before a turned-down alarm goes back to full volume. */
@@ -123,11 +120,17 @@ export interface Settings {
   morningLight: boolean;
   /** Sleep comes in automatically from a smartwatch (Apple Health / Health Connect) instead of the button. */
   smartwatch: boolean;
+  /** You accepted that Ryz reads your sleep from your watch. Asked once, the first time smartwatch mode is turned on. */
+  watchConsent: boolean;
+  /** The watch the last nights came from ("Federico's Apple Watch"), once one has synced. */
+  watchName: string | null;
+  /** Show sample nights on Sleep and Today until you've tracked three of your own. */
+  sampleSleep: boolean;
   /** What you want Ryz to help with, from sign-up. */
   goals: string[];
   /** Anything else you typed under "Other". */
   goalOther: string;
-  /** Finished the welcome: account, news topics and goals. */
+  /** Finished the welcome: account and goals. */
   onboarded: boolean;
 }
 

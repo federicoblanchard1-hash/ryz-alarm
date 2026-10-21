@@ -21,9 +21,8 @@ export const FREE_MISSIONS: MissionType[] = ['math', 'memory', 'typing', 'shake'
 export const FREE_MISSION_SLOTS = 3;
 export const FREE_SOUNDS: AlarmSoundId[] = ['gentle', 'deep', 'air_raid', 'buzzer', 'bell', 'birds', 'ocean', 'wind_chimes'];
 export const FREE_VIBRATIONS: VibrationId[] = ['basic', 'heartbeat'];
-export const FREE_NEWS_TOPICS = 5;
 
-export type ProFeature = 'missions' | 'mission_slots' | 'sounds' | 'vibrations' | 'sleep_history' | 'smartwatch' | 'news_topics' | 'trial_ended';
+export type ProFeature = 'missions' | 'mission_slots' | 'sounds' | 'vibrations' | 'sleep_history' | 'smartwatch' | 'trial_ended';
 
 /** The headline on the paywall when it opens from a locked feature. */
 export const FEATURE_COPY: Record<ProFeature, { title: string; text: string }> = {
@@ -33,14 +32,8 @@ export const FEATURE_COPY: Record<ProFeature, { title: string; text: string }> =
   vibrations: { title: 'Every vibration pattern', text: 'Rapid, strong, waves and SOS, for when sound isn’t enough.' },
   sleep_history: { title: 'Your whole sleep history', text: 'A year at a glance, any dates you pick, and every stat across them.' },
   smartwatch: { title: 'Automatic sleep from your watch', text: 'Apple Watch, Galaxy, Pixel, Fitbit, Garmin: your nights appear by themselves.' },
-  news_topics: { title: 'Follow every topic', text: `Free news follows ${FREE_NEWS_TOPICS} topics. Pro follows as many as you like.` },
   trial_ended: { title: 'Your Pro trial has ended', text: 'You’re back on the free plan. Your alarms keep working exactly as you set them.' },
 };
-
-/** Followed topics and entities: the free plan follows up to FREE_NEWS_TOPICS. */
-export function newsFollowCount(settings: AppData['settings']): number {
-  return (settings.newsTopics?.length ?? 0) + settings.news.entities.length;
-}
 
 export function trialEndsAt(data: AppData): number | null {
   return data.trialStartedAt === null ? null : data.trialStartedAt + TRIAL_DAYS * DAY;
@@ -79,7 +72,5 @@ export function proThingsInUse(data: AppData): string[] {
   const sounds = new Set(data.alarms.map((a) => a.sound).filter((s) => !FREE_SOUNDS.includes(s)));
   if (sounds.size) out.push(`${sounds.size} Pro ${sounds.size === 1 ? 'sound' : 'sounds'}`);
   if (data.settings.smartwatch) out.push('Automatic sleep from your watch');
-  const topics = newsFollowCount(data.settings);
-  if (topics > FREE_NEWS_TOPICS) out.push(`${topics} news topics (free follows ${FREE_NEWS_TOPICS})`);
   return out;
 }

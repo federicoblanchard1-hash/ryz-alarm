@@ -1,13 +1,13 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AppState, Linking, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, StyleSheet, TextInput, View } from 'react-native';
 
 import { AmountPicker } from '@/components/AmountPicker';
 import { Block, Group, Line, Page, Row, Toggle } from '@/components/SettingsKit';
 import { Button, Segmented, Txt, confirm, haptic } from '@/components/ui';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
-import { logOut } from '@/services/account';
+import { logOut, resetPassword } from '@/services/account';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { useAuth } from '@/state/auth';
 import { useStore } from '@/state/store';
@@ -28,6 +28,11 @@ const SOURCES = [
   { title: 'Place names on web', who: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright' },
 ];
 
+function notice(title: string, text: string) {
+  if (Platform.OS === 'web') globalThis.alert?.(`${title}\n\n${text}`);
+  else Alert.alert(title, text);
+}
+
 const RELIABILITY_NOTE: Partial<Record<typeof Platform.OS, string>> = {
   ios: 'While Ryz is open, alarms ring even in silent mode. When Ryz is closed they ring as notifications, which follow the silent switch, so keep Ryz open overnight or silent mode off.',
   android: 'Alarms ring at alarm volume and through Do Not Disturb, even when Ryz is closed.',
@@ -41,11 +46,18 @@ function useLocationPermission() {
     const sub = AppState.addEventListener('change', (s) => s === 'active' && refresh());
     return () => sub.remove();
   }, []);
+  // Once it's been answered, only the phone's Settings can change it (that's how iOS and Android work).
   const fix = async () => {
-    if (state === 'denied') await Linking.openSettings();
+    if (state === 'granted' || state === 'denied') await openPhoneSettings();
     else setState(await requestLocationPermission().catch(() => 'denied' as const));
   };
   return { state, fix };
+}
+
+/** The phone's Settings page for Ryz, where permissions are changed. The web preview has none. */
+async function openPhoneSettings() {
+  if (Platform.OS === 'web') return;
+  await Linking.openSettings().catch(() => {});
 }
 
 function AccountPage() {
@@ -59,7 +71,7 @@ function AccountPage() {
   };
   return (
     <Page title="Account">
-      <Group note="Your name, news, goals and XP are saved to your account.">
+      <Group note="Your name, goals, sleep goal and XP are saved to your account.">
         <Line title="Name">
           <TextInput
             value={name}
@@ -79,9 +91,21 @@ function AccountPage() {
           <Txt variant="caption" numberOfLines={1} style={styles.value}>{auth.email ?? '—'}</Txt>
         </Line>
       </Group>
-      {auth.session ? (
-        <Group>
-          <Row icon="log-out-outline" title="Log out" onPress={() => confirm('Log out?', 'Your alarms stay on this phone. Log in again to keep using Ryz.', 'Log out', () => logOut())} />
+      {auth.session && auth.email ? (
+        <Group note="Your email is how you log in, so it can’t be changed here. To use another one, create a new account.">
+          <Row
+            icon="key-outline"
+            title="Change password"
+            detail="We email you a link to set a new one"
+            onPress={() =>
+              confirm('Change password?', `We’ll send a link to ${auth.email}.`, 'Send link', () => {
+                resetPassword(auth.email!)
+                  .then(() => notice('Check your email', `Open the link we sent to ${auth.email} to set a new password.`))
+                  .catch((e) => notice('Couldn’t send the email', e instanceof Error ? e.message : 'Try again in a minute.'));
+              })
+            }
+          />
+          <Row icon="log-out-outline" title="Log out" detail="Your alarms stay on this phone" onPress={() => confirm('Log out?', 'Your alarms stay on this phone. Log in again to keep using Ryz.', 'Log out', () => logOut())} />
         </Group>
       ) : null}
       <Group note="Deletes all alarms, sleep history and settings on this phone. It can’t be undone.">
@@ -107,7 +131,7 @@ function AlarmsPage() {
   const { settings } = data;
   return (
     <Page title="Alarms">
-      <Group title="Missions" note="When time runs out, the mission starts over and the alarm comes back at full volume.">
+      <Group title="Missions" note="The alarm stays silent while you work on a mission. If you stop, or the time runs out, it rings again until you finish. Set 0 for no time limit.">
         <Block>
           <AmountPicker
             title="Time for each mission"
@@ -120,16 +144,16 @@ function AlarmsPage() {
             onChange={(missionTimeLimitSeconds) => updateSettings({ missionTimeLimitSeconds })}
           />
         </Block>
-        <Toggle title="Quieter during missions" note="So you can think" value={settings.quietDuringMissions} onChange={(quietDuringMissions) => updateSettings({ quietDuringMissions })} />
+        <Toggle title="Silent during missions" note="So you can think" value={settings.quietDuringMissions} onChange={(quietDuringMissions) => updateSettings({ quietDuringMissions })} />
         {settings.quietDuringMissions ? (
           <Block>
-            <AmountPicker title="Full volume again after" value={settings.missionIdleSeconds} min={5} max={120} unit={(n) => `${n} s idle`} onChange={(missionIdleSeconds) => updateSettings({ missionIdleSeconds })} />
+            <AmountPicker title="Rings again if you stop for" value={settings.missionIdleSeconds} min={5} max={120} unit={(n) => `${n} s`} onChange={(missionIdleSeconds) => updateSettings({ missionIdleSeconds })} />
           </Block>
         ) : null}
       </Group>
       <Group title="Waking up" note="Bright light right after waking clears grogginess faster (Hilditch & McHill, 2019).">
-        <Toggle title="Bright screen when ringing" value={settings.brightScreen} onChange={(brightScreen) => updateSettings({ brightScreen })} />
-        <Toggle title="Daylight reminder" note="A nudge to get light in the first hour" value={settings.morningLight} onChange={(morningLight) => updateSettings({ morningLight })} />
+        <Toggle title="Bright screen when ringing" note="Full brightness while it rings" value={settings.brightScreen} onChange={(brightScreen) => updateSettings({ brightScreen })} />
+        <Toggle title="Daylight reminder" note="A nudge after you stop the alarm to get light in the first hour" value={settings.morningLight} onChange={(morningLight) => updateSettings({ morningLight })} />
       </Group>
     </Page>
   );
@@ -145,19 +169,23 @@ function SleepPage() {
           <AmountPicker title="Sleep goal" value={settings.sleepGoalMinutes} min={240} max={720} step={15} unit={(n) => `${n} min`} hint={formatHours} onChange={(sleepGoalMinutes) => updateSettings({ sleepGoalMinutes })} />
         </Block>
       </Group>
-      <Group title="Reminders" note="Even 6 hours before bed, caffeine can cost an hour of sleep.">
+      <Group title="Reminders" note="Reminders are notifications, so they need notifications on. Even 6 hours before bed, caffeine can cost an hour of sleep.">
         <Toggle title="Bedtime" note="Before your earliest alarm" value={settings.bedtimeReminder} onChange={(bedtimeReminder) => updateSettings({ bedtimeReminder })} />
         {settings.bedtimeReminder ? (
           <Block>
             <AmountPicker title="How long before" value={settings.reminderLeadMinutes} min={5} max={180} step={5} unit={(n) => `${n} min`} hint={(n) => (n >= 60 ? formatHours(n) : null)} onChange={(reminderLeadMinutes) => updateSettings({ reminderLeadMinutes })} />
           </Block>
         ) : null}
-        <Toggle title="Last call for coffee" value={settings.caffeineReminder} onChange={(caffeineReminder) => updateSettings({ caffeineReminder })} />
+        <Toggle title="Last call for coffee" note="Also sets “Last coffee” on Today" value={settings.caffeineReminder} onChange={(caffeineReminder) => updateSettings({ caffeineReminder })} />
         {settings.caffeineReminder ? (
           <Block>
             <AmountPicker title="Hours before bedtime" value={settings.caffeineHours} min={3} max={12} unit={(n) => `${n} h`} onChange={(caffeineHours) => updateSettings({ caffeineHours })} />
           </Block>
         ) : null}
+      </Group>
+      <Group title="Tracking" note={settings.smartwatch ? 'Turn the watch on or off from the Sleep tab.' : 'Sample nights show until you’ve tracked 3 of your own.'}>
+        <Row icon="watch-outline" title="Smartwatch" detail={settings.smartwatch ? (settings.watchName ? `Connected · ${settings.watchName}` : `On · waiting for the first night`) : 'Off · nights come from the Start sleep button'} onPress={() => router.navigate('/sleep')} />
+        <Toggle title="Sample nights" note="Preview Sleep and Today before you have data" value={settings.sampleSleep} onChange={(sampleSleep) => updateSettings({ sampleSleep })} />
       </Group>
     </Page>
   );
@@ -171,7 +199,7 @@ function GeneralPage() {
   return (
     <Page title="General">
       <Group>
-        <Toggle title="24-hour clock" value={settings.use24h} onChange={(use24h) => updateSettings({ use24h })} />
+        <Toggle title="24-hour clock" note="On every screen, alarms and notifications" value={settings.use24h} onChange={(use24h) => updateSettings({ use24h })} />
         <Line title="Temperature">
           <Segmented
             label="Temperature"
@@ -184,8 +212,15 @@ function GeneralPage() {
           />
         </Line>
       </Group>
-      <Group note="For the weather on Home.">
-        <Row icon="location-outline" title="Location" value={located ? 'On' : location.state === 'denied' ? 'Off · Settings' : 'Allow'} dot={located ? 'ok' : 'warn'} onPress={located ? () => {} : location.fix} />
+      <Group note={Platform.OS === 'web' ? 'In the web preview, change location in your browser’s site settings.' : 'Only used for the weather on Morning, and never saved or shared. Once you’ve answered, your phone keeps the choice, so turning it on or off happens in its Settings.'}>
+        <Row
+          icon="location-outline"
+          title="Location"
+          detail={located ? 'On · tap to change it in Settings' : location.state === 'denied' ? 'Off · tap to turn it on in Settings' : 'Not asked yet · tap to allow'}
+          value={located ? 'On' : location.state === 'denied' ? 'Off' : 'Allow'}
+          dot={located ? 'ok' : 'warn'}
+          onPress={location.fix}
+        />
       </Group>
     </Page>
   );
@@ -199,7 +234,14 @@ function CheckPage() {
     <Page title="Will my alarm ring?">
       {permissions.supported ? (
         <Group note={RELIABILITY_NOTE[Platform.OS]}>
-          <Row icon="notifications-outline" title="Notifications" detail={ok ? 'Alarms ring when Ryz is closed' : 'Alarms only ring while Ryz is open'} value={ok ? 'On' : 'Allow'} dot={ok ? 'ok' : 'warn'} onPress={ok ? () => {} : permissions.fix} />
+          <Row
+            icon="notifications-outline"
+            title="Notifications"
+            detail={ok ? 'Alarms ring when Ryz is closed · tap to change in Settings' : 'Off: alarms only ring while Ryz is open · tap to fix'}
+            value={ok ? 'On' : 'Allow'}
+            dot={ok ? 'ok' : 'warn'}
+            onPress={ok ? openPhoneSettings : permissions.fix}
+          />
         </Group>
       ) : (
         <Txt variant="caption">This is the web preview: alarms only ring while this tab is open.</Txt>

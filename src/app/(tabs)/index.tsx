@@ -1,21 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { AlarmTags } from '@/components/ModeBadge';
 import { Button, Card, PressableScale, Txt, type IconName } from '@/components/ui';
-import { NewsFeed, NewsPrompt } from '@/components/NewsFeed';
+import { Today } from '@/components/Today';
 import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing, sleepAdvice } from '@/core/next';
 import { formatDuration, minutesAsleep } from '@/core/sleep';
 import { HOUR, formatClock, formatClockText, formatSpan } from '@/core/time';
-import { FREE_NEWS_TOPICS, trialJustEnded } from '@/core/pro';
+import { trialJustEnded } from '@/core/pro';
+import { nightsToShow } from '@/core/today';
 import { balance, levelOf, nextReward } from '@/core/xp';
 import { useAuth } from '@/state/auth';
 import { usePro } from '@/state/usePro';
-import { nearBottom } from '@/state/nearBottom';
 import { pullToRefresh } from '@/state/pullToRefresh';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
@@ -43,10 +43,6 @@ function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string
 export default function Home() {
   const { data, ready } = useStore();
   const { pro, status } = usePro();
-  // The free plan reads its first few follows (topics and names together).
-  const allFollows = data.settings.newsTopics;
-  const entityCount = data.settings.news.entities.length;
-  const newsFollows = useMemo(() => (pro ? (allFollows ?? []) : (allFollows ?? []).slice(0, Math.max(0, FREE_NEWS_TOPICS - entityCount))), [pro, allFollows, entityCount]);
   const permissions = usePermissions();
   const tabSpace = useTabBarSpace();
   const now = useNow();
@@ -55,8 +51,9 @@ export default function Home() {
   const nextDate = next ? new Date(next.at) : null;
   const clock = nextDate ? formatClock(nextDate.getHours(), nextDate.getMinutes(), use24h) : null;
   const advice = next && !next.snoozed ? sleepAdvice(next.at, now, sleepGoalMinutes, use24h) : null;
-  // The most recent night, if it ended in the last day and a half.
-  const lastNight = data.sleep.at(-1)?.end && now - data.sleep.at(-1)!.end < 36 * HOUR ? data.sleep.at(-1)! : null;
+  // The most recent night (or a sample one, while those show), if it ended in the last day and a half.
+  const latest = nightsToShow(data, now).nights.at(-1);
+  const lastNight = latest && now - latest.end < 36 * HOUR ? latest : null;
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
   // Ryz needs an account: when you're signed out (or new), the welcome screen comes back.
   const auth = useAuth();
@@ -68,7 +65,7 @@ export default function Home() {
     pullToRefresh().finally(() => setPulling(false));
   };
   useEffect(() => {
-    // First launch: welcome, account, news topics and goals. After that, only to log back in.
+    // First launch: welcome, account and goals. After that, only to log back in.
     if (askWelcome) router.push('/welcome');
   }, [askWelcome]);
   // When the trial runs out, say so once, with what Pro was doing for you.
@@ -85,11 +82,6 @@ export default function Home() {
       contentInsetAdjustmentBehavior="never"
       contentContainerStyle={{ paddingBottom: tabSpace + space.xl }}
       refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={colors.text} colors={[colors.onAccent]} progressBackgroundColor={colors.accent} />}
-      // Near the end, the news feed shows more stories and then older ones.
-      scrollEventThrottle={250}
-      onScroll={({ nativeEvent: e }) => {
-        if (e.layoutMeasurement.height + e.contentOffset.y >= e.contentSize.height - 900) nearBottom();
-      }}
     >
       <WeatherHero>
         <View style={styles.tiles}>
@@ -178,7 +170,7 @@ export default function Home() {
           </PressableScale>
         ) : null}
 
-        {newsFollows.length > 0 || data.settings.news.entities.length > 0 ? <NewsFeed follows={newsFollows} /> : ready ? <NewsPrompt /> : null}
+        {ready ? <Today /> : null}
 
         {awakeCheck ? (
           <Card style={styles.inline}>

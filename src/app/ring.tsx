@@ -62,7 +62,7 @@ export default function RingScreen() {
     if (idleTimer.current) clearTimeout(idleTimer.current);
   }, []);
 
-  /** Quiet while you work on a mission; loud again if you stop for `missionIdleSeconds`. */
+  /** Silent while you work on a mission; it rings again if you stop for `missionIdleSeconds`. */
   const activity = useCallback(() => {
     if (!quietDuringMissions) return;
     setBusy(true);
@@ -70,7 +70,7 @@ export default function RingScreen() {
     idleTimer.current = setTimeout(() => setBusy(false), missionIdleSeconds * 1000);
   }, [quietDuringMissions, missionIdleSeconds]);
 
-  /** Out of time on a mission: it starts over and the alarm comes back at full volume. */
+  /** Out of time on a mission: it starts over and the alarm rings again until you get going. */
   const timedOut = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
     setBusy(false);
@@ -128,7 +128,7 @@ export default function RingScreen() {
         <View style={[styles.missions, { paddingTop: insets.top + space.md, paddingBottom: insets.bottom + space.lg }]}>
           <View style={styles.bar}>
             <Txt variant="heading">{formatClockText(new Date(now).getHours(), new Date(now).getMinutes(), data.settings.use24h)}</Txt>
-            <Txt variant="caption" accessibilityLiveRegion="polite">{!quietDuringMissions ? 'Finish to turn it off' : busy ? 'Alarm turned down while you do this' : 'Alarm back to full volume. Keep going'}</Txt>
+            <Txt variant="caption" accessibilityLiveRegion="polite">{!quietDuringMissions ? 'Finish to turn it off' : busy ? 'Alarm off while you do this' : 'Ringing again. Keep going to silence it'}</Txt>
           </View>
           <MissionRunner missions={alarm.missions} onActivity={activity} onComplete={finish} timeLimitSeconds={missionTimeLimitSeconds} onTimeout={timedOut} />
         </View>

@@ -32,6 +32,7 @@ import {
   wrapDay,
 } from '@/core/sleep';
 import { formatClockText } from '@/core/time';
+import { nightsToShow } from '@/core/today';
 import type { SleepRecord } from '@/core/types';
 import { HEALTH_APP, connectHealth, healthState, readWatchNights, type HealthState } from '@/services/health';
 import { useNow } from '@/state/useNow';
@@ -93,7 +94,7 @@ const WATCH_NOTE: Record<HealthState, string> = {
 };
 
 /** Reads the watch's nights when the Sleep tab opens, if smartwatch mode is on. */
-function useWatchSync(on: boolean, onNights: (nights: SleepRecord[]) => void) {
+function useWatchSync(on: boolean, onNights: (nights: SleepRecord[], device: string | null) => void) {
   const [state, setState] = useState<HealthState | null>(null);
   const [syncedAt, setSyncedAt] = useState(0);
   const sync = useCallback(async () => {
@@ -102,8 +103,8 @@ function useWatchSync(on: boolean, onNights: (nights: SleepRecord[]) => void) {
     setState(s);
     if (s !== 'ready') return;
     try {
-      const nights = await readWatchNights(Date.now() - 30 * DAY, Date.now());
-      onNights(nights);
+      const { nights, device } = await readWatchNights(Date.now() - 30 * DAY, Date.now());
+      onNights(nights, device);
       setSyncedAt(Date.now());
     } catch {
       setState('denied');
@@ -139,7 +140,12 @@ export default function SleepScreen() {
   const [openNight, setOpenNight] = useState<string | null>(null);
   const { use24h, sleepGoalMinutes: goal, smartwatch } = data.settings;
 
-  const onNights = useCallback((nights: SleepRecord[]) => update((d) => ({ ...d, sleep: mergeWatchNights(d.sleep, nights) })), [update]);
+  const onNights = useCallback(
+    (nights: SleepRecord[], device: string | null) =>
+      update((d) => ({ ...d, sleep: mergeWatchNights(d.sleep, nights), settings: device && device !== d.settings.watchName ? { ...d.settings, watchName: device } : d.settings })),
+    [update],
+  );
+  const [asking, setAsking] = useState(false);
   const { pro, unlock } = usePro();
   // Watch sync is Pro; on the free plan the button works as usual.
   const watchOn = smartwatch && pro;
@@ -148,10 +154,12 @@ export default function SleepScreen() {
 
   const toDay = range === 'custom' ? (custom.to ?? custom.from ?? now) : now;
   const fromDay = range === 'custom' ? (custom.from ?? now) : now - (range - 1) * DAY;
-  const shown = between(data.sleep, fromDay, toDay);
+  // Until you've tracked three nights, sample ones show what this looks like.
+  const { nights: allNights, sample } = nightsToShow(data, now);
+  const shown = between(allNights, fromDay, toDay);
   const stats = sleepStats(shown, goal);
   const more = moreStats(shown, goal);
-  const columns = makeBuckets(data.sleep, fromDay, toDay);
+  const columns = makeBuckets(allNights, fromDay, toDay);
   const picked = columns.find((b) => b.start === selected) ?? null;
   const next = nextRing(data, now);
   const advice = next ? sleepAdvice(next.at, now, goal, use24h) : null;
@@ -177,8 +185,16 @@ export default function SleepScreen() {
   const toggleWatch = (on: boolean) => {
     if (on && !pro) return unlock('smartwatch');
     haptic('select');
+    // The first time, ask before Ryz connects to your watch's sleep data.
+    if (on && !data.settings.watchConsent) return setAsking(true);
     updateSettings({ smartwatch: on });
     if (on) watch.connect();
+  };
+  const acceptWatch = () => {
+    haptic('success');
+    setAsking(false);
+    updateSettings({ smartwatch: true, watchConsent: true });
+    watch.connect();
   };
 
   const avgBed = stats ? wrapDay(stats.averageBed) : null;
@@ -186,8 +202,8 @@ export default function SleepScreen() {
   const tip = stats ? insight(stats, goal, more?.socialJetLag ?? null) : null;
   // Newest first, whatever order the nights arrived in (button, typed in, or a watch).
   const nights = [...shown].sort((a, b) => b.end - a.end);
-  const effects = tagEffects(data.sleep);
-  const tagged = data.sleep.filter((r) => r.tags?.length).length;
+  const effects = tagEffects(allNights);
+  const tagged = allNights.filter((r) => r.tags?.length).length;
   const nightOpen = openNight ? (data.sleep.find((r) => r.id === openNight) ?? null) : null;
   const rangeLabel = range === 'custom' && custom.from !== null ? `${SHORT_DATE.format(custom.from)} – ${SHORT_DATE.format(custom.to ?? custom.from)}` : null;
 
@@ -201,12 +217,22 @@ export default function SleepScreen() {
           </Pressable>
         </View>
 
+        {sample ? (
+          <View style={styles.sampleNote}>
+            <Ionicons name="eye-outline" size={18} color={colors.textMuted} />
+            <Txt variant="caption" style={styles.flex}>Sample nights, to show what Sleep looks like. They go away once you’ve tracked 3 of your own.</Txt>
+            <Pressable onPress={() => updateSettings({ sampleSleep: false })} hitSlop={10} accessibilityRole="button">
+              <Text style={styles.hide}>Hide</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
         <View style={[styles.session, sleeping && styles.sessionOn]}>
           <View style={styles.watchRow}>
             <Ionicons name="watch-outline" size={22} color={colors.text} />
             <View style={styles.flex}>
               <Txt variant="heading">Smartwatch</Txt>
-              <Txt variant="caption">{watchOn ? `Automatic from ${HEALTH_APP}` : pro ? 'Off: use the button below' : 'Pro: nights arrive by themselves'}</Txt>
+              <Txt variant="caption">{watchOn ? (automatic && data.settings.watchName ? `Connected to Ryz` : `Automatic from ${HEALTH_APP}`) : pro ? 'Off: use the button below' : 'Pro: nights arrive by themselves'}</Txt>
             </View>
             <ThemedSwitch value={watchOn} onChange={toggleWatch} label="I sleep with a smartwatch" />
           </View>
@@ -214,6 +240,13 @@ export default function SleepScreen() {
 
           {watchOn ? (
             <View style={styles.watchNote}>
+              {automatic && data.settings.watchName ? (
+                <View style={styles.connected}>
+                  <View style={styles.connectedDot} />
+                  <Text style={styles.connectedText} numberOfLines={1}>{data.settings.watchName}</Text>
+                  <Txt variant="caption">{HEALTH_APP}</Txt>
+                </View>
+              ) : null}
               <Txt variant="muted">{WATCH_NOTE[watch.state ?? 'ready']}</Txt>
               {watch.state === 'denied' ? <Button title="Open settings" variant="secondary" icon="settings-outline" onPress={() => Linking.openSettings()} /> : null}
               {automatic && watch.syncedAt > 0 ? <Txt variant="caption">{`Synced at ${clock(watch.syncedAt, use24h)}`}</Txt> : null}
@@ -278,7 +311,7 @@ export default function SleepScreen() {
               </Txt>
             </View>
 
-            <DebtCard debt={sleepDebt(data.sleep, goal, now)} />
+            <DebtCard debt={sleepDebt(allNights, goal, now)} />
 
             <View style={styles.chartCard}>
               <Txt variant="caption" style={styles.detail} accessibilityLiveRegion="polite">
@@ -325,7 +358,7 @@ export default function SleepScreen() {
             <Txt variant="section" style={styles.listTitle}>Nights</Txt>
             <View style={styles.list}>
               {(showAll ? nights : nights.slice(0, 14)).map((r, i) => (
-                <Pressable key={r.id} onPress={() => setOpenNight(r.id)} onLongPress={() => remove(r)} accessibilityHint="Tap for details, long press to delete" style={[styles.night, i > 0 && styles.nightBorder]}>
+                <Pressable key={r.id} disabled={sample} onPress={() => setOpenNight(r.id)} onLongPress={() => remove(r)} accessibilityHint="Tap for details, long press to delete" style={[styles.night, i > 0 && styles.nightBorder]}>
                   <View style={styles.flex}>
                     <Txt variant="row">{DATE.format(r.end)}</Txt>
                     <Txt variant="caption">{`${clock(r.start, use24h)} – ${clock(r.end, use24h)}${r.rating ? ` · ${RATINGS[r.rating - 1].label}` : ''}${r.tags?.length ? ` · ${r.tags.length} ${r.tags.length === 1 ? 'note' : 'notes'}` : ''}`}</Txt>
@@ -336,7 +369,7 @@ export default function SleepScreen() {
               ))}
             </View>
             {nights.length > 14 && !showAll ? <Button title={`Show all ${nights.length} nights`} variant="secondary" onPress={() => setShowAll(true)} /> : null}
-            <Txt variant="caption" style={styles.center}>Tap a night to rate it or note what happened. Long press to delete.</Txt>
+            {sample ? null : <Txt variant="caption" style={styles.center}>Tap a night to rate it or note what happened. Long press to delete.</Txt>}
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -380,6 +413,31 @@ export default function SleepScreen() {
           if (r) remove(r);
         }}
       />
+
+      <Sheet
+        visible={asking}
+        onClose={() => setAsking(false)}
+        title="Connect your watch?"
+        footer={
+          <View style={styles.askButtons}>
+            <Button title="Accept and connect" icon="watch-outline" onPress={acceptWatch} />
+            <Button title="Not now" variant="secondary" onPress={() => setAsking(false)} />
+          </View>
+        }
+      >
+        <Txt variant="muted">{`Ryz will read your sleep from ${HEALTH_APP}, which your watch writes to. Nights then show up here by themselves.`}</Txt>
+        {[
+          { icon: 'moon-outline' as const, text: 'Only when you fell asleep and woke up. Nothing else from your health data.' },
+          { icon: 'phone-portrait-outline' as const, text: 'Your nights stay on this phone. Ryz never writes to your watch or Health.' },
+          { icon: 'toggle-outline' as const, text: `Turn it off any time here, or remove Ryz in ${HEALTH_APP}.` },
+        ].map((p) => (
+          <View key={p.icon} style={styles.askPoint}>
+            <Ionicons name={p.icon} size={20} color={colors.text} />
+            <Txt variant="body" style={styles.flex}>{p.text}</Txt>
+          </View>
+        ))}
+        <Txt variant="caption">{`Next, your phone asks you to allow it: turn on Sleep for Ryz.`}</Txt>
+      </Sheet>
 
       <AddNight visible={adding} onClose={() => setAdding(false)} use24h={use24h} onSave={(r) => update((d) => ({ ...d, sleep: addRecord(d.sleep.filter((x) => x.id !== r.id), r) }))} />
     </View>
@@ -428,6 +486,13 @@ function AddNight({ visible, onClose, onSave, use24h }: { visible: boolean; onCl
 }
 
 const styles = StyleSheet.create({
+  sampleNote: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
+  hide: { fontSize: 13, fontFamily: FONT.medium, color: colors.text },
+  connected: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised, alignSelf: 'flex-start' },
+  connectedDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#34C759' },
+  connectedText: { fontSize: 14, fontFamily: FONT.medium, color: colors.text, flexShrink: 1 },
+  askButtons: { gap: space.sm },
+  askPoint: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { paddingHorizontal: space.lg, gap: space.lg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: space.md },

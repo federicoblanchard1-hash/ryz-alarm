@@ -1,5 +1,3 @@
-import { upgradeNewsSettings } from '@/core/newsMigration';
-import type { NewsPrefs } from '@/core/newsPrefs';
 import type { AgeGroup, AppData, Settings } from '@/core/types';
 import { supabase } from './supabase';
 
@@ -7,9 +5,6 @@ import { supabase } from './supabase';
 export interface Profile {
   name: string;
   age_group: AgeGroup | null;
-  news_topics: string[];
-  /** Mutes, entities and filters. */
-  news_prefs: Partial<NewsPrefs> | null;
   goals: string[];
   goal_other: string;
   sleep_goal_minutes: number;
@@ -28,8 +23,6 @@ export function profileFromData(d: AppData): Profile {
     trial_started_at: d.trialStartedAt ? new Date(d.trialStartedAt).toISOString() : null,
     name: s.profile.name.slice(0, 60),
     age_group: s.profile.ageGroup,
-    news_topics: s.newsTopics ?? [],
-    news_prefs: s.news,
     goals: s.goals,
     goal_other: s.goalOther.slice(0, 300),
     sleep_goal_minutes: s.sleepGoalMinutes,
@@ -52,11 +45,6 @@ export function withProfileXp(d: AppData, p: Profile): AppData {
 export function settingsFromProfile(p: Profile, current: Settings): Partial<Settings> {
   return {
     profile: { name: p.name || current.profile.name, ageGroup: p.age_group ?? current.profile.ageGroup },
-    ...(() => {
-      // The account's topics and news preferences, moved to the current taxonomy.
-      const up = upgradeNewsSettings({ newsTopics: p.news_topics.length ? p.news_topics : current.newsTopics, news: p.news_prefs && Object.keys(p.news_prefs).length ? { ...current.news, ...p.news_prefs } : current.news });
-      return { newsTopics: up.newsTopics, news: up.news };
-    })(),
     goals: p.goals.length ? p.goals : current.goals,
     goalOther: p.goal_other || current.goalOther,
     sleepGoalMinutes: p.sleep_goal_minutes || current.sleepGoalMinutes,
@@ -99,7 +87,7 @@ export async function logOut() {
 }
 
 export async function loadProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('name, age_group, news_topics, news_prefs, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until, trial_started_at').eq('id', userId).maybeSingle();
+  const { data, error } = await supabase.from('profiles').select('name, age_group, goals, goal_other, sleep_goal_minutes, xp_earned, xp_spent, pro_until, trial_started_at').eq('id', userId).maybeSingle();
   if (error) throw error;
   return data as Profile | null;
 }

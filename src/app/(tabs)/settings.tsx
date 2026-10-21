@@ -36,7 +36,6 @@ export default function SettingsScreen() {
     .slice(0, 2)
     .toUpperCase();
   const ringOk = !permissions.supported || permissions.state?.notifications === 'granted';
-  const following = (settings.newsTopics?.length ?? 0) + settings.news.entities.length;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -64,7 +63,6 @@ export default function SettingsScreen() {
         <Group>
           <Row icon="alarm-outline" title="Alarms" onPress={() => open('alarms')} />
           <Row icon="moon-outline" title="Sleep" value={formatHours(settings.sleepGoalMinutes)} onPress={() => open('sleep')} />
-          <Row icon="newspaper-outline" title="News" value={following ? `${following} followed` : 'Off'} onPress={() => router.push('/news-settings')} />
           <Row icon="flag-outline" title="Goals" value={settings.goals.length ? `${settings.goals.length}` : 'None'} onPress={() => router.push('/goals')} />
           <Row icon="options-outline" title="General" onPress={() => open('general')} />
         </Group>

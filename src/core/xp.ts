@@ -6,7 +6,7 @@ import type { ActiveRing, Alarm, AppData } from './types';
 // the shop on free days of Ryz Pro. Every award has an id, so the same
 // morning or night can't be counted twice.
 
-export type XpReason = 'woke' | 'no_snooze' | 'quick_stop' | 'missions' | 'awake_check' | 'sleep_goal' | 'night_logged' | 'regular' | 'streak' | 'redeem';
+export type XpReason = 'woke' | 'no_snooze' | 'quick_stop' | 'missions' | 'awake_check' | 'sleep_goal' | 'night_logged' | 'regular' | 'streak' | 'daylight' | 'redeem';
 
 export interface XpEvent {
   id: string;
@@ -38,6 +38,7 @@ export const XP_RULES: { reason: Exclude<XpReason, 'redeem'>; title: string; amo
   { reason: 'missions', title: 'Missions done', amount: 5, text: 'For each mission you finish.' },
   { reason: 'awake_check', title: 'Pass the awake check', amount: 10, text: 'Answer “Are you awake?” in time.' },
   { reason: 'regular', title: 'Regular wake-up', amount: 10, text: 'Wake within 30 minutes of your usual time.' },
+  { reason: 'daylight', title: 'Morning daylight', amount: 10, text: 'Tick it on Today after 10 minutes outside in the morning.' },
   { reason: 'night_logged', title: 'Track a night', amount: 5, text: 'Any night tracked with the button or a smartwatch.' },
   { reason: 'sleep_goal', title: 'Reach your sleep goal', amount: 25, text: 'A tracked night at or above your goal.' },
   { reason: 'streak', title: '7-day streak', amount: 50, text: 'Every seventh morning in a row without snoozing.' },
@@ -115,6 +116,16 @@ export function wakeXp(data: AppData, ring: Extract<ActiveRing, { type: 'ring' }
     if (streak > 0 && streak % 7 === 0) events.push({ id: id('streak'), at: now, amount: AMOUNT.streak, reason: 'streak' });
   }
   return events;
+}
+
+/** Ticked "Get daylight" today. */
+export function daylightDone(data: AppData, now: number): boolean {
+  return data.xp.events.some((e) => e.id === `daylight:${dayKey(now)}`);
+}
+
+/** The XP for getting daylight today: once a day, and only in the morning or early afternoon. */
+export function daylightXp(now: number): XpEvent {
+  return { id: `daylight:${dayKey(now)}`, at: now, amount: AMOUNT.daylight, reason: 'daylight' };
 }
 
 /** Mornings in a row without snoozing (a freeze covers a missed one), up to `now`, optionally counting today. */

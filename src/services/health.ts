@@ -68,16 +68,35 @@ export async function connectHealth(): Promise<HealthState> {
   }
 }
 
-/** Nights the watch recorded between two times (ms). */
-export async function readWatchNights(from: number, to: number): Promise<SleepRecord[]> {
+// Health Connect names the app that wrote the data; these are the common watch apps.
+const WATCH_APPS: Record<string, string> = {
+  'com.fitbit.FitbitMobile': 'Fitbit',
+  'com.google.android.apps.fitness': 'Pixel Watch',
+  'com.sec.android.app.shealth': 'Galaxy Watch',
+  'com.garmin.android.apps.connectmobile': 'Garmin',
+  'com.ouraring.oura': 'Oura Ring',
+  'com.withings.wiscale2': 'Withings',
+  'com.xiaomi.wearable': 'Xiaomi',
+  'com.huawei.health': 'Huawei',
+};
+
+/** Nights the watch recorded between two times (ms), and the name of the watch that recorded the latest one. */
+export async function readWatchNights(from: number, to: number): Promise<{ nights: SleepRecord[]; device: string | null }> {
   if (Platform.OS === 'ios') {
     const hk = healthKit();
-    if (!hk) return [];
+    if (!hk) return { nights: [], device: null };
     const samples = await hk.queryCategorySamples(SLEEP, { limit: -1, ascending: true, filter: { date: { startDate: new Date(from), endDate: new Date(to) } } });
-    return nightsFromIntervals(samples.filter((s) => ASLEEP.has(Number(s.value))).map((s) => ({ start: s.startDate.getTime(), end: s.endDate.getTime() })));
+    const asleep = samples.filter((s) => ASLEEP.has(Number(s.value)));
+    const last = asleep.at(-1);
+    // "Federico's Apple Watch": the source's name is what the person called their watch.
+    const device = last ? (last.sourceRevision?.source?.name || last.device?.name || null) : null;
+    return { nights: nightsFromIntervals(asleep.map((s) => ({ start: s.startDate.getTime(), end: s.endDate.getTime() }))), device };
   }
   const hc = healthConnect();
-  if (!hc) return [];
+  if (!hc) return { nights: [], device: null };
   const result = await hc.readRecords('SleepSession', { timeRangeFilter: { operator: 'between', startTime: new Date(from).toISOString(), endTime: new Date(to).toISOString() } });
-  return nightsFromIntervals(result.records.map((r) => ({ start: Date.parse(r.startTime), end: Date.parse(r.endTime) })));
+  const meta = result.records.at(-1)?.metadata;
+  const model = [meta?.device?.manufacturer, meta?.device?.model].filter(Boolean).join(' ');
+  const device = model || (meta?.dataOrigin ? (WATCH_APPS[meta.dataOrigin] ?? meta.dataOrigin) : null);
+  return { nights: nightsFromIntervals(result.records.map((r) => ({ start: Date.parse(r.startTime), end: Date.parse(r.endTime) }))), device };
 }

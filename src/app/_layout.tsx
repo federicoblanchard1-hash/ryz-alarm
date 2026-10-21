@@ -128,16 +128,6 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
-              name="interests"
-              options={{ presentation: "fullScreenModal", headerShown: false }}
-            />
-            <Stack.Screen name="article" options={{ headerShown: false }} />
-            <Stack.Screen name="story/[id]" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="news-settings"
-              options={{ presentation: "modal", headerShown: false }}
-            />
-            <Stack.Screen
               name="welcome"
               options={{
                 presentation: "fullScreenModal",

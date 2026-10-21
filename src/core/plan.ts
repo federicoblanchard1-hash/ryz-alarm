@@ -71,7 +71,7 @@ export function buildPlan(data: AppData, now: number, limit = NOTIFICATION_LIMIT
 
   for (const alarm of enabled) {
     const clock = formatClockText(alarm.hour, alarm.minute, settings.use24h);
-    const base = { kind: 'alarm' as const, alarmId: alarm.id, sound: soundAt(alarm, 'alarm', 0), title: title(alarm), body: `${clock} · Tap to stop or snooze` };
+    const base = { kind: 'alarm' as const, alarmId: alarm.id, sound: soundAt(alarm, 'alarm', 0), title: title(alarm), body: alarm.missions.length ? `${clock} · Tap to start your mission` : `${clock} · Tap to stop or snooze` };
     if (alarm.days.length === 0) {
       if (alarm.date === undefined || alarm.date <= now) continue;
       fixed.push({ ...base, id: `alarm:${alarm.id}`, trigger: { type: 'date', date: alarm.date } });
@@ -120,7 +120,7 @@ export function buildPlan(data: AppData, now: number, limit = NOTIFICATION_LIMIT
         alarmId: ring.alarm.id,
         sound: soundAt(ring.alarm, ring.kind, seconds),
         title: title(ring.alarm),
-        body: 'Still ringing — tap to open Ryz',
+        body: ring.alarm.missions.length ? 'Still ringing — tap to finish your mission' : 'Still ringing — tap to open Ryz',
         trigger: { type: 'date', date: ring.start + seconds * 1000 },
       });
     }

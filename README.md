@@ -21,7 +21,7 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 
 ## Getting started
 
-On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, pick your **news topics**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are required; your name, news topics, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms and sleep history stay on the phone, so alarms always work offline.
+On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are required; your name, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms and sleep history stay on the phone, so alarms always work offline.
 
 ## Morning (home)
 
@@ -29,15 +29,13 @@ On first launch: a welcome screen, then **create an account** (name, email, pass
 - **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
 - **Shortcut tiles** on the scene: your **XP** (tap to see how to earn more), **Add alarm**, **Power nap** (the quick alarm) and **Last night**'s sleep.
 - **Next alarm** card with how long until it rings, its sound and missions.
-- **Your news**: 31 categories, 384 topics and 435 sub-topics (850 in all), exactly as listed in [docs/news-brief.md](docs/news-brief.md), from World, Local & National and Politics to Sports, Lifestyle and Utilities. IDs are hierarchical (`sports.football.premier-league`, `finance.crypto.bitcoin`, `disasters.accidents.plane-crashes`), and you can **follow or mute any level**: the closest choice wins, so you can mute Football but still follow Transfers. You can also **follow names**: teams, players, leagues, companies, tickers, people, countries (all of them, A to Z), cities and any keyword. Stories come from a **registry of 376 sources** (publishers, broadcasters, news agencies, official bodies like NASA, the Fed, the ECB, the WHO, USGS and UN disaster alerts, specialist trade press, fact-checkers, podcasts and YouTube news channels) in 18 languages and 49 countries, plus Google News in 23 editions. Each source lists its country, language, whether it has a paywall, and notes. Every node has at least one working source, and niche topics have specialist ones.
-  - **Feeds**: For you, Following, Top stories, Breaking, Trending and a Daily digest (the day's dozen biggest stories from what you follow). Format filters: articles, videos, podcasts, live blogs, photo galleries, long reads and short briefs.
-  - **Stories, not duplicates**: the same news from many publishers becomes one card ("BBC + 11 more"), and a big ongoing story has its own page with every source as a timeline, the past week's coverage, and a Follow button.
-  - **Auto-tagging**: each story is tagged with its categories (one story can be in several), topics and sub-topics, countries and regions, language, the names in it, and its format.
-  - **News settings**: languages and editions, your country, region and city (for Local & National), only some world regions, preferred and blocked sources, paywalled sources on or off, muted words and muted topics.
-  - **Tap a story to read it inside Ryz**: a clean reader view (photo, title, text) when the page allows it, otherwise the publisher's page shown in Ryz itself; no browser, no link to follow. At the bottom: the original page, "Also in N more sources" (the story's page with every publisher), and follow or mute its topic. The order (newest, recommended, most sources) and type (articles, videos, podcasts…) sit behind the small filter icon. All sources are public RSS/Atom feeds or Google News RSS.
-  - **Sort**: Newest (the default), Recommended, or Most sources.
-  - **Choosing**: a grid of the 31 categories; open one to follow it whole or tap its topics and sub-topics as chips (switch to *Tap to mute* to mute). A strip at the top lists everything you follow and mute, one tap to remove, and **Erase all my choices** starts over.
-  - It stays up to date (every 5 minutes while open, on return, on pull-down), stories appear as each source answers, slow sites are skipped, and the Following and For you feeds keep loading older news as you scroll. Topics picked in older versions of Ryz move over to the new taxonomy automatically.
+- **Today**, from your own sleep, in place of a news feed (reading the news right after waking goes with more stress, and Alarmy's own morning panel is just weather, news and horoscopes):
+  - **Your energy through the day** as a small bar chart, from wake-up to bedtime, with the bar for now highlighted.
+  - **When to do what**: groggy until (sleep inertia, longer after a short night or sleep debt), best focus, the afternoon dip (a short nap or walk), last coffee (at least 6 h before bed, or your *Last call for coffee* setting), second wind, wind down and bed (your sleep goal before tomorrow's alarm). Past steps fade; the current one says *Now*.
+  - It starts from this morning's wake-up and last night's sleep; before you're up, from your usual wake-up time or today's alarm. It's an estimate built on well-studied patterns (Hilditch & McHill, 2019; Monk, 2005; Drake et al., 2013; Van Dongen et al., 2003), and says so.
+  - **Get daylight**: 10 minutes outside in the first two hours, ticked off for 10 XP once a day (Burns et al., 2023: more daytime light, lower depression risk).
+  - **Wake-up rhythm**: your streak of mornings within 30 minutes of your usual time, the last 7 days as dots, and how much your wake-up moves (Windred et al., 2024).
+  - **Sample nights** fill Sleep and Today until you've tracked 3 nights of your own, with a *Sample* tag and a one-tap *Hide* (or Settings → Sleep → Sample nights).
 
 Four tabs: **Morning**, **Alarms**, **Sleep** and **Settings**, in the native iOS tab bar on iPhone (a floating pill on web). **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
 
@@ -45,7 +43,7 @@ The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Rin
 
 ## Missions
 
-Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the boxed number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. While you work, the alarm turns down; if you stop for a while (5 s to 1 min, Settings) it's back to full volume. An optional **time limit per mission** (30 s to 3 min) restarts the mission with a new puzzle when it runs out.
+Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the boxed number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. **While you work, the alarm is silent.** If you stop for a while (5 s to 2 min, Settings → Alarms) it rings again, and an optional **time limit per mission** restarts the mission with a new puzzle and rings again when it runs out. It only stops for good when every mission is done. There's no *new puzzle* button, so you can't skip one.
 
 | Wake your brain | Wake your body | Scientific |
 | --- | --- | --- |
@@ -84,7 +82,7 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 
 ## XP and Ryz Pro
 
-**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps, and news for 5 follows (topics or names). Pro adds all 18 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, and unlimited news follows. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
+**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps and the Today plan. Pro adds all 18 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, and Family Sharing (one plan for up to 6 people). No ads on any plan. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
 
 **The 14-day reverse trial.** Everyone gets full Pro for 14 days once they finish signing up, with no card. Morning shows the days left, and from 3 days before the end, a reminder. When it ends, Ryz says so once and lists what Pro was doing for you. The trial is once per account (its start date is saved to the account). Why this design: people value something they already have about twice as much as something they don't (loss aversion, the endowment effect), and longer trials convert best (RevenueCat, *State of Subscription Apps 2025*: 17–32-day trials have the highest trial-to-paid rate, 45.7%; Strava and Ladder grew with reverse trials).
 
@@ -101,10 +99,24 @@ Tap **+** on Alarms (or **Power nap** on Morning) and choose **Quick alarm** for
 ## Sleep
 
 - **Start sleep** when you go to bed; stopping your alarm ends it (or tap *I'm awake*). Nights can also be added by hand and deleted with a long press.
-- **Smartwatch**: switch it on and nights come in by themselves from Apple Health (Apple Watch, or any watch that writes to Health) or Health Connect (Galaxy Watch, Pixel Watch, Fitbit, Garmin…). While it's on, the Start button is disabled, because there's nothing to press. Not wearing the watch tonight? Switch it off and use the button. This needs a real build of the app (see *Running it*); Expo Go explains that and keeps the button.
+- **Smartwatch** (off by default): the first time you switch it on, Ryz asks you to accept that it reads your sleep (only when you fell asleep and woke up; nothing is written to the watch or Health), then your phone asks for permission. Once nights arrive, the Sleep tab shows **which watch is connected** ("Federico's Apple Watch", "Galaxy Watch"…), and so does Settings → Sleep. Nights come in by themselves from Apple Health (Apple Watch, or any watch that writes to Health) or Health Connect (Galaxy Watch, Pixel Watch, Fitbit, Garmin…). While it's on, the Start button is disabled, because there's nothing to press. Not wearing the watch tonight? Switch it off and use the button. This needs a real build of the app (see *Running it*); Expo Go explains that and keeps the button.
 - **Ranges**: week, 2 weeks, month, year, or any dates from a calendar. Long ranges average by week or by month.
 - Stats: your **average night** against your goal, hours per night (tap a column for details), average bedtime and wake-up with their spread, **regularity**, **sleep debt**, nights on goal, **weekend shift** (social jet lag, Wittmann et al., 2006), longest and shortest night, and how you felt.
 - One research-based note at a time: under 7 hours (AASM/SRS), irregular mornings (Windred et al., 2024), or short of your goal.
+
+## Fixed from Alarmy's 1–3 star reviews
+
+We read Alarmy's recent low-star App Store reviews and made sure Ryz doesn't have the same problems:
+
+- **"The ads have gotten insane"**: Ryz has no ads, on any plan.
+- **"I wish I had the check-in feature"** (paywalled): the *Are you awake?* check is free.
+- **Battery drain overnight**: Ryz does no background work. Alarms are scheduled with the system, and the sleep-sound timer only runs during its last-minute fade.
+- **"It rings on the Home Screen and I have to search for the app to do the mission"**: a mission alarm's notification says *Tap to start your mission*, and tapping it opens the mission.
+- **"It wakes up my whole house"**: **Wake only me** (alarm editor) buzzes for 10 s to 2 min before any sound, while Ryz is open.
+- **"Didn't realise I'd be charged $60 after the trial"**: the trial needs no card and nothing is charged when it ends. The paywall shows the whole price.
+- **"Subscriptions aren't family shareable"**: Pro is listed with Family Sharing. Turn it on for the subscription in App Store Connect when payments go live.
+- **"I go back to sleep"** and re-rolling puzzles: there's no *new puzzle* button, missions are silent only while you're working on them, and the awake check rings again if you don't answer.
+- **Alarms that don't go off**: alarms repeat on weekly system triggers (they ring even if Ryz isn't opened for weeks), with follow-up notifications that keep ringing, within iOS's 64-notification limit.
 
 ## Settings
 
@@ -114,7 +126,6 @@ A short list, like iOS Settings; each row opens its own page.
 - **Ryz Pro** and **XP**.
 - **Alarms**: time for each mission, quieter during missions and how long before full volume comes back, bright screen when ringing, daylight reminder.
 - **Sleep**: sleep goal, bedtime reminder, last call for coffee.
-- **News**: news settings (languages, regions, sources, muted words) and what you follow.
 - **Goals**: what you want to improve.
 - **General**: 24-hour clock, °C or °F, location for the weather.
 - **Will my alarm ring?**: notification status and a test alarm. **The research**: the studies behind Ryz.
@@ -163,8 +174,8 @@ The alarm sounds are generated by `scripts/generate-sounds.mjs` (`npm run sounds
 
 ```
 src/
-  app/            screens (Expo Router): tabs (morning, alarms, sleep, settings), alarm editor, ringing, try a mission, "Are you awake?", good morning, news topics (follow/mute tree), news settings, story pages, article cards
-  core/           plain TypeScript, unit-tested: the alarm model, when things ring, the notification plan, volume fades, missions, sounds, vibration, sleep stats, weather, news
+  app/            screens (Expo Router): tabs (morning, alarms, sleep, settings), settings pages, alarm editor, ringing, try a mission, "Are you awake?", good morning, welcome, account, goals, Pro and XP
+  core/           plain TypeScript, unit-tested: the alarm model, when things ring, the notification plan, volume fades, missions, sounds, vibration, sleep stats, the Today plan, weather, XP and Pro
   missions/       the mission screens and the runner
   services/       expo-notifications scheduling, expo-audio playback, location and weather
   state/          the store (saved with AsyncStorage) and permission state
@@ -187,7 +198,7 @@ assets/weather/   the rendered sky backgrounds
 ## Sources
 
 - Weather: Open-Meteo.com (CC BY 4.0). Place names on web: © OpenStreetMap contributors.
-- News: the taxonomy is in `src/core/taxonomy.ts` and the source registry in `src/core/sources.ts`. `src/core/__tests__/taxonomy.test.ts` ticks every item of `docs/news-brief.md` off against the taxonomy (814 items), and `newsEngine.test.ts` checks that every node has a feed in any language setup and that every feed is in the registry.
+- Today: `src/core/today.ts` (energy estimate, plan, wake-up rhythm, sample nights), tested in `src/core/__tests__/today.test.ts`.
 
 - Bruck & Thomas, low-frequency alarms and waking deep sleepers: https://vuir.vu.edu.au/3994
 - McFarlane et al. (RMIT, 2020), melodic alarms: https://neurosciencenews.com/alarm-music-grogginess-15625/
@@ -197,4 +208,8 @@ assets/weather/   the rendered sky backgrounds
 - Vallat et al. (2022), activity, sleep and morning alertness: https://www.nature.com/articles/s41467-022-34503-2
 - Hirshkowitz et al. (2015), sleep needed by age: https://pubmed.ncbi.nlm.nih.gov/29073412/
 - Windred et al. (2024), sleep regularity: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10782489/
+- Burns et al. (2023), day and night light and mental health (UK Biobank, about 86,000 people): https://www.monash.edu/news/articles/largest-ever-study-on-light-exposure-proves-its-impact-on-mental-health
+- Monk (2005), the post-lunch dip: https://pubmed.ncbi.nlm.nih.gov/15892914/
+- Drake et al. (2013), caffeine 0, 3 or 6 hours before bed: https://pubmed.ncbi.nlm.nih.gov/24235903/
+- Van Dongen et al. (2003), the cost of chronic sleep restriction: https://pubmed.ncbi.nlm.nih.gov/12683469/
 - AASM & SRS (2015), sleep duration: https://aasm.org/aasm-and-srs-publish-new-sleep-duration-consensus-statement/

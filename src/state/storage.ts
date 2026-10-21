@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { defaultSettings, emptyData, newAlarm } from '@/core/defaults';
-import { upgradeNewsSettings } from '@/core/newsMigration';
 import type { AppData, Settings } from '@/core/types';
 
 const KEY = 'ryz/data/v1';
@@ -35,7 +34,7 @@ export function deviceLocale(): string | undefined {
 }
 
 export async function loadData(): Promise<AppData> {
-  const fallback = emptyData(prefers24h(), preferredTempUnit(), deviceLocale());
+  const fallback = emptyData(prefers24h(), preferredTempUnit());
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return fallback;
@@ -44,10 +43,10 @@ export async function loadData(): Promise<AppData> {
       // Fill in fields added since the alarm was saved.
       alarms: (saved.alarms ?? []).map((a) => ({ ...newAlarm(a.id), ...a })),
       settings: (() => {
-        const defaults = defaultSettings(prefers24h(), preferredTempUnit(), deviceLocale());
-        const settings = { ...defaults, ...saved.settings, profile: { ...defaults.profile, ...saved.settings?.profile } };
-        // Topics from older versions move to the new taxonomy; new news preferences get their defaults.
-        return upgradeNewsSettings(settings, deviceLocale());
+        const defaults = defaultSettings(prefers24h(), preferredTempUnit());
+        // Older versions also kept news topics; they're simply left out now.
+        const { newsTopics: _topics, news: _news, ...rest } = (saved.settings ?? {}) as Partial<AppData['settings']> & { newsTopics?: unknown; news?: unknown };
+        return { ...defaults, ...rest, profile: { ...defaults.profile, ...rest.profile } };
       })(),
       sleep: saved.sleep ?? [],
       sleepingSince: saved.sleepingSince ?? null,

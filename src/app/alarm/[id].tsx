@@ -38,7 +38,7 @@ const PREVIEW_PROGRESS = {
   animationTimingFunction: 'linear',
 } as const;
 
-type SheetName = 'sound' | 'vibration' | 'gentle' | 'ring' | 'snooze' | 'check' | null;
+type SheetName = 'sound' | 'vibration' | 'quiet' | 'gentle' | 'ring' | 'snooze' | 'check' | null;
 
 export default function EditAlarm() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -181,6 +181,7 @@ export default function EditAlarm() {
             />
           </View>
           <LinkRow title="Vibration" value={draft.vibrate ? VIBRATIONS[draft.vibration]?.title ?? 'On' : 'Off'} onPress={() => setSheet('vibration')} />
+          <LinkRow title="Wake only me" value={draft.quietStartSeconds ? `Buzz ${draft.quietStartSeconds} s first` : 'Off'} onPress={() => setSheet('quiet')} />
           <LinkRow title="Gentle wake-up" value={draft.mode === 'gentle' ? fadeLabel(draft.fadeInSeconds) : 'Off'} onPress={() => (draft.mode === 'gentle' ? setSheet('gentle') : setSheet('sound'))} />
           <LinkRow title="Keep ringing" value={`${draft.ringMinutes} min`} onPress={() => setSheet('ring')} />
         </View>
@@ -312,6 +313,18 @@ export default function EditAlarm() {
         <Txt variant="caption">
           {Platform.OS === 'ios' ? 'Tap a pattern to feel it. iPhones buzz for a fixed length, so patterns differ in rhythm.' : 'Tap a pattern to feel it.'}
         </Txt>
+      </Sheet>
+
+      <Sheet visible={sheet === 'quiet'} onClose={() => setSheet(null)} title="Wake only me">
+        <ToggleRow
+          title="Vibrate before the sound"
+          description="Keep your phone in your pocket or under your pillow: it buzzes first, and the sound only starts if you don't react. Works while Ryz is open."
+          value={Boolean(draft.quietStartSeconds)}
+          onChange={(on) => set({ quietStartSeconds: on ? 30 : 0 })}
+        />
+        {draft.quietStartSeconds ? (
+          <AmountPicker title="Sound starts after" value={draft.quietStartSeconds} min={10} max={120} step={5} unit={(n) => `${n} seconds`} onChange={(quietStartSeconds) => set({ quietStartSeconds })} />
+        ) : null}
       </Sheet>
 
       <Sheet visible={sheet === 'gentle'} onClose={() => setSheet(null)} title="Gentle wake-up">

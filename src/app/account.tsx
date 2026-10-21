@@ -21,7 +21,7 @@ function Field({ label, ...props }: { label: string } & React.ComponentProps<typ
   );
 }
 
-/** Create an account or log in. During onboarding it continues to news topics; from Settings it just closes. */
+/** Create an account or log in. During onboarding it continues to your goals; otherwise it just closes. */
 export default function Account() {
   const params = useLocalSearchParams<{ mode?: string; onboarding?: string }>();
   const onboarding = params.onboarding === '1';
@@ -45,11 +45,11 @@ export default function Account() {
     if (router.canDismiss()) router.dismissAll();
     else router.replace('/');
   };
-  // New here: on to news topics and goals. Back after logging out: straight in.
+  // New here: on to your goals. Back after logging out: straight in.
   const next = () => {
     if (!onboarding) close();
     else if (data.settings.onboarded) finish();
-    else router.replace({ pathname: '/interests', params: { first: '1' } });
+    else router.replace({ pathname: '/goals', params: { first: '1' } });
   };
 
   const submit = async () => {
@@ -71,7 +71,7 @@ export default function Account() {
         const { data: user } = await supabase.auth.getUser();
         const profile = user.user ? await loadProfile(user.user.id).catch(() => null) : null;
         if (profile) updateSettings(settingsFromProfile(profile, data.settings));
-        if (onboarding && profile && profile.news_topics.length > 0 && profile.goals.length > 0) {
+        if (onboarding && profile && profile.goals.length > 0) {
           updateSettings({ onboarded: true });
           finish();
         } else next();
