@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -30,7 +31,10 @@ export default function Welcome() {
   return (
     <View style={[styles.screen, { paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.lg }]}>
       <View style={styles.top}>
-        <Animated.Text entering={enter(0)} style={styles.wordmark} accessibilityRole="header">ryz</Animated.Text>
+        <Animated.View entering={enter(0)} style={styles.lockup} accessible accessibilityRole="header" accessibilityLabel="Ryz">
+          <Image source={require('../../assets/brand/mark.png')} style={styles.mark} contentFit="contain" />
+          <Text style={styles.wordmark}>ryz</Text>
+        </Animated.View>
         <Animated.View entering={enter(1)}>
           <Text style={styles.headline}>Wake up for real.</Text>
         </Animated.View>
@@ -64,6 +68,9 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: space.xl, justifyContent: 'space-between' },
   top: { gap: space.lg },
+  lockup: { flexDirection: 'row', alignItems: 'flex-end', gap: space.md },
+  // The mark's horizon line sits on the wordmark's baseline.
+  mark: { width: 96, height: 96, marginBottom: 2 },
   wordmark: { fontSize: 88, lineHeight: 96, fontFamily: FONT.displayItalic, color: colors.text, letterSpacing: 1 },
   headline: { fontSize: 40, lineHeight: 46, fontFamily: FONT.display, color: colors.text },
   points: { gap: space.lg, marginTop: space.lg },
