@@ -1,10 +1,19 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { MOODS, type MoodId } from '@/core/mood';
-import { FONT, colors, radius, space } from '@/theme';
+import { MOOD, MOODS, type MoodId } from '@/core/mood';
+import { FONT, colors, space } from '@/theme';
 import { haptic } from './ui';
 
-/** A row of mood emojis with their names; the chosen one is highlighted. */
+type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
+
+/** A mood's face, in black and white like the rest of Ryz. */
+export function MoodIcon({ mood, size = 24, color = colors.text }: { mood: MoodId; size?: number; color?: string }) {
+  return <MaterialCommunityIcons name={MOOD[mood].icon as IconName} size={size} color={color} accessibilityLabel={MOOD[mood].label} />;
+}
+
+/** A row of mood faces with their names; the chosen one is filled in white. */
 export function MoodPicker({ value, onPick, label }: { value?: MoodId | null; onPick: (mood: MoodId) => void; label: string }) {
   return (
     <View style={styles.row} accessibilityRole="radiogroup" accessibilityLabel={label}>
@@ -20,9 +29,11 @@ export function MoodPicker({ value, onPick, label }: { value?: MoodId | null; on
             accessibilityRole="radio"
             accessibilityState={{ selected: on }}
             accessibilityLabel={m.label}
-            style={({ pressed }) => [styles.mood, on && styles.moodOn, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.mood, pressed && styles.pressed]}
           >
-            <Text style={styles.emoji}>{m.emoji}</Text>
+            <View style={[styles.face, on && styles.faceOn]}>
+              <MoodIcon mood={m.id} size={26} color={on ? colors.onAccent : colors.text} />
+            </View>
             <Text style={[styles.label, on && styles.labelOn]} numberOfLines={1}>{m.label}</Text>
           </Pressable>
         );
@@ -33,10 +44,10 @@ export function MoodPicker({ value, onPick, label }: { value?: MoodId | null; on
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 2 },
-  mood: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: space.sm, borderRadius: radius.md },
-  moodOn: { backgroundColor: colors.surfaceRaised },
+  mood: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: space.xs },
   pressed: { opacity: 0.6 },
-  emoji: { fontSize: 28, lineHeight: 34 },
+  face: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  faceOn: { backgroundColor: colors.accent },
   label: { fontSize: 10, fontFamily: FONT.regular, color: colors.textMuted },
   labelOn: { color: colors.text, fontFamily: FONT.medium },
 });

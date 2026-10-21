@@ -1,5 +1,5 @@
 import { newAlarm } from '../defaults';
-import { formatClockText, formatDays, formatSpan, nextOccurrence, previousOccurrence } from '../time';
+import { formatClockText, formatDays, formatSpan, nextOccurrence, previousOccurrence, skippable } from '../time';
 
 // Monday 19 October 2026, local time.
 const at = (day: number, h: number, m = 0) => new Date(2026, 9, day, h, m).getTime();
@@ -62,5 +62,20 @@ describe('formatting', () => {
     expect(formatSpan(30_000)).toBe('less than a minute');
     expect(formatSpan(45 * 60_000)).toBe('45 min');
     expect(formatSpan(8 * 3_600_000 + 12 * 60_000)).toBe('8 h 12 min');
+  });
+});
+
+describe('skip the next one', () => {
+  // Weekdays at 7:00; Monday 19 October 2026.
+  const weekdays = { ...newAlarm('w'), hour: 7, minute: 0, days: [1, 2, 3, 4, 5] as (0 | 1 | 2 | 3 | 4 | 5 | 6)[], enabled: true };
+
+  it('rings the day after the skipped one', () => {
+    const skipped = { ...weekdays, skip: at(20, 7) };
+    expect(nextOccurrence(skipped, at(19, 8))).toBe(at(21, 7));
+    expect(skippable(skipped, at(19, 8))).toBe(at(20, 7));
+  });
+
+  it("doesn't ring on the skipped morning", () => {
+    expect(previousOccurrence({ ...weekdays, skip: at(20, 7) }, at(20, 7, 1))).toBeNull();
   });
 });

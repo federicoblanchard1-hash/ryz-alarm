@@ -54,6 +54,8 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
     watchConsent: false,
     watchName: null,
     sampleSleep: true,
+    morningMusic: null,
+    morningMusicAuto: false,
     goals: [],
     goalOther: '',
     onboarded: false,

@@ -42,7 +42,7 @@ export default function SettingsScreen() {
       <Txt variant="largeTitle" style={styles.title} accessibilityRole="header">Settings</Txt>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]}>
         <Pressable
-          onPress={() => (auth.session || !auth.enabled ? open('account') : router.push({ pathname: '/account', params: { mode: 'login' } }))}
+          onPress={() => open('account')}
           accessibilityRole="button"
           accessibilityLabel="Account"
           style={({ pressed }) => [styles.account, pressed && styles.pressed]}
@@ -50,7 +50,7 @@ export default function SettingsScreen() {
           <View style={styles.avatar}>{initials ? <Text style={styles.initials}>{initials}</Text> : <Ionicons name="person" size={22} color={colors.textMuted} />}</View>
           <View style={styles.flex}>
             <Text style={styles.name} numberOfLines={1}>{name || 'You'}</Text>
-            <Text style={styles.email} numberOfLines={1}>{auth.email ?? (auth.enabled ? 'Not signed in' : 'Accounts are off in this build')}</Text>
+            <Text style={styles.email} numberOfLines={1}>{auth.email ?? (auth.enabled ? 'No account · tap to back up your data' : 'Accounts are off in this build')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
         </Pressable>

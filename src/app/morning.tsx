@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Card, Txt, type IconName } from '@/components/ui';
@@ -41,6 +41,7 @@ export default function Morning() {
   const insets = useSafeAreaInsets();
   const check = data.pending.find((e) => e.kind === 'awakeCheck');
   const checkAt = check ? new Date(check.at) : null;
+  const music = data.settings.morningMusic;
   // After the missions: how you feel now, for the Mood calendar.
   const mood = moodsOn(data.moods, startOfDay(now)).morning;
 
@@ -83,7 +84,21 @@ export default function Morning() {
         ))}
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
-        <Button title="I'm up" onPress={() => router.replace('/')} />
+        {music ? (
+          <Button
+            title={`Play your morning music`}
+            icon="musical-notes"
+            variant="secondary"
+            onPress={() => Linking.openURL(music.url).catch(() => {})}
+          />
+        ) : null}
+        <Button
+          title="I'm up"
+          onPress={() => {
+            router.replace('/');
+            if (music && data.settings.morningMusicAuto) Linking.openURL(music.url).catch(() => {});
+          }}
+        />
       </View>
     </View>
   );
@@ -99,5 +114,5 @@ const styles = StyleSheet.create({
   rating: { flex: 1, height: 40, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
   ratingText: { fontSize: 14, fontFamily: FONT.regular, color: colors.text },
   pressed: { backgroundColor: colors.accent },
-  footer: { paddingHorizontal: space.lg, paddingTop: space.sm },
+  footer: { paddingHorizontal: space.lg, paddingTop: space.sm, gap: space.sm },
 });

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MoodPicker } from '@/components/MoodPicker';
+import { MoodIcon, MoodPicker } from '@/components/MoodPicker';
 import { Txt } from '@/components/ui';
 import { MOOD, addMood, moodAndSleep, moodCounts, moodDay, moodWhen, moodsOn, monthGrid, startOfDay } from '@/core/mood';
 import { formatDuration, minutesAsleep } from '@/core/sleep';
@@ -17,7 +17,7 @@ const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
 const DAY_TITLE = new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 
-/** Your moods as a calendar: the big emoji is the morning, the small one the evening. */
+/** Your moods as a calendar: the big face is the morning, the small one the evening. */
 export default function MoodScreen() {
   const { data, update } = useStore();
   const insets = useSafeAreaInsets();
@@ -90,14 +90,14 @@ export default function MoodScreen() {
                     style={[styles.cell, d === today && styles.today, d === picked && styles.picked]}
                   >
                     <Text style={[styles.dayNum, future && styles.faded]}>{new Date(d).getDate()}</Text>
-                    <Text style={styles.big}>{m.morning ? MOOD[m.morning.mood].emoji : ' '}</Text>
-                    <Text style={styles.small}>{m.night ? MOOD[m.night.mood].emoji : ' '}</Text>
+                    <View style={styles.big}>{m.morning ? <MoodIcon mood={m.morning.mood} size={22} /> : null}</View>
+                    <View style={styles.small}>{m.night ? <MoodIcon mood={m.night.mood} size={13} color={colors.textMuted} /> : null}</View>
                   </Pressable>
                 );
               })}
             </View>
           ))}
-          <Txt variant="caption" style={styles.center}>Big: morning · small: evening</Txt>
+          <Txt variant="caption" style={styles.center}>Big face: morning · small: evening</Txt>
         </View>
 
         <View style={styles.card}>
@@ -105,7 +105,14 @@ export default function MoodScreen() {
           {(['morning', 'night'] as const).map((k) => (
             <View key={k} style={styles.line}>
               <Txt variant="caption" style={styles.lineLabel}>{k === 'morning' ? 'Morning' : 'Evening'}</Txt>
-              <Text style={styles.lineValue}>{day[k] ? `${MOOD[day[k]!.mood].emoji}  ${MOOD[day[k]!.mood].label}` : '—'}</Text>
+              {day[k] ? (
+                <View style={styles.lineMood}>
+                  <MoodIcon mood={day[k]!.mood} size={18} />
+                  <Text style={styles.lineValue}>{MOOD[day[k]!.mood].label}</Text>
+                </View>
+              ) : (
+                <Text style={styles.lineValue}>—</Text>
+              )}
             </View>
           ))}
           <View style={styles.line}>
@@ -120,7 +127,7 @@ export default function MoodScreen() {
             <View style={styles.counts}>
               {counts.map((c) => (
                 <View key={c.id} style={styles.count}>
-                  <Text style={styles.countEmoji}>{MOOD[c.id].emoji}</Text>
+                  <MoodIcon mood={c.id} size={16} />
                   <Text style={styles.countText}>{`${MOOD[c.id].label} ${c.count}`}</Text>
                 </View>
               ))}
@@ -165,15 +172,15 @@ const styles = StyleSheet.create({
   today: { borderWidth: 1, borderColor: colors.borderStrong },
   picked: { backgroundColor: colors.surfaceRaised },
   dayNum: { fontSize: 10, fontFamily: FONT.regular, color: colors.textMuted },
-  big: { fontSize: 22, lineHeight: 27 },
-  small: { fontSize: 12, lineHeight: 15 },
+  big: { height: 27, justifyContent: 'center' },
+  small: { height: 15, justifyContent: 'center' },
+  lineMood: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   center: { textAlign: 'center' },
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   lineLabel: { flex: 1 },
   lineValue: { fontSize: 15, fontFamily: FONT.regular, color: colors.text },
   counts: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   count: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceRaised },
-  countEmoji: { fontSize: 16 },
   countText: { fontSize: 12, fontFamily: FONT.regular, color: colors.text },
   insight: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
   flex: { flex: 1, gap: 2 },

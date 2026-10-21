@@ -25,11 +25,17 @@ export function nextClock(hour: number, minute: number, now: number): number {
 export function nextOccurrence(alarm: Alarm, now: number): number | null {
   if (!alarm.enabled) return null;
   if (alarm.days.length === 0) return alarm.date !== undefined && alarm.date > now ? alarm.date : null;
-  for (let offset = 0; offset <= 7; offset++) {
+  for (let offset = 0; offset <= 14; offset++) {
     const t = clockOn(now, offset, alarm.hour, alarm.minute);
-    if (t > now && alarm.days.includes(new Date(t).getDay() as Weekday)) return t;
+    if (t > now && t !== alarm.skip && alarm.days.includes(new Date(t).getDay() as Weekday)) return t;
   }
   return null;
+}
+
+/** The ring "Skip the next one" would leave out: the next one, ignoring any skip already set. */
+export function skippable(alarm: Alarm, now: number): number | null {
+  if (alarm.days.length === 0) return null;
+  return nextOccurrence({ ...alarm, enabled: true, skip: undefined }, now);
 }
 
 /** The latest time the alarm rang, at or before `now`; null if never. */
@@ -38,7 +44,7 @@ export function previousOccurrence(alarm: Alarm, now: number): number | null {
   if (alarm.days.length === 0) return alarm.date !== undefined && alarm.date <= now ? alarm.date : null;
   for (let offset = 0; offset >= -7; offset--) {
     const t = clockOn(now, offset, alarm.hour, alarm.minute);
-    if (t <= now && alarm.days.includes(new Date(t).getDay() as Weekday)) return t;
+    if (t <= now && alarm.days.includes(new Date(t).getDay() as Weekday)) return t === alarm.skip ? null : t;
   }
   return null;
 }

@@ -152,3 +152,11 @@ describe('time zones', () => {
     expect(cleanup(d, at(19, 22)).alarms[0]).toBe(alarm);
   });
 });
+
+describe('skip clean-up', () => {
+  it('forgets a skip once that morning has passed', () => {
+    const alarm: Alarm = { ...newAlarm('w'), hour: 7, minute: 0, days: [1, 2, 3, 4, 5], enabled: true, skip: at(20, 7) };
+    expect(cleanup(data([alarm]), at(20, 12)).alarms[0].skip).toBeUndefined();
+    expect(cleanup(data([alarm]), at(19, 12)).alarms[0].skip).toBe(at(20, 7));
+  });
+});

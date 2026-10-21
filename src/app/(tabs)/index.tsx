@@ -11,10 +11,10 @@ import { nextRing } from '@/core/next';
 import { formatDuration, minutesAsleep } from '@/core/sleep';
 import { HOUR, formatClock, formatClockText, formatSpan } from '@/core/time';
 import { trialJustEnded } from '@/core/pro';
-import { MOOD, latestToday } from '@/core/mood';
+import { MoodIcon } from '@/components/MoodPicker';
+import { latestToday } from '@/core/mood';
 import { moodsToShow, nightsToShow } from '@/core/today';
 import { balance, levelOf, nextReward } from '@/core/xp';
-import { useAuth } from '@/state/auth';
 import { usePro } from '@/state/usePro';
 import { pullToRefresh } from '@/state/pullToRefresh';
 import { useNow } from '@/state/useNow';
@@ -23,17 +23,17 @@ import { usePermissions } from '@/state/usePermissions';
 import { FONT, colors, radius, space } from '@/theme';
 
 /** A shortcut like Alarmy's: a rounded square holding a value or an icon, with its name below. */
-function Tile({ icon, value, label, onPress }: { icon?: IconName; value?: string; label: string; onPress: () => void }) {
+function Tile({ icon, value, label, onPress, children }: { icon?: IconName; value?: string; label: string; onPress: () => void; children?: React.ReactNode }) {
   return (
     <View style={styles.tileWrap}>
       <PressableScale onPress={onPress} style={styles.tile} accessibilityLabel={value ? `${label}: ${value}` : label}>
-        {value ? (
+        {children ?? (value ? (
           <Txt style={styles.tileValue} numberOfLines={1} adjustsFontSizeToFit>
             {value}
           </Txt>
         ) : (
           <Ionicons name={icon ?? 'ellipse'} size={32} color={colors.text} />
-        )}
+        ))}
       </PressableScale>
       <Txt style={styles.tileLabel} numberOfLines={2}>{label}</Txt>
     </View>
@@ -55,17 +55,15 @@ export default function Home() {
   const lastNight = latest && now - latest.end < 36 * HOUR ? latest : null;
   const mood = latestToday(moodsToShow(data, now).moods, now);
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
-  // Ryz needs an account: when you're signed out (or new), the welcome screen comes back.
-  const auth = useAuth();
-  const signedOut = auth.enabled && auth.checked && !auth.session;
-  const askWelcome = ready && (!data.settings.onboarded || signedOut);
+  // First launch only. An account is optional: Sleep Cycle's reviews are full of people who left over a forced sign-up.
+  const askWelcome = ready && !data.settings.onboarded;
   const [pulling, setPulling] = useState(false);
   const onRefresh = () => {
     setPulling(true);
     pullToRefresh().finally(() => setPulling(false));
   };
   useEffect(() => {
-    // First launch: welcome, account and goals. After that, only to log back in.
+    // First launch: welcome, an optional account, and goals.
     if (askWelcome) router.push('/welcome');
   }, [askWelcome]);
   // When the trial runs out, say so once, with what Pro was doing for you.
@@ -86,7 +84,9 @@ export default function Home() {
       <WeatherHero>
         <View style={styles.tiles}>
           <Tile label={`XP · level ${levelOf(data.xp.earned).level}`} value={String(balance(data.xp))} onPress={() => router.push('/xp')} />
-          <Tile label="Mood" value={mood ? MOOD[mood.mood].emoji : undefined} icon="happy-outline" onPress={() => router.push('/mood')} />
+          <Tile label="Mood" icon="happy-outline" onPress={() => router.push('/mood')}>
+            {mood ? <MoodIcon mood={mood.mood} size={34} /> : undefined}
+          </Tile>
           <Tile label="Power nap" icon="timer-outline" onPress={() => router.push({ pathname: '/alarms', params: { quick: '1' } })} />
           <Tile
             label="Last night"

@@ -17,11 +17,12 @@ import { LinkRow, PressableScale, Txt, haptic, ToggleRow } from '@/components/ui
 import { newAlarm } from '@/core/defaults';
 import { FREE_SOUNDS, FREE_VIBRATIONS, type ProFeature } from '@/core/pro';
 import { makeId } from '@/core/ring';
-import { formatSpan, nextClock, nextOccurrence } from '@/core/time';
+import { formatSpan, nextClock, nextOccurrence, skippable } from '@/core/time';
 import { SOUNDS, SOUND_CATEGORIES, soundsIn, type SoundCategory } from '@/core/sounds';
 import type { Alarm, AlarmSoundId } from '@/core/types';
 import { requestPermissions } from '@/services/notifications';
 import { VIBRATIONS, VIBRATION_IDS } from '@/core/vibration';
+import { pickSong } from '@/services/song';
 import { previewVibration, stopVibration, usePreview } from '@/services/sound';
 import { useNow } from '@/state/useNow';
 import { usePro } from '@/state/usePro';
@@ -100,6 +101,8 @@ export default function EditAlarm() {
   const checkLabel = awakeCheck.enabled ? `After ${awakeCheck.delayMinutes} min` : 'Off';
   const snoozeLabel = snooze.enabled ? `${snooze.minutes} min, ${snooze.limit}×` : 'Off';
   // A one-time alarm gets its date on save, so here it's simply the next time the clock shows it.
+  // "Skip the next one" for a holiday or a day off: the ring after now, ignoring any skip already set.
+  const skipAt = skippable({ ...draft, hour: draft.hour, minute: draft.minute }, now);
   const ringsAt = draft.days.length === 0 ? nextClock(draft.hour, draft.minute, now) : nextOccurrence({ ...draft, enabled: true }, now);
 
   return (
@@ -133,8 +136,22 @@ export default function EditAlarm() {
         <TimePicker hour={draft.hour} minute={draft.minute} use24h={data.settings.use24h} onChange={(hour, minute) => set({ hour, minute })} />
 
         <View style={styles.days}>
-          <DayPicker days={draft.days} onChange={(days) => set({ days })} />
+          <DayPicker days={draft.days} onChange={(days) => set({ days, skip: undefined })} />
         </View>
+        {draft.days.length > 0 && skipAt !== null ? (
+          <Pressable
+            onPress={() => {
+              haptic('select');
+              set({ skip: draft.skip === skipAt ? undefined : skipAt });
+            }}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: draft.skip === skipAt }}
+            style={[styles.skipChip, draft.skip === skipAt && styles.skipChipOn]}
+          >
+            <Ionicons name={draft.skip === skipAt ? 'checkmark' : 'play-skip-forward-outline'} size={14} color={draft.skip === skipAt ? colors.onAccent : colors.text} />
+            <Text style={[styles.skipText, draft.skip === skipAt && styles.skipTextOn]}>{`Skip the next one · ${SKIP_DATE.format(skipAt)}`}</Text>
+          </Pressable>
+        ) : null}
 
         <MissionCard missions={draft.missions} onChange={(missions) => set({ missions })} awakeCheckLabel={checkLabel} onAwakeCheck={() => setSheet('check')} />
 
@@ -157,7 +174,7 @@ export default function EditAlarm() {
                 setSheet('sound');
               }}
               accessibilityRole="button" accessibilityLabel={`Sound: ${soundTitle(draft.sound)}. Change`} style={({ pressed }) => [styles.soundPick, pressed && styles.pressed]}>
-              <Txt style={styles.soundName} numberOfLines={1}>{soundTitle(draft.sound)}</Txt>
+              <Txt style={styles.soundName} numberOfLines={1}>{draft.song ? draft.song.name : soundTitle(draft.sound)}</Txt>
               <Ionicons name="chevron-forward" size={24} color={colors.text} />
             </Pressable>
           </View>
@@ -212,6 +229,31 @@ export default function EditAlarm() {
       </View>
 
       <Sheet visible={sheet === 'sound'} onClose={() => setSheet(null)} title="Alarm sound">
+        <View style={styles.songBox}>
+          <Ionicons name="musical-note" size={20} color={colors.text} />
+          <View style={styles.flex}>
+            <Txt style={styles.optionTitle} numberOfLines={1}>{draft.song ? draft.song.name : 'Your own song'}</Txt>
+            <Txt variant="caption">{draft.song ? 'Plays while Ryz is open. If Ryz is closed, the sound below rings.' : 'Any song you have as a file (MP3, M4A…), from Files.'}</Txt>
+          </View>
+          {draft.song ? (
+            <Pressable onPress={() => set({ song: undefined })} hitSlop={8} accessibilityRole="button" accessibilityLabel="Remove your song">
+              <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => {
+                pickSong()
+                  .then((song) => song && set({ song }))
+                  .catch(() => {});
+              }}
+              accessibilityRole="button"
+              style={styles.songPick}
+            >
+              <Txt style={styles.songPickText}>Choose</Txt>
+            </Pressable>
+          )}
+        </View>
+        <Txt variant="caption">Spotify and Apple Music songs can’t be alarm sounds (they only play inside their own apps). Add one as Morning music in Settings → Alarms, and it plays once you’re up.</Txt>
         <View style={styles.tabs} accessibilityRole="tablist">
           {SOUND_CATEGORIES.map((c) => {
             const on = soundTab === c.id;
@@ -372,7 +414,16 @@ export default function EditAlarm() {
   );
 }
 
+const SKIP_DATE = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
 const styles = StyleSheet.create({
+  skipChip: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', paddingHorizontal: space.md, height: 32, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, marginTop: -space.sm },
+  skipChipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  skipText: { fontSize: 13, fontFamily: FONT.regular, color: colors.text },
+  skipTextOn: { color: colors.onAccent, fontFamily: FONT.medium },
+  songBox: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surfaceRaised },
+  songPick: { paddingHorizontal: space.md, height: 32, borderRadius: radius.pill, backgroundColor: colors.accent, justifyContent: 'center' },
+  songPickText: { fontSize: 14, fontFamily: FONT.medium, color: colors.onAccent },
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingBottom: space.sm },

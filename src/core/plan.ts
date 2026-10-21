@@ -72,7 +72,13 @@ export function buildPlan(data: AppData, now: number, limit = NOTIFICATION_LIMIT
   for (const alarm of enabled) {
     const clock = formatClockText(alarm.hour, alarm.minute, settings.use24h);
     const base = { kind: 'alarm' as const, alarmId: alarm.id, sound: soundAt(alarm, 'alarm', 0), title: title(alarm), body: alarm.missions.length ? `${clock} · Tap to start your mission` : `${clock} · Tap to stop or snooze` };
-    if (alarm.days.length === 0) {
+    if (alarm.days.length > 0 && alarm.skip !== undefined && alarm.skip > now) {
+      // Skipping one ring: the next two weeks as single rings, without it. Ryz goes back to
+      // weekly triggers the next time it's opened after the skipped day.
+      for (let t = nextOccurrence(alarm, now); t !== null && t < now + 14 * 24 * 60 * MINUTE; t = nextOccurrence(alarm, t)) {
+        fixed.push({ ...base, id: `alarm:${alarm.id}:${t}`, trigger: { type: 'date', date: t } });
+      }
+    } else if (alarm.days.length === 0) {
       if (alarm.date === undefined || alarm.date <= now) continue;
       fixed.push({ ...base, id: `alarm:${alarm.id}`, trigger: { type: 'date', date: alarm.date } });
     } else if (alarm.days.length === 7) {

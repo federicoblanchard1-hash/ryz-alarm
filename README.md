@@ -21,15 +21,15 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 
 ## Getting started
 
-On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are required; your name, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms work offline; your alarms, nights and moods are also backed up to the account, so a new phone or a reinstall gets them back (a phone that already has alarms keeps its own).
+On first launch: a welcome screen, then **create an account** (name, email, password), **log in**, or **continue without an account**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are optional (Sleep Cycle's reviews are full of people who left over a forced sign-up); with one, your name, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms work offline; your alarms, nights and moods are also backed up to the account, so a new phone or a reinstall gets them back (a phone that already has alarms keeps its own).
 
 ## Morning (home)
 
 - **Weather where you wake up**, laid out like Alarmy's morning screen: your town (tap to refresh), the temperature on the left, conditions and today's high and low on the right, and the next 24 hours with white weather icons underneath. Data from Open-Meteo (no API key); the town name comes from the phone's geocoder.
 - **A realistic sky that matches the weather**, like the iPhone Weather app: 13 rendered skies (clear, partly cloudy, overcast, rain, storm, snow, fog; day and night) that drift slowly, with animated rain, drops on the glass, snow and lightning on top. They're made by `scripts/generate-skies.py` (`npm run skies`). Everything holds still when Reduce Motion is on.
-- **Shortcut tiles** on the scene: your **XP** (tap to see how to earn more), **Mood** (today's emoji; tap for the calendar), **Power nap** (the quick alarm) and **Last night**'s sleep.
+- **Shortcut tiles** on the scene: your **XP** (tap to see how to earn more), **Mood** (today's face; tap for the calendar), **Power nap** (the quick alarm) and **Last night**'s sleep.
 - **Next alarm** as one slim row: the time, how long until it rings, its name and missions. Tap to edit.
-- **Mood**: Ryz asks *How's your mood now?* after you finish your morning missions, and *How was your day?* when you tap Start sleep. Seven emojis: 😄 Happy, 😌 Calm, 😐 Okay, 😴 Tired, 😢 Sad, 😣 Stressed, 😠 Angry. The Mood screen is a month calendar (big emoji: morning, small: evening), a day's details with the sleep before it, the month's counts, and how your morning mood compares after full and short nights. You can also log a mood there any time.
+- **Mood**: Ryz asks *How's your mood now?* after you finish your morning missions, and *How was your day?* when you tap Start sleep. Seven black-and-white faces, to match the rest of the app: Happy, Calm, Okay, Tired, Sad, Stressed, Angry. The Mood screen is a month calendar (big face: morning, small: evening), a day's details with the sleep before it, the month's counts, and how your morning mood compares after full and short nights. You can also log a mood there any time.
 - **Today**, from your own sleep, in place of a news feed (reading the news right after waking goes with more stress, and Alarmy's own morning panel is just weather, news and horoscopes). It reads top to bottom:
   - **Right now**: what your energy is like at this moment in plain words (*Best focus until 11:30 AM: your sharpest hours, do the hardest thing first*), and what's next.
   - **Your day**: a small bar chart from wake-up to bedtime (taller = more energy, the white bar is now, with Noon and 6 PM marked) and the times in a list, time first: waking up (sleep inertia, longer after a short night or sleep debt), best focus, the afternoon dip (a short nap or walk), last coffee (at least 6 h before bed, or your *Last call for coffee* setting), second wind, wind down and bed (your sleep goal before tomorrow's alarm). Past steps fade; the current one says *Now*.
@@ -129,13 +129,20 @@ We read Alarmy's recent low-star App Store reviews and made sure Ryz doesn't hav
 - **"It doesn't work on silent / Do Not Disturb"** and *will it ring?* anxiety: Start sleep now shows tomorrow's alarm and whether notifications are on, with a one-tap fix, and on iPhone a reminder about the silent switch.
 - **"Ads flash in the middle of the night"**, **forced trials on launch**: no ads, and the trial needs no card.
 
-Still not possible in an Expo app, and the most-asked: Spotify or Apple Music songs as alarms, and Home Screen widgets. Both need extra native code.
+**Round three**, from the feature wishes in all 11,676 reviews (every star rating):
+
+- **Your own song** as the alarm sound (alarm editor → Alarm sound → *Your own song*): any song you have as a file (MP3, M4A…), picked from Files and copied into Ryz. It plays while Ryz is open; if Ryz is closed, the alarm's regular sound rings, because iPhone notifications can only play short sounds built into the app.
+- **Morning music** (Settings → Alarms): paste a Spotify, Apple Music, YouTube Music, Deezer or SoundCloud link (Share → Copy link) and *Play your morning music* appears after the alarm, or it starts by itself when you tap *I'm up*. Spotify and Apple Music don't let other apps use their songs as the alarm sound itself; the apps that claim to just launch Spotify and need it left open all night (MacStories on Alarmify), which is exactly the kind of alarm that fails.
+- **Skip the next one**: for a repeating alarm, skip just the next ring (a holiday, a day off) without switching it off. The alarm list shows *skips Tue*, and it goes back to normal by itself.
+- **Accounts are optional again**, and everything works without one.
+
+Still not possible in an Expo app: Home Screen widgets (they need native widget code).
 
 ## Settings
 
 A short list, like iOS Settings; each row opens its own page.
 
-- **Account** (top): your name and email; on its page, Log out and Erase all data. An account is required: when you're signed out, Ryz shows the welcome screen until you log in.
+- **Account** (top): your name and email; on its page, Change password, Log out and Erase all data. Without an account, the page offers *Create an account* or *Log in*, to back up alarms, nights, moods and XP.
 - **Ryz Pro** and **XP**.
 - **Alarms**: time for each mission, quieter during missions and how long before full volume comes back, bright screen when ringing, daylight reminder.
 - **Sleep**: sleep goal, bedtime reminder, last call for coffee.
@@ -219,6 +226,7 @@ assets/weather/   the rendered sky backgrounds
 - Basner & Dinges (2011), the psychomotor vigilance test: https://pubmed.ncbi.nlm.nih.gov/21532953/
 - Vallat et al. (2022), activity, sleep and morning alertness: https://www.nature.com/articles/s41467-022-34503-2
 - Hirshkowitz et al. (2015), sleep needed by age: https://pubmed.ncbi.nlm.nih.gov/29073412/
+- MacStories on Alarmify (Spotify alarms that need Spotify left open all night): https://www.macstories.net/?p=21964
 - Windred et al. (2024), sleep regularity: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10782489/
 - Burns et al. (2023), day and night light and mental health (UK Biobank, about 86,000 people): https://www.monash.edu/news/articles/largest-ever-study-on-light-exposure-proves-its-impact-on-mental-health
 - Monk (2005), the post-lunch dip: https://pubmed.ncbi.nlm.nih.gov/15892914/

@@ -123,6 +123,11 @@ export function cleanup(data: AppData, now: number): AppData {
       alarmsChanged = true;
       return { ...a, enabled: false, date: undefined };
     }
+    // A skipped ring that has passed: back to normal.
+    if (a.skip !== undefined && now >= a.skip + a.ringMinutes * MINUTE) {
+      alarmsChanged = true;
+      return { ...a, skip: undefined };
+    }
     // After a time-zone change, a one-time 7:00 alarm is still 7:00 here, not 7:00 back home.
     if (a.enabled && !a.quick && a.days.length === 0 && a.date !== undefined && a.date > now) {
       const at = new Date(a.date);

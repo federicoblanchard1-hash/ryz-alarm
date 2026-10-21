@@ -15,15 +15,19 @@ export interface MoodEntry {
   mood: MoodId;
 }
 
-/** In the order the picker shows them; `score` (1–5) is only for comparing days. */
-export const MOODS: { id: MoodId; emoji: string; label: string; score: number }[] = [
-  { id: 'happy', emoji: '😄', label: 'Happy', score: 5 },
-  { id: 'calm', emoji: '😌', label: 'Calm', score: 4 },
-  { id: 'okay', emoji: '😐', label: 'Okay', score: 3 },
-  { id: 'tired', emoji: '😴', label: 'Tired', score: 2 },
-  { id: 'sad', emoji: '😢', label: 'Sad', score: 1 },
-  { id: 'stressed', emoji: '😣', label: 'Stressed', score: 1.5 },
-  { id: 'angry', emoji: '😠', label: 'Angry', score: 1 },
+/**
+ * In the order the picker shows them. `icon` is a black-and-white face from
+ * Material Community Icons, to match the app; `score` (1–5) is only for
+ * comparing days.
+ */
+export const MOODS: { id: MoodId; icon: string; label: string; score: number }[] = [
+  { id: 'happy', icon: 'emoticon-excited-outline', label: 'Happy', score: 5 },
+  { id: 'calm', icon: 'emoticon-outline', label: 'Calm', score: 4 },
+  { id: 'okay', icon: 'emoticon-neutral-outline', label: 'Okay', score: 3 },
+  { id: 'tired', icon: 'sleep', label: 'Tired', score: 2 },
+  { id: 'sad', icon: 'emoticon-sad-outline', label: 'Sad', score: 1 },
+  { id: 'stressed', icon: 'emoticon-confused-outline', label: 'Stressed', score: 1.5 },
+  { id: 'angry', icon: 'emoticon-angry-outline', label: 'Angry', score: 1 },
 ];
 
 export const MOOD = Object.fromEntries(MOODS.map((m) => [m.id, m])) as Record<MoodId, (typeof MOODS)[number]>;

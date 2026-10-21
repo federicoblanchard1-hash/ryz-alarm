@@ -36,11 +36,14 @@ function DeleteAction({ drag, onDelete }: { drag: SharedValue<number>; onDelete:
   );
 }
 
+const SKIP_DAY = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+
 /** An alarm in the list. Tap to edit, switch to turn on or off, swipe left to delete. */
 export function AlarmRow({ alarm, use24h, onPress, onToggle, onDelete }: Props) {
   const swipe = useRef<SwipeableMethods>(null);
   const { time, period } = formatClock(alarm.hour, alarm.minute, use24h);
-  const detail = [alarm.label.trim(), formatDays(alarm.days)].filter(Boolean).join(' · ');
+  // A skipped ring is cleared once it has passed, so any skip here is still ahead.
+  const detail = [alarm.label.trim(), formatDays(alarm.days), alarm.skip !== undefined ? `skips ${SKIP_DAY.format(alarm.skip)}` : ''].filter(Boolean).join(' · ');
   const remove = () => {
     haptic('success');
     swipe.current?.close();

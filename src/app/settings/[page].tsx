@@ -5,6 +5,7 @@ import { Alert, AppState, Linking, Platform, StyleSheet, TextInput, View } from 
 import { AmountPicker } from '@/components/AmountPicker';
 import { Block, Group, Line, Page, Row, Toggle } from '@/components/SettingsKit';
 import { Button, Segmented, Txt, confirm, haptic } from '@/components/ui';
+import { MUSIC_SERVICE_NAME, parseMusicLink } from '@/core/music';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { logOut, resetPassword } from '@/services/account';
@@ -88,7 +89,7 @@ function AccountPage() {
           />
         </Line>
         <Line title="Email">
-          <Txt variant="caption" numberOfLines={1} style={styles.value}>{auth.email ?? '—'}</Txt>
+          <Txt variant="caption" numberOfLines={1} style={styles.value}>{auth.email ?? 'No account'}</Txt>
         </Line>
       </Group>
       {auth.session && auth.email ? (
@@ -105,7 +106,12 @@ function AccountPage() {
               })
             }
           />
-          <Row icon="log-out-outline" title="Log out" detail="Your alarms stay on this phone" onPress={() => confirm('Log out?', 'Your alarms stay on this phone. Log in again to keep using Ryz.', 'Log out', () => logOut())} />
+          <Row icon="log-out-outline" title="Log out" detail="Everything stays on this phone" onPress={() => confirm('Log out?', 'Everything stays on this phone and keeps working. Log in again any time to back it up.', 'Log out', () => logOut())} />
+        </Group>
+      ) : auth.enabled ? (
+        <Group note="Optional. Without an account everything still works, but only on this phone.">
+          <Row icon="person-add-outline" title="Create an account" detail="Back up your alarms, nights, moods and XP" onPress={() => router.push({ pathname: '/account', params: { mode: 'signup' } })} />
+          <Row icon="log-in-outline" title="Log in" detail="Bring back what you had on another phone" onPress={() => router.push({ pathname: '/account', params: { mode: 'login' } })} />
         </Group>
       ) : null}
       <Group note="Deletes all alarms, sleep history and settings on this phone. It can’t be undone.">
@@ -123,6 +129,43 @@ function AccountPage() {
         />
       </Group>
     </Page>
+  );
+}
+
+/** Paste a link from a music app's Share button; it opens once you're up. */
+function MorningMusic() {
+  const { data, updateSettings } = useStore();
+  const { morningMusic, morningMusicAuto } = data.settings;
+  const [text, setText] = useState(morningMusic?.url ?? '');
+  const parsed = parseMusicLink(text);
+  const save = () => {
+    if (!text.trim()) return updateSettings({ morningMusic: null });
+    if (parsed && parsed.url !== morningMusic?.url) updateSettings({ morningMusic: parsed });
+  };
+  return (
+    <Group
+      title="Morning music"
+      note="Music you like right after waking cuts grogginess (McFarlane et al., 2020). In Spotify or Apple Music, tap Share → Copy link on a song or playlist and paste it here. It plays in that app, so keep it installed."
+    >
+      <Line title="Link">
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          onBlur={save}
+          onSubmitEditing={save}
+          placeholder="Paste a Spotify or Apple Music link"
+          placeholderTextColor={colors.textFaint}
+          style={styles.input}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+          accessibilityLabel="Morning music link"
+        />
+      </Line>
+      {text.trim() && !parsed ? <Txt variant="caption" style={styles.warn}>That doesn’t look like a Spotify, Apple Music, YouTube Music, Deezer or SoundCloud link.</Txt> : null}
+      {morningMusic ? <Row icon="play-circle-outline" title={`Play on ${MUSIC_SERVICE_NAME[morningMusic.service]}`} detail="Try it now" onPress={() => Linking.openURL(morningMusic.url).catch(() => {})} /> : null}
+      {morningMusic ? <Toggle title="Start it when I’m up" note="Opens it when you tap “I’m up” after your alarm" value={morningMusicAuto} onChange={(morningMusicAuto) => updateSettings({ morningMusicAuto })} /> : null}
+    </Group>
   );
 }
 
@@ -155,6 +198,7 @@ function AlarmsPage() {
         <Toggle title="Bright screen when ringing" note="Full brightness while it rings" value={settings.brightScreen} onChange={(brightScreen) => updateSettings({ brightScreen })} />
         <Toggle title="Daylight reminder" note="A nudge after you stop the alarm to get light in the first hour" value={settings.morningLight} onChange={(morningLight) => updateSettings({ morningLight })} />
       </Group>
+      <MorningMusic />
     </Page>
   );
 }
@@ -295,5 +339,6 @@ const styles = StyleSheet.create({
   input: { flex: 1, textAlign: 'right', fontSize: 15, fontFamily: FONT.light, color: colors.text, paddingVertical: space.sm },
   value: { flex: 1, textAlign: 'right' },
   test: { gap: space.sm },
+  warn: { color: colors.danger, paddingBottom: space.sm },
   center: { textAlign: 'center' },
 });

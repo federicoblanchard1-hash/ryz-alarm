@@ -119,3 +119,15 @@ describe('soundAt', () => {
     expect(soundAt({ ...newAlarm('a'), sound: 'birds' as const }, 'recheck', 0)).toBe('deep');
   });
 });
+
+describe('skip the next one', () => {
+  it('schedules the next two weeks one by one, without the skipped ring', () => {
+    const alarm: Alarm = { ...newAlarm('w'), hour: 7, minute: 0, days: [1, 2, 3, 4, 5], enabled: true, skip: at(20, 7) };
+    const rings = buildPlan(data([alarm]), MONDAY_6AM).filter((p) => p.kind === 'alarm');
+    const dates = rings.map((p) => (p.trigger.type === 'date' ? p.trigger.date : null));
+    expect(dates).not.toContain(at(20, 7));
+    expect(dates).toContain(at(19, 7));
+    expect(dates).toContain(at(21, 7));
+    expect(rings.every((p) => p.trigger.type === 'date')).toBe(true);
+  });
+});

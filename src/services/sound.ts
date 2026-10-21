@@ -83,7 +83,8 @@ async function setAlarmAudioMode() {
  */
 export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' | 'recheck' | 'test', startedAt: number, active: boolean, ducked = false) {
   // The alarm's own sound, plus the 520 Hz tone for when a soft alarm escalates (or the melody, for a loud one).
-  const own = useAudioPlayer(SOUND_SOURCES[alarm?.sound ?? 'gentle']);
+  // Your own song, when the alarm has one, plays in place of its sound.
+  const own = useAudioPlayer(alarm?.song ? { uri: alarm.song.uri } : SOUND_SOURCES[alarm?.sound ?? 'gentle']);
   const deep = useAudioPlayer(SOUND_SOURCES.deep);
   const melody = useAudioPlayer(SOUND_SOURCES.gentle);
   const duckRef = useRef(ducked);

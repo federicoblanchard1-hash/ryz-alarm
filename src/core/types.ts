@@ -1,5 +1,6 @@
 import type { Mission } from './missions';
 import type { MoodEntry } from './mood';
+import type { MusicLink } from './music';
 import type { SleepSoundId, SleepTag } from './sleep';
 import type { VibrationId } from './vibration';
 import type { XpState } from './xp';
@@ -71,6 +72,8 @@ export interface Alarm {
   mode: WakeMode;
   /** What it rings with. Its category sets `mode`: calm sounds fade in, loud ones need a hold to stop. */
   sound: AlarmSoundId;
+  /** Your own song file (copied into Ryz), played instead of `sound` while Ryz is open. Notifications still use `sound`. */
+  song?: { uri: string; name: string };
   /** Gentle mode: seconds the melody takes to reach full volume. */
   fadeInSeconds: number;
   /** Gentle mode: switch to the deep tone if still ringing after `escalateAfterMinutes`. */
@@ -92,6 +95,8 @@ export interface Alarm {
   missions: Mission[];
   /** A countdown for a nap: rings once at `date`, no missions, and removes itself afterwards. */
   quick?: boolean;
+  /** "Skip the next one": this one ring (ms) of a repeating alarm is left out, for a holiday or a day off. */
+  skip?: number;
 }
 
 export interface Settings {
@@ -127,6 +132,10 @@ export interface Settings {
   watchName: string | null;
   /** Show sample nights on Sleep and Today until you've tracked three of your own. */
   sampleSleep: boolean;
+  /** A Spotify / Apple Music / YouTube Music link that plays once you're up. */
+  morningMusic: MusicLink | null;
+  /** Open the morning music by itself when you tap "I'm up". */
+  morningMusicAuto: boolean;
   /** What you want Ryz to help with, from sign-up. */
   goals: string[];
   /** Anything else you typed under "Other". */

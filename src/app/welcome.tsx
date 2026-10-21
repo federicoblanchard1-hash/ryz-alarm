@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { BackHandler, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,17 +15,16 @@ const POINTS: { icon: IconName; text: string }[] = [
   { icon: 'analytics-outline', text: 'Sleep tracking, and a plan for your day: when you’ll focus best and when to wind down' },
 ];
 
-/** First launch (or after logging out): what Ryz is, then create an account or log in. */
+/** First launch: what Ryz is, then create an account, log in, or go on without one. */
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const { enabled } = useAuth();
-  // Ryz needs an account, so Android's back button can't skip this screen.
+  // Android's back button can't skip the first-launch setup.
   useEffect(() => {
-    if (!enabled) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
     return () => sub.remove();
-  }, [enabled]);
+  }, []);
   const enter = (i: number) => (reduced ? undefined : FadeInDown.delay(150 + i * 120).duration(420));
 
   return (
@@ -49,11 +48,14 @@ export default function Welcome() {
           <>
             <Button title="Create an account" onPress={() => router.push({ pathname: '/account', params: { mode: 'signup', onboarding: '1' } })} />
             <Button title="I already have an account" variant="secondary" onPress={() => router.push({ pathname: '/account', params: { mode: 'login', onboarding: '1' } })} />
+            <Pressable onPress={() => router.replace({ pathname: '/goals', params: { first: '1' } })} hitSlop={8} accessibilityRole="button" style={styles.skip}>
+              <Text style={styles.skipText}>Continue without an account</Text>
+            </Pressable>
           </>
         ) : (
           <Button title="Get started" onPress={() => router.replace({ pathname: '/goals', params: { first: '1' } })} />
         )}
-        <Txt variant="caption" style={styles.center}>Your alarms always work, even offline. Your account keeps your goals and XP.</Txt>
+        <Txt variant="caption" style={styles.center}>Everything works without an account. With one, your alarms, nights, moods and XP are backed up.</Txt>
       </View>
     </View>
   );
@@ -69,4 +71,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   actions: { gap: space.md },
   center: { textAlign: 'center' },
+  skip: { alignSelf: 'center', paddingVertical: space.sm },
+  skipText: { fontSize: 15, fontFamily: FONT.medium, color: colors.textMuted, textDecorationLine: 'underline' },
 });
