@@ -105,6 +105,7 @@ export function buildPlan(data: AppData, now: number, limit = NOTIFICATION_LIMIT
   }
 
   if (settings.bedtimeReminder) fixed.push(...bedtimeReminders(data, now));
+  if (settings.caffeineReminder) fixed.push(...caffeineReminders(data));
 
   const plan = fixed.slice(0, limit);
   let budget = limit - plan.length;
@@ -168,6 +169,44 @@ function bedtimeReminders(data: AppData, now: number): PlannedNotification[] {
     const at = alarm.date - before * MINUTE;
     if (at <= now) continue;
     out.push({ id: `bedtime:${alarm.id}`, kind: 'bedtime', alarmId: alarm.id, sound: 'chime', title: 'Time to wind down', body: body(alarm), trigger: { type: 'date', date: at } });
+  }
+  return out;
+}
+
+/**
+ * "Last call for coffee": `caffeineHours` before bedtime on each alarm day,
+ * where bedtime is the earliest alarm minus your sleep goal. Caffeine taken
+ * 6 hours before bed still cuts sleep by about an hour (Drake et al., 2013).
+ */
+function caffeineReminders(data: AppData): PlannedNotification[] {
+  const { settings } = data;
+  const before = settings.sleepGoalMinutes + settings.caffeineHours * 60;
+  const earliest = new Map<Weekday, Alarm>();
+  for (const alarm of data.alarms) {
+    if (!alarm.enabled) continue;
+    for (const day of alarm.days) {
+      const current = earliest.get(day);
+      if (!current || alarm.hour * 60 + alarm.minute < current.hour * 60 + current.minute) earliest.set(day, alarm);
+    }
+  }
+  const out: PlannedNotification[] = [];
+  for (const [day, alarm] of earliest) {
+    let minuteOfDay = alarm.hour * 60 + alarm.minute - before;
+    let weekday = day as number;
+    while (minuteOfDay < 0) {
+      minuteOfDay += DAY_MINUTES;
+      weekday = (weekday + 6) % 7;
+    }
+    const bed = (alarm.hour * 60 + alarm.minute - settings.sleepGoalMinutes + DAY_MINUTES * 2) % DAY_MINUTES;
+    out.push({
+      id: `caffeine:${day}`,
+      kind: 'bedtime',
+      alarmId: alarm.id,
+      sound: 'chime',
+      title: 'Last call for coffee',
+      body: `Bedtime is ${formatClockText(Math.floor(bed / 60), bed % 60, settings.use24h)}. Caffeine after now can still be keeping you up then.`,
+      trigger: { type: 'weekly', weekday: weekday + 1, hour: Math.floor(minuteOfDay / 60), minute: minuteOfDay % 60 },
+    });
   }
   return out;
 }

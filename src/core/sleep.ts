@@ -269,3 +269,115 @@ export function moreStats(list: SleepRecord[], goalMinutes: number): MoreStats |
     socialJetLag: weekend.length && weekdays.length ? mean(weekend.map(mid)) - mean(weekdays.map(mid)) : null,
   };
 }
+
+// ---- Sleep debt
+
+export interface SleepDebt {
+  /** Minutes short of the goal, added up over the window (nights over the goal pay a little back). */
+  minutes: number;
+  /** Nights recorded in the window. */
+  nights: number;
+  days: number;
+}
+
+/**
+ * Sleep debt over the last `days` days: the minutes each recorded night fell
+ * short of the goal. Extra sleep pays back at most an hour a night, since
+ * one long lie-in doesn't undo a short week (Van Dongen et al., 2003;
+ * Depner et al., 2019).
+ */
+export function sleepDebt(list: SleepRecord[], goalMinutes: number, now: number, days = 14): SleepDebt {
+  const nights = recent(list, now, days);
+  let minutes = 0;
+  for (const r of nights) {
+    const diff = goalMinutes - minutesAsleep(r);
+    minutes += diff > 0 ? diff : Math.max(diff, -60);
+  }
+  return { minutes: Math.max(0, minutes), nights: nights.length, days };
+}
+
+// ---- Night notes
+
+export type SleepTag = 'caffeine' | 'alcohol' | 'exercise' | 'late_meal' | 'screens' | 'stress' | 'nap' | 'new_place';
+
+/** Things that change sleep, each with what research says about it. */
+export const SLEEP_TAGS: { id: SleepTag; title: string; why: string }[] = [
+  { id: 'caffeine', title: 'Caffeine after 2 pm', why: 'Caffeine even 6 hours before bed can cut sleep by an hour (Drake et al., 2013).' },
+  { id: 'alcohol', title: 'Alcohol', why: 'Alcohol helps you fall asleep but breaks up the second half of the night (Ebrahim et al., 2013).' },
+  { id: 'exercise', title: 'Exercise', why: 'Regular exercise tends to deepen sleep (Kredlow et al., 2015).' },
+  { id: 'late_meal', title: 'Late meal', why: 'A big meal close to bedtime can make it harder to fall asleep.' },
+  { id: 'screens', title: 'Screens in bed', why: 'Phones and tablets in bed delay sleep (Chang et al., 2015).' },
+  { id: 'stress', title: 'Stress', why: 'Worry keeps the brain alert at bedtime.' },
+  { id: 'nap', title: 'Nap', why: 'Long or late naps lower sleep pressure at night.' },
+  { id: 'new_place', title: 'New place', why: 'The first night somewhere new is lighter: half the brain stays on watch (Tamaki et al., 2016).' },
+];
+
+export interface TagEffect {
+  tag: SleepTag;
+  /** Nights with and without the tag. */
+  with: number;
+  without: number;
+  /** Average sleep with the tag minus without, in minutes. */
+  minutes: number;
+  /** Average rating with the tag minus without, if both have ratings. */
+  rating: number | null;
+}
+
+/**
+ * How each tag goes with your sleep: the difference in average sleep (and
+ * how rested you felt) between nights with it and without it. Needs at
+ * least `minNights` of each, so one odd night doesn't decide. Biggest
+ * effects first.
+ */
+export function tagEffects(list: SleepRecord[], minNights = 3): TagEffect[] {
+  const out: TagEffect[] = [];
+  for (const { id } of SLEEP_TAGS) {
+    const withTag = list.filter((r) => r.tags?.includes(id));
+    // Only nights you've tagged at all count as "without", so untagged history doesn't skew it.
+    const without = list.filter((r) => r.tags && !r.tags.includes(id));
+    if (withTag.length < minNights || without.length < minNights) continue;
+    const avg = (rs: SleepRecord[]) => mean(rs.map(minutesAsleep));
+    const rated = (rs: SleepRecord[]) => rs.filter((r) => r.rating).map((r) => r.rating as number);
+    const rw = rated(withTag);
+    const ro = rated(without);
+    out.push({
+      tag: id,
+      with: withTag.length,
+      without: without.length,
+      minutes: Math.round(avg(withTag) - avg(without)),
+      rating: rw.length >= minNights && ro.length >= minNights ? Math.round((mean(rw) - mean(ro)) * 10) / 10 : null,
+    });
+  }
+  return out.sort((a, b) => Math.abs(b.minutes) - Math.abs(a.minutes));
+}
+
+export function tagNight(data: AppData, id: string, tags: SleepTag[]): AppData {
+  return { ...data, sleep: data.sleep.map((r) => (r.id === id ? { ...r, tags } : r)) };
+}
+
+// ---- Sleep sounds
+
+export type SleepSoundId = 'rain' | 'ocean' | 'stream' | 'forest' | 'pink_noise' | 'brown_noise';
+
+export const SLEEP_SOUNDS: { id: SleepSoundId; title: string }[] = [
+  { id: 'rain', title: 'Rain' },
+  { id: 'ocean', title: 'Ocean' },
+  { id: 'stream', title: 'Stream' },
+  { id: 'forest', title: 'Forest' },
+  { id: 'pink_noise', title: 'Pink noise' },
+  { id: 'brown_noise', title: 'Brown noise' },
+];
+
+/** Timer choices in minutes; 0 plays all night. */
+export const SLEEP_TIMERS = [15, 30, 45, 60, 90, 0];
+
+/** The last minute fades out, so the stop doesn't wake you. */
+export const SLEEP_FADE_MS = 60_000;
+
+/** The volume `elapsedMs` into a sleep sound that lasts `minutes` (0 = no end). */
+export function sleepSoundVolume(elapsedMs: number, minutes: number, volume: number): number {
+  if (minutes === 0) return volume;
+  const left = minutes * MIN - elapsedMs;
+  if (left <= 0) return 0;
+  return left >= SLEEP_FADE_MS ? volume : volume * (left / SLEEP_FADE_MS);
+}

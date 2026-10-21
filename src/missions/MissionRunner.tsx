@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Accelerometer, Pedometer } from 'expo-sensors';
+import { Accelerometer, Gyroscope, LightSensor, Pedometer } from 'expo-sensors';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -28,6 +28,10 @@ const SCREENS: Record<Mission['type'], (props: MissionProps) => React.ReactEleme
   squats: BodyMission,
   steps: BodyMission,
   jacks: BodyMission,
+  sprint: BodyMission,
+  twists: BodyMission,
+  reach: BodyMission,
+  light: BodyMission,
   numbers: NumbersMission,
   oddtile: OddTileMission,
   symbol: SymbolMission,
@@ -44,6 +48,9 @@ async function canRun(mission: Mission): Promise<boolean> {
   if (Platform.OS === 'web') return false;
   if (sensor === 'camera') return true;
   try {
+    // The light sensor is Android-only; an iPhone gets the fallback mission.
+    if (sensor === 'light') return Platform.OS === 'android' && (await LightSensor.isAvailableAsync());
+    if (sensor === 'gyroscope') return await Gyroscope.isAvailableAsync();
     return sensor === 'accelerometer' ? await Accelerometer.isAvailableAsync() : await Pedometer.isAvailableAsync();
   } catch {
     return false;

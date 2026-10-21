@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RangeCalendar } from '@/components/RangeCalendar';
 import { Sheet } from '@/components/Sheet';
 import { SleepChart, bucketLabel } from '@/components/SleepChart';
+import { DebtCard, NightSheet, SleepSounds, TagEffects } from '@/components/SleepExtras';
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { TimePicker } from '@/components/TimePicker';
 import { Button, Chips, Segmented, ThemedSwitch, Txt, haptic } from '@/components/ui';
@@ -22,8 +23,12 @@ import {
   mergeWatchNights,
   minutesAsleep,
   moreStats,
+  rateSleep,
+  sleepDebt,
   sleepStats,
   startSleep,
+  tagEffects,
+  tagNight,
   wrapDay,
 } from '@/core/sleep';
 import { formatClockText } from '@/core/time';
@@ -129,6 +134,8 @@ export default function SleepScreen() {
   const [adding, setAdding] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  /** The night whose details sheet is open. */
+  const [openNight, setOpenNight] = useState<string | null>(null);
   const { use24h, sleepGoalMinutes: goal, smartwatch } = data.settings;
 
   const onNights = useCallback((nights: SleepRecord[]) => update((d) => ({ ...d, sleep: mergeWatchNights(d.sleep, nights) })), [update]);
@@ -176,7 +183,11 @@ export default function SleepScreen() {
   const avgBed = stats ? wrapDay(stats.averageBed) : null;
   const avgWake = stats ? wrapDay(stats.averageWake) : null;
   const tip = stats ? insight(stats, goal, more?.socialJetLag ?? null) : null;
-  const nights = [...shown].reverse();
+  // Newest first, whatever order the nights arrived in (button, typed in, or a watch).
+  const nights = [...shown].sort((a, b) => b.end - a.end);
+  const effects = tagEffects(data.sleep);
+  const tagged = data.sleep.filter((r) => r.tags?.length).length;
+  const nightOpen = openNight ? (data.sleep.find((r) => r.id === openNight) ?? null) : null;
   const rangeLabel = range === 'custom' && custom.from !== null ? `${SHORT_DATE.format(custom.from)} – ${SHORT_DATE.format(custom.to ?? custom.from)}` : null;
 
   return (
@@ -225,6 +236,8 @@ export default function SleepScreen() {
           )}
         </View>
 
+        <SleepSounds />
+
         <View style={styles.rangeRow}>
           <View style={styles.flex}>
             <Segmented
@@ -264,6 +277,8 @@ export default function SleepScreen() {
               </Txt>
             </View>
 
+            <DebtCard debt={sleepDebt(data.sleep, goal, now)} />
+
             <View style={styles.chartCard}>
               <Txt variant="caption" style={styles.detail} accessibilityLiveRegion="polite">
                 {picked && picked.minutes !== null
@@ -299,13 +314,15 @@ export default function SleepScreen() {
               </View>
             ) : null}
 
+            <TagEffects effects={effects} tagged={tagged} />
+
             <Txt variant="section" style={styles.listTitle}>Nights</Txt>
             <View style={styles.list}>
               {(showAll ? nights : nights.slice(0, 14)).map((r, i) => (
-                <Pressable key={r.id} onLongPress={() => remove(r)} accessibilityHint="Long press to delete" style={[styles.night, i > 0 && styles.nightBorder]}>
+                <Pressable key={r.id} onPress={() => setOpenNight(r.id)} onLongPress={() => remove(r)} accessibilityHint="Tap for details, long press to delete" style={[styles.night, i > 0 && styles.nightBorder]}>
                   <View style={styles.flex}>
                     <Txt variant="row">{DATE.format(r.end)}</Txt>
-                    <Txt variant="caption">{`${clock(r.start, use24h)} – ${clock(r.end, use24h)}${r.rating ? ` · ${RATINGS[r.rating - 1].label}` : ''}`}</Txt>
+                    <Txt variant="caption">{`${clock(r.start, use24h)} – ${clock(r.end, use24h)}${r.rating ? ` · ${RATINGS[r.rating - 1].label}` : ''}${r.tags?.length ? ` · ${r.tags.length} ${r.tags.length === 1 ? 'note' : 'notes'}` : ''}`}</Txt>
                   </View>
                   {r.source === 'watch' ? <Ionicons name="watch-outline" size={16} color={colors.textMuted} accessibilityLabel="From your watch" /> : null}
                   <Text style={styles.nightValue}>{formatDuration(minutesAsleep(r))}</Text>
@@ -313,7 +330,7 @@ export default function SleepScreen() {
               ))}
             </View>
             {nights.length > 14 && !showAll ? <Button title={`Show all ${nights.length} nights`} variant="secondary" onPress={() => setShowAll(true)} /> : null}
-            <Txt variant="caption" style={styles.center}>Long press a night to delete it.</Txt>
+            <Txt variant="caption" style={styles.center}>Tap a night to rate it or note what happened. Long press to delete.</Txt>
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -345,6 +362,18 @@ export default function SleepScreen() {
       >
         <RangeCalendar from={custom.from} to={custom.to} max={now} onChange={(from, to) => setCustom({ from, to })} />
       </Sheet>
+
+      <NightSheet
+        night={nightOpen}
+        onClose={() => setOpenNight(null)}
+        onRate={(rating) => nightOpen && update((d) => rateSleep(d, nightOpen.id, rating))}
+        onTags={(tags) => nightOpen && update((d) => tagNight(d, nightOpen.id, tags))}
+        onDelete={() => {
+          const r = nightOpen;
+          setOpenNight(null);
+          if (r) remove(r);
+        }}
+      />
 
       <AddNight visible={adding} onClose={() => setAdding(false)} use24h={use24h} onSave={(r) => update((d) => ({ ...d, sleep: addRecord(d.sleep.filter((x) => x.id !== r.id), r) }))} />
     </View>

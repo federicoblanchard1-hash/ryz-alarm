@@ -21,6 +21,10 @@ export const MISSION_ICONS: Record<MissionType, IconName> = {
   pvt: 'flash-outline',
   arrows: 'swap-horizontal-outline',
   jacks: 'fitness-outline',
+  sprint: 'speedometer-outline',
+  twists: 'sync-outline',
+  reach: 'arrow-up-circle-outline',
+  light: 'sunny-outline',
 };
 
 export interface MissionProps {

@@ -4,7 +4,7 @@ import { feedsForEntity, feedsForMode, feedsForNode, FEED_MODES, followFeeds, re
 import { migrateNewsTopics, upgradeNewsSettings } from '../newsMigration';
 import { defaultNewsPrefs, editionForLocale, followState, toggleFollow, toggleMute, type NewsPrefs } from '../newsPrefs';
 import { EDITIONS, F, sourceForFeed } from '../sources';
-import { applyFilters, clusterArticles, mutedByTags, orderStories } from '../stories';
+import { applyFilters, clusterArticles, mutedByTags, orderStories, sortStories } from '../stories';
 import { formatOf, tagArticle } from '../tagging';
 import { ALL_NODES, CATEGORIES, nodeById } from '../taxonomy';
 
@@ -162,6 +162,13 @@ describe('stories', () => {
     expect(orderStories('top', stories, en, [], now)[0].sources.length).toBe(3);
     expect(orderStories('breaking', stories, en, [], now + 10 * 3_600_000)).toHaveLength(0);
     expect(orderStories('digest', stories, en, [], now).length).toBeGreaterThan(0);
+  });
+
+  it('sorts newest first, by coverage, or keeps the recommended order', () => {
+    const stories = clusterArticles(list);
+    expect(sortStories(stories, 'newest')[0].lead.source).toBe('ESPN');
+    expect(sortStories(stories, 'covered')[0].sources).toHaveLength(3);
+    expect(sortStories(stories, 'recommended')).toBe(stories);
   });
 
   it('applies language, source, keyword and topic filters', () => {

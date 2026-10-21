@@ -1,5 +1,6 @@
 import type { Mission } from './missions';
 import type { NewsPrefs } from './newsPrefs';
+import type { SleepSoundId, SleepTag } from './sleep';
 import type { VibrationId } from './vibration';
 import type { XpState } from './xp';
 
@@ -94,6 +95,12 @@ export interface Alarm {
 export interface Settings {
   sleepGoalMinutes: number;
   bedtimeReminder: boolean;
+  /** "Last call for coffee" some hours before bedtime. */
+  caffeineReminder: boolean;
+  /** Hours before bedtime for the caffeine reminder. */
+  caffeineHours: number;
+  /** Sleep sounds: what plays, for how long (0 = all night) and how loud. */
+  sleepSound: { id: SleepSoundId; minutes: number; volume: number };
   /** Minutes before bedtime the reminder arrives. */
   reminderLeadMinutes: number;
   use24h: boolean;
@@ -148,6 +155,8 @@ export interface SleepRecord {
   rating?: 1 | 2 | 3 | 4 | 5;
   /** Where it came from: the Start sleep button (default), typed in, or a smartwatch via Apple Health / Health Connect. */
   source?: 'button' | 'manual' | 'watch';
+  /** What happened that day (caffeine, exercise…), to see what helps your sleep. */
+  tags?: SleepTag[];
 }
 
 export interface AppData {

@@ -1,118 +1,190 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PressableScale, Segmented, Txt, confirm, haptic } from '@/components/ui';
+import { PressableScale, Segmented, Txt, confirm, haptic, type IconName } from '@/components/ui';
 import { COUNTRIES } from '@/core/countries';
-import { ENTITY_KINDS, entityTitle, followState, toggleFollow, toggleMute, type EntityKind, type FollowedEntity, type FollowState } from '@/core/newsPrefs';
+import { ENTITY_KINDS, entityTitle, followState, toggleFollow, toggleMute, type EntityKind, type FollowedEntity } from '@/core/newsPrefs';
 import { FREE_NEWS_TOPICS } from '@/core/pro';
-import { CATEGORIES, pathTitle, searchNodes, type NewsNode } from '@/core/taxonomy';
+import { CATEGORIES, nodeById, pathTitle, searchNodes, type NewsCategory, type NewsNode } from '@/core/taxonomy';
 import { usePro } from '@/state/usePro';
 import { useStore } from '@/state/store';
 import { FONT, colors, radius, space } from '@/theme';
 
 type Choices = { follows: string[]; muted: string[] };
+/** What tapping a topic does in a category: follow it or mute it. */
+type TapMode = 'follow' | 'mute';
 
-const STATE_TEXT: Record<Exclude<FollowState, null>, string> = {
-  followed: 'Following',
-  muted: 'Muted',
-  'followed-above': 'Included',
-  'muted-above': 'Muted above',
-};
-
-/** Follow and mute buttons for one node. */
-function NodeActions({ node, choices, onFollow, onMute }: { node: NewsNode; choices: Choices; onFollow: (id: string) => void; onMute: (id: string) => void }) {
+/** A topic as a pill: white when followed, dashed when included by a followed parent, red when muted. */
+function TopicChip({ node, choices, onPress, strong }: { node: NewsNode; choices: Choices; onPress: (id: string) => void; strong?: boolean }) {
   const state = followState(node.id, choices.follows, choices.muted);
-  const followed = state === 'followed';
-  const muted = state === 'muted';
+  const label = state === 'followed' ? 'following' : state === 'muted' ? 'muted' : state === 'followed-above' ? 'included' : state === 'muted-above' ? 'muted above' : 'not chosen';
   return (
-    <View style={styles.actions}>
-      <Pressable
-        onPress={() => onFollow(node.id)}
-        hitSlop={6}
-        accessibilityRole="button"
-        accessibilityState={{ selected: followed }}
-        accessibilityLabel={followed ? `Stop following ${node.title}` : `Follow ${node.title}`}
-        style={[styles.follow, followed && styles.followOn, state === 'followed-above' && styles.followInherited]}
-      >
-        <Text style={[styles.followText, followed && styles.followTextOn]}>{followed ? 'Following' : state === 'followed-above' ? 'Included' : 'Follow'}</Text>
-      </Pressable>
-      <Pressable
-        onPress={() => onMute(node.id)}
-        hitSlop={6}
-        accessibilityRole="button"
-        accessibilityState={{ selected: muted }}
-        accessibilityLabel={muted ? `Unmute ${node.title}` : `Mute ${node.title}`}
-        style={[styles.mute, muted && styles.muteOn]}
-      >
-        <Ionicons name={muted || state === 'muted-above' ? 'notifications-off' : 'notifications-off-outline'} size={17} color={muted ? colors.onAccent : state === 'muted-above' ? colors.danger : colors.textMuted} />
-      </Pressable>
-    </View>
+    <Pressable
+      onPress={() => onPress(node.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`${node.title}, ${label}`}
+      style={({ pressed }) => [
+        styles.chip,
+        strong && styles.chipStrong,
+        state === 'followed' && styles.chipOn,
+        state === 'followed-above' && styles.chipIncluded,
+        state === 'muted' && styles.chipMuted,
+        state === 'muted-above' && styles.chipMutedAbove,
+        pressed && styles.pressed,
+      ]}
+    >
+      {state === 'followed' ? <Ionicons name="checkmark" size={15} color={colors.onAccent} /> : null}
+      {state === 'muted' ? <Ionicons name="notifications-off" size={14} color={colors.danger} /> : null}
+      <Text style={[styles.chipText, strong && styles.chipTextStrong, state === 'followed' && styles.chipTextOn, (state === 'muted' || state === 'muted-above') && styles.chipTextMuted]}>{node.title}</Text>
+    </Pressable>
   );
 }
 
-function NodeRow({ node, choices, open, onToggleOpen, onFollow, onMute, indent }: { node: NewsNode; choices: Choices; open: boolean; onToggleOpen?: () => void; onFollow: (id: string) => void; onMute: (id: string) => void; indent: number }) {
-  const state = followState(node.id, choices.follows, choices.muted);
-  return (
-    <View style={[styles.nodeRow, { paddingLeft: space.lg + indent * space.lg }]}>
-      <Pressable onPress={onToggleOpen} disabled={!onToggleOpen} style={styles.nodeTitle} accessibilityRole={onToggleOpen ? 'button' : 'text'} accessibilityState={onToggleOpen ? { expanded: open } : undefined}>
-        <Text style={[styles.nodeText, (state === 'muted' || state === 'muted-above') && styles.nodeMuted]} numberOfLines={2}>
-          {node.title}
-        </Text>
-        {onToggleOpen ? (
-          <Text style={styles.nodeCount}>
-            {node.children.length} {open ? '▴' : '▾'}
-          </Text>
-        ) : null}
-      </Pressable>
-      <NodeActions node={node} choices={choices} onFollow={onFollow} onMute={onMute} />
-    </View>
-  );
-}
-
-/** A category: its own buttons, then its topics (under their headings), each with its sub-topics. */
-function CategoryCard({ category, choices, open, onToggleOpen, onFollow, onMute }: { category: (typeof CATEGORIES)[number]; choices: Choices; open: boolean; onToggleOpen: () => void; onFollow: (id: string) => void; onMute: (id: string) => void }) {
-  const [openTopic, setOpenTopic] = useState<string | null>(null);
+/** One category in the grid: its icon and how much of it you've chosen. */
+function CategoryTile({ category, choices, onOpen }: { category: NewsCategory; choices: Choices; onOpen: () => void }) {
   const state = followState(category.id, choices.follows, choices.muted);
-  const inside = [...choices.follows, ...choices.muted].filter((id) => id.startsWith(`${category.id}.`)).length;
+  const inside = choices.follows.filter((id) => id.startsWith(`${category.id}.`)).length;
+  const muted = choices.muted.filter((id) => id.startsWith(`${category.id}.`)).length;
+  const on = state === 'followed';
+  const caption = on ? 'Following all' : state === 'muted' ? 'Muted' : inside ? `${inside} followed` : muted ? `${muted} muted` : `${category.children.length} topics`;
   return (
-    <View style={[styles.card, state === 'followed' && styles.cardOn]}>
-      <View style={styles.cardHead}>
-        <Pressable onPress={onToggleOpen} style={styles.cardTitleWrap} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={`${category.title}, ${category.children.length} topics`}>
-          <View style={styles.flex}>
-            <Text style={styles.cardTitle}>{category.title}</Text>
-            <Text style={styles.cardCount}>{state ? STATE_TEXT[state] : inside > 0 ? `${inside} chosen inside` : `${category.children.length} topics`}</Text>
-          </View>
-          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
-        </Pressable>
-        <NodeActions node={category} choices={choices} onFollow={onFollow} onMute={onMute} />
-      </View>
-      {open ? (
-        <View style={styles.tree}>
-          {category.children.map((topic, i) => {
-            const heading = topic.group && topic.group !== category.children[i - 1]?.group ? topic.group : null;
-            const topicOpen = openTopic === topic.id;
-            return (
-              <View key={topic.id}>
-                {heading ? <Txt variant="label" style={styles.groupLabel}>{heading}</Txt> : null}
-                <NodeRow node={topic} choices={choices} indent={topic.group ? 1 : 0} open={topicOpen} onToggleOpen={topic.children.length ? () => setOpenTopic((o) => (o === topic.id ? null : topic.id)) : undefined} onFollow={onFollow} onMute={onMute} />
-                {topicOpen
-                  ? topic.children.map((sub, j) => (
-                      <View key={sub.id}>
-                        {sub.group && sub.group !== topic.children[j - 1]?.group ? <Txt variant="label" style={[styles.groupLabel, styles.subGroup]}>{sub.group}</Txt> : null}
-                        <NodeRow node={sub} choices={choices} indent={(topic.group ? 2 : 1) + (sub.group ? 0.5 : 0)} open={false} onFollow={onFollow} onMute={onMute} />
-                      </View>
-                    ))
-                  : null}
-              </View>
-            );
-          })}
+    <Pressable onPress={onOpen} accessibilityRole="button" accessibilityLabel={`${category.title}: ${caption}`} style={({ pressed }) => [styles.tile, on && styles.tileOn, inside > 0 && !on && styles.tilePartly, state === 'muted' && styles.tileMuted, pressed && styles.pressed]}>
+      <Ionicons name={category.icon as IconName} size={24} color={on ? colors.onAccent : state === 'muted' ? colors.danger : colors.text} />
+      <Text style={[styles.tileTitle, on && styles.tileTextOn]} numberOfLines={2}>
+        {category.title}
+      </Text>
+      <Text style={[styles.tileCaption, on && styles.tileTextOn]}>{caption}</Text>
+    </Pressable>
+  );
+}
+
+/** Inside a category: follow or mute all of it, then tap topics and sub-topics. */
+function CategoryDetail({ category, choices, mode, onMode, onTap, onBack }: { category: NewsCategory; choices: Choices; mode: TapMode; onMode: (m: TapMode) => void; onTap: (id: string) => void; onBack: () => void }) {
+  const state = followState(category.id, choices.follows, choices.muted);
+  const leaves = category.children.filter((t) => t.children.length === 0);
+  const branches = category.children.filter((t) => t.children.length > 0);
+  // Topics without sub-topics, in their headings ("Industries", "Other team sports"…).
+  const leafGroups = leaves.reduce<{ label: string | null; nodes: NewsNode[] }[]>((acc, n) => {
+    const label = n.group ?? null;
+    const last = acc[acc.length - 1];
+    if (last && last.label === label) last.nodes.push(n);
+    else acc.push({ label, nodes: [n] });
+    return acc;
+  }, []);
+  return (
+    <View style={styles.detail}>
+      <Pressable onPress={onBack} hitSlop={10} accessibilityRole="button" style={styles.back}>
+        <Ionicons name="chevron-back" size={20} color={colors.textMuted} />
+        <Txt variant="muted">All categories</Txt>
+      </Pressable>
+      <View style={styles.detailHead}>
+        <View style={[styles.detailIcon, state === 'followed' && styles.detailIconOn]}>
+          <Ionicons name={category.icon as IconName} size={26} color={state === 'followed' ? colors.onAccent : colors.text} />
         </View>
-      ) : null}
+        <Text style={styles.detailTitle} accessibilityRole="header">
+          {category.title}
+        </Text>
+      </View>
+      <View style={styles.wholeRow}>
+        <Pressable onPress={() => onTap(category.id)} accessibilityRole="button" style={[styles.wholeButton, state === 'followed' && styles.wholeOn, state === 'muted' && styles.wholeMuted]}>
+          <Ionicons name={state === 'followed' ? 'checkmark' : state === 'muted' ? 'notifications-off' : mode === 'follow' ? 'add' : 'notifications-off-outline'} size={18} color={state === 'followed' ? colors.onAccent : state === 'muted' ? colors.danger : colors.text} />
+          <Text style={[styles.wholeText, state === 'followed' && styles.chipTextOn]}>
+            {state === 'followed' ? `Following all of ${category.title}` : state === 'muted' ? `${category.title} is muted` : mode === 'follow' ? `Follow all of ${category.title}` : `Mute all of ${category.title}`}
+          </Text>
+        </Pressable>
+      </View>
+      <Segmented
+        label="What a tap does"
+        options={[
+          { value: 'follow', label: 'Tap to follow' },
+          { value: 'mute', label: 'Tap to mute' },
+        ]}
+        value={mode}
+        onChange={onMode}
+      />
+      <Txt variant="caption">
+        {mode === 'follow' ? 'White means followed; dashed means included because you follow the whole category.' : 'Red means muted: those stories never show, even inside something you follow.'}
+      </Txt>
+      {leafGroups.map((g, i) => (
+        <View key={`${g.label ?? 'topics'}${i}`} style={styles.section}>
+          <Txt variant="label">{g.label ?? 'Topics'}</Txt>
+          <View style={styles.cloud}>
+            {g.nodes.map((n) => (
+              <TopicChip key={n.id} node={n} choices={choices} onPress={onTap} />
+            ))}
+          </View>
+        </View>
+      ))}
+      {branches.map((t) => {
+        const subGroups = t.children.reduce<{ label: string | null; nodes: NewsNode[] }[]>((acc, n) => {
+          const label = n.group ?? null;
+          const last = acc[acc.length - 1];
+          if (last && last.label === label) last.nodes.push(n);
+          else acc.push({ label, nodes: [n] });
+          return acc;
+        }, []);
+        return (
+          <View key={t.id} style={styles.branch}>
+            {t.group ? <Txt variant="label">{t.group}</Txt> : null}
+            <TopicChip node={t} choices={choices} onPress={onTap} strong />
+            {subGroups.map((g, i) => (
+              <View key={`${t.id}${i}`} style={styles.subSection}>
+                {g.label ? <Text style={styles.subLabel}>{g.label}</Text> : null}
+                <View style={styles.cloud}>
+                  {g.nodes.map((n) => (
+                    <TopicChip key={n.id} node={n} choices={choices} onPress={onTap} />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
+}
+
+/** What you follow and mute so far, one tap to remove. */
+function Chosen({ choices, entities, onRemove, onRemoveEntity }: { choices: Choices; entities: FollowedEntity[]; onRemove: (id: string) => void; onRemoveEntity: (e: FollowedEntity) => void }) {
+  if (!choices.follows.length && !choices.muted.length && !entities.length) return null;
+  return (
+    <View style={styles.chosen}>
+      <Txt variant="label">{`Following ${choices.follows.length + entities.length}${choices.muted.length ? ` · muted ${choices.muted.length}` : ''}`}</Txt>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chosenRow} style={styles.chosenScroll}>
+        {choices.follows.map((id) => (
+          <Pressable key={id} onPress={() => onRemove(id)} accessibilityRole="button" accessibilityLabel={`Stop following ${nodeById(id)?.title ?? id}`} style={[styles.chip, styles.chipOn]}>
+            <Text style={[styles.chipText, styles.chipTextOn]}>{nodeById(id)?.title ?? id}</Text>
+            <Ionicons name="close" size={14} color={colors.onAccent} />
+          </Pressable>
+        ))}
+        {entities.map((e) => (
+          <Pressable key={`${e.kind}:${e.name}`} onPress={() => onRemoveEntity(e)} accessibilityRole="button" accessibilityLabel={`Stop following ${entityTitle(e)}`} style={[styles.chip, styles.chipOn]}>
+            <Text style={[styles.chipText, styles.chipTextOn]}>{entityTitle(e)}</Text>
+            <Ionicons name="close" size={14} color={colors.onAccent} />
+          </Pressable>
+        ))}
+        {choices.muted.map((id) => (
+          <Pressable key={id} onPress={() => onRemove(id)} accessibilityRole="button" accessibilityLabel={`Unmute ${nodeById(id)?.title ?? id}`} style={[styles.chip, styles.chipMuted]}>
+            <Ionicons name="notifications-off" size={14} color={colors.danger} />
+            <Text style={[styles.chipText, styles.chipTextMuted]}>{nodeById(id)?.title ?? id}</Text>
+            <Ionicons name="close" size={14} color={colors.danger} />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+/** Followed, muted or not, for a search result. */
+function ResultState({ node, choices }: { node: NewsNode; choices: Choices }) {
+  const state = followState(node.id, choices.follows, choices.muted);
+  if (state === 'followed') return <Ionicons name="checkmark-circle" size={24} color={colors.text} />;
+  if (state === 'muted') return <Ionicons name="notifications-off" size={22} color={colors.danger} />;
+  if (state === 'followed-above') return <Ionicons name="checkmark-circle-outline" size={24} color={colors.textMuted} />;
+  return <Ionicons name="add-circle-outline" size={24} color={colors.textMuted} />;
 }
 
 /** Follow a team, player, league, company, ticker, person, country, city or any keyword. */
@@ -184,7 +256,8 @@ export default function Interests() {
   const insets = useSafeAreaInsets();
   const [choices, setChoices] = useState<Choices>(() => ({ follows: data.settings.newsTopics ?? [], muted: data.settings.news.muted }));
   const [entities, setEntities] = useState<FollowedEntity[]>(data.settings.news.entities);
-  const [open, setOpen] = useState<string | null>(first ? 'world' : null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [mode, setMode] = useState<TapMode>('follow');
   const [tab, setTab] = useState<'topics' | 'names'>(startTab === 'names' ? 'names' : 'topics');
   const [query, setQuery] = useState('');
   const matches = useMemo(() => searchNodes(query, 60), [query]);
@@ -208,6 +281,20 @@ export default function Interests() {
   const mute = (id: string) => {
     haptic('select');
     setChoices((c) => toggleMute(id, c.follows, c.muted));
+  };
+  /** Inside a category a tap follows or mutes, depending on the mode. */
+  const tap = (id: string) => (mode === 'follow' ? follow(id) : mute(id));
+  /** From the Following strip: undo whatever was chosen. */
+  const unchoose = (id: string) => {
+    haptic('select');
+    setChoices((c) => ({ follows: c.follows.filter((x) => x !== id), muted: c.muted.filter((x) => x !== id) }));
+  };
+  const openCategory = open ? (CATEGORIES.find((c) => c.id === open) ?? null) : null;
+  const scroll = useRef<ScrollView>(null);
+  // Opening or leaving a category starts at the top of the page.
+  const goTo = (id: string | null) => {
+    setOpen(id);
+    scroll.current?.scrollTo({ y: 0, animated: false });
   };
   const addEntity = (e: FollowedEntity) => {
     if (entities.some((x) => x.kind === e.kind && x.name.toLowerCase() === e.name.toLowerCase())) return;
@@ -244,15 +331,19 @@ export default function Interests() {
           {first ? <Txt style={styles.skip}>Skip</Txt> : <Ionicons name="close" size={30} color={colors.text} />}
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title} accessibilityRole="header">
-          {first ? 'Your morning news' : 'Your news'}
-        </Text>
-        <Txt variant="muted" style={styles.subtitle}>
-          {first
-            ? 'Follow what you like: a whole category, or open it for topics and sub-topics. Mute anything you never want to see. You can change it any time.'
-            : 'Follow or mute any category, topic or sub-topic. The closest choice wins: mute Football but follow Transfers, and you get transfers only.'}
-        </Txt>
+      <ScrollView ref={scroll} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} keyboardShouldPersistTaps="handled">
+        {openCategory ? null : (
+          <>
+            <Text style={styles.title} accessibilityRole="header">
+              {first ? 'Your morning news' : 'Your news'}
+            </Text>
+            <Txt variant="muted" style={styles.subtitle}>
+              {first ? 'Tap a category to choose its topics, or follow it whole. You can change it any time.' : 'Tap a category to follow or mute its topics. The closest choice wins: mute Football but follow Transfers, and you get transfers only.'}
+            </Txt>
+          </>
+        )}
+        {openCategory ? null : <Chosen choices={choices} entities={entities} onRemove={unchoose} onRemoveEntity={removeEntity} />}
+        {openCategory ? null : (
         <Segmented
           label="What to follow"
           options={[
@@ -262,7 +353,10 @@ export default function Interests() {
           value={tab}
           onChange={setTab}
         />
-        {tab === 'names' ? (
+        )}
+        {openCategory && tab === 'topics' ? (
+          <CategoryDetail category={openCategory} choices={choices} mode={mode} onMode={setMode} onTap={tap} onBack={() => goTo(null)} />
+        ) : tab === 'names' ? (
           <Entities entities={entities} onAdd={addEntity} onRemove={removeEntity} />
         ) : (
           <>
@@ -276,7 +370,7 @@ export default function Interests() {
               ) : null}
             </View>
             {query.trim() ? (
-              <View style={styles.card}>
+              <View>
                 {matches.length === 0 ? (
                   <View style={styles.empty}>
                     <Txt variant="muted">{`No topic matches “${query.trim()}”.`}</Txt>
@@ -285,23 +379,30 @@ export default function Interests() {
                     </Pressable>
                   </View>
                 ) : (
-                  matches.map((n) => (
-                    <View key={n.id} style={styles.nodeRow}>
-                      <View style={styles.nodeTitle}>
-                        <Text style={styles.nodeText} numberOfLines={2}>
-                          {n.title}
-                        </Text>
-                        <Txt variant="caption" numberOfLines={1}>
-                          {pathTitle(n.id).split(' › ').slice(0, -1).join(' › ') || 'Category'}
-                        </Txt>
-                      </View>
-                      <NodeActions node={n} choices={choices} onFollow={follow} onMute={mute} />
-                    </View>
-                  ))
+                  <View style={styles.results}>
+                    <Txt variant="caption">Tap to follow; hold to mute.</Txt>
+                    {matches.map((n) => (
+                      <Pressable key={n.id} onPress={() => follow(n.id)} onLongPress={() => mute(n.id)} accessibilityRole="button" accessibilityHint="Tap to follow, hold to mute" style={({ pressed }) => [styles.resultRow, pressed && styles.pressed]}>
+                        <View style={styles.flex}>
+                          <Text style={styles.resultTitle} numberOfLines={2}>
+                            {n.title}
+                          </Text>
+                          <Txt variant="caption" numberOfLines={1}>
+                            {pathTitle(n.id).split(' › ').slice(0, -1).join(' › ') || 'Category'}
+                          </Txt>
+                        </View>
+                        <ResultState node={n} choices={choices} />
+                      </Pressable>
+                    ))}
+                  </View>
                 )}
               </View>
             ) : (
-              CATEGORIES.map((c) => <CategoryCard key={c.id} category={c} choices={choices} open={open === c.id} onToggleOpen={() => setOpen((o) => (o === c.id ? null : c.id))} onFollow={follow} onMute={mute} />)
+              <View style={styles.grid}>
+                {CATEGORIES.map((c) => (
+                  <CategoryTile key={c.id} category={c} choices={choices} onOpen={() => goTo(c.id)} />
+                ))}
+              </View>
             )}
           </>
         )}
@@ -327,41 +428,62 @@ export default function Interests() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
+  pressed: { opacity: 0.6 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: space.xl, minHeight: 44 },
   skip: { fontSize: 17, fontFamily: FONT.regular, color: colors.textMuted },
   content: { paddingHorizontal: space.lg, gap: space.md },
   title: { fontSize: 42, lineHeight: 48, fontFamily: FONT.display, color: colors.text, paddingHorizontal: space.xs },
   subtitle: { paddingHorizontal: space.xs, marginBottom: space.xs },
-  card: { borderRadius: radius.md + 6, backgroundColor: colors.surface, overflow: 'hidden' },
-  cardOn: { borderWidth: 1, borderColor: colors.borderStrong },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingRight: space.md },
-  cardTitleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, paddingRight: space.xs },
-  cardTitle: { fontSize: 17, lineHeight: 22, fontFamily: FONT.medium, color: colors.text },
-  cardCount: { fontSize: 13, lineHeight: 18, fontFamily: FONT.light, color: colors.textMuted },
-  tree: { paddingBottom: space.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  groupLabel: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.xs },
-  subGroup: { paddingLeft: space.xxl + space.lg },
-  nodeRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm, paddingHorizontal: space.lg, minHeight: 50 },
-  nodeTitle: { flex: 1, flexDirection: 'column', gap: 2 },
-  nodeText: { fontSize: 16, lineHeight: 21, fontFamily: FONT.regular, color: colors.text },
-  nodeMuted: { color: colors.textFaint, textDecorationLine: 'line-through' },
-  nodeCount: { fontSize: 12, fontFamily: FONT.light, color: colors.textMuted },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  follow: { minWidth: 86, height: 32, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
-  followOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  followInherited: { borderStyle: 'dashed' },
-  followText: { fontSize: 14, fontFamily: FONT.medium, color: colors.text },
-  followTextOn: { color: colors.onAccent },
-  mute: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised },
-  muteOn: { backgroundColor: colors.danger },
-  chip: { minHeight: 36, paddingHorizontal: space.md + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, justifyContent: 'center' },
+  // Category grid
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  tile: { width: '48.5%', minHeight: 112, padding: space.md + 2, borderRadius: radius.md + 4, backgroundColor: colors.surface, gap: 6, justifyContent: 'space-between', borderWidth: 1, borderColor: 'transparent' },
+  tileOn: { backgroundColor: colors.accent },
+  tilePartly: { borderColor: colors.borderStrong },
+  tileMuted: { borderColor: colors.danger, backgroundColor: colors.dangerSoft },
+  tileTitle: { fontSize: 16, lineHeight: 20, fontFamily: FONT.medium, color: colors.text },
+  tileCaption: { fontSize: 13, lineHeight: 17, fontFamily: FONT.light, color: colors.textMuted },
+  tileTextOn: { color: colors.onAccent },
+  // Chips
+  cloud: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 36, paddingHorizontal: space.md + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, alignSelf: 'flex-start' },
+  chipStrong: { minHeight: 40, borderColor: colors.text },
   chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  chipIncluded: { borderStyle: 'dashed', borderColor: colors.textMuted },
+  chipMuted: { borderColor: colors.danger, backgroundColor: colors.dangerSoft },
+  chipMutedAbove: { borderColor: colors.border },
   chipText: { fontSize: 15, fontFamily: FONT.regular, color: colors.text },
+  chipTextStrong: { fontFamily: FONT.medium, fontSize: 16 },
   chipTextOn: { color: colors.onAccent },
+  chipTextMuted: { color: colors.danger, textDecorationLine: 'line-through' },
+  // Category page
+  detail: { gap: space.md },
+  back: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', minHeight: 36 },
+  detailHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  detailIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  detailIconOn: { backgroundColor: colors.accent },
+  detailTitle: { flex: 1, fontSize: 34, lineHeight: 39, fontFamily: FONT.display, color: colors.text },
+  wholeRow: { flexDirection: 'row' },
+  wholeButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, minHeight: 48, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderStrong, paddingHorizontal: space.md },
+  wholeOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  wholeMuted: { borderColor: colors.danger, backgroundColor: colors.dangerSoft },
+  wholeText: { fontSize: 15, fontFamily: FONT.medium, color: colors.text, flexShrink: 1 },
+  section: { gap: space.sm, marginTop: space.sm },
+  branch: { gap: space.sm, marginTop: space.md, paddingTop: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  subSection: { gap: 6, paddingLeft: space.md },
+  subLabel: { fontSize: 13, fontFamily: FONT.medium, color: colors.textMuted },
+  // Following strip
+  chosen: { gap: space.sm },
+  chosenScroll: { marginHorizontal: -space.lg },
+  chosenRow: { gap: space.sm, paddingHorizontal: space.lg },
+  // Search
   search: { flexDirection: 'row', alignItems: 'center', gap: space.sm, height: 46, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.surface },
   searchInput: { flex: 1, height: '100%', fontSize: 16, fontFamily: FONT.regular, color: colors.text, paddingVertical: 0 },
+  results: { gap: 2 },
+  resultRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm + 2, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  resultTitle: { fontSize: 16, lineHeight: 21, fontFamily: FONT.regular, color: colors.text },
   empty: { padding: space.lg, gap: space.sm },
   link: { fontSize: 15, fontFamily: FONT.medium, color: colors.text },
+  // Names tab
   entities: { gap: space.md },
   kinds: { gap: space.sm },
   addRow: { flexDirection: 'row', gap: space.sm },
@@ -370,9 +492,12 @@ const styles = StyleSheet.create({
   disabled: { opacity: 0.4 },
   countryList: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   entityRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  sources: { textAlign: 'center', marginTop: space.md, paddingHorizontal: space.lg },
+  nodeText: { fontSize: 16, lineHeight: 21, fontFamily: FONT.regular, color: colors.text },
+  groupLabel: { paddingTop: space.md, paddingBottom: space.xs },
+  // Bottom
   erase: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm, height: 50, marginTop: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.danger, backgroundColor: colors.dangerSoft },
   eraseText: { fontSize: 16, fontFamily: FONT.medium, color: colors.danger },
+  sources: { textAlign: 'center', marginTop: space.md, paddingHorizontal: space.lg },
   footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.xl, paddingTop: space.md, backgroundColor: colors.bg },
   save: { height: 56, borderRadius: radius.md, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   saveText: { fontSize: 17, fontFamily: FONT.semibold, color: colors.onAccent },

@@ -278,6 +278,21 @@ export function orderStories(mode: FeedMode, stories: Story[], prefs: NewsPrefs,
   }
 }
 
+export type StorySort = 'newest' | 'recommended' | 'covered';
+
+export const STORY_SORTS: { id: StorySort; title: string }[] = [
+  { id: 'newest', title: 'Newest' },
+  { id: 'recommended', title: 'Recommended' },
+  { id: 'covered', title: 'Most sources' },
+];
+
+/** Re-sort a mode's stories: newest first, the mode's own order (recommended), or the most widely covered first. */
+export function sortStories(stories: Story[], sort: StorySort): Story[] {
+  if (sort === 'recommended') return stories;
+  if (sort === 'newest') return [...stories].sort((a, b) => b.last - a.last);
+  return [...stories].sort((a, b) => b.sources.length - a.sources.length || b.last - a.last);
+}
+
 /** Known publishers, for picking preferred and blocked sources. */
 export function registrySources() {
   return SOURCES.filter((s) => s.kind !== 'aggregator').sort((a, b) => a.name.localeCompare(b.name));

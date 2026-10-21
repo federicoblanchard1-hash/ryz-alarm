@@ -21,8 +21,13 @@ import {
   sameWords,
   scramble,
   seeded,
+  LIGHT_LUX,
+  lightTimer,
+  reachCounter,
   shakeCounter,
+  sprintTimer,
   squatCounter,
+  twistCounter,
   symbolProblem,
   type Sample,
 } from '../missions';
@@ -81,6 +86,42 @@ describe('squatCounter', () => {
       [1, 0.7, 0.6, 0.7, 1, 1.3, 1.4, 1.3, 1, 0.9, 1].map((z, i) => ({ x: 0, y: 0, z, t: start + i * 80 }));
     const samples = [...Array.from({ length: 20 }, (_, i) => still(i * 50)), ...squat(1000), ...squat(2500), ...squat(4000)];
     expect(samples.filter(count)).toHaveLength(3);
+  });
+});
+
+describe('new body missions', () => {
+  it('runs the sprint clock only while moving hard', () => {
+    const run = sprintTimer();
+    let ms = 0;
+    // 3 s of hard running (big jolts every 200 ms), then 3 s standing still.
+    for (let t = 0; t <= 3000; t += 40) ms = run({ x: 0, y: 0, z: t % 200 < 80 ? 2 : 0.3, t });
+    expect(ms).toBeGreaterThan(2800);
+    const afterRun = ms;
+    for (let t = 3040; t <= 6000; t += 40) ms = run(still(t));
+    expect(ms - afterRun).toBeLessThan(450);
+  });
+
+  it('counts a twist each time the turn changes direction', () => {
+    const twist = twistCounter();
+    const turn = (dir: number, start: number) => [0.5, 2.5, 3, 2.5, 0.5].map((v, i) => ({ x: 0, y: dir * v, z: 0.1, t: start + i * 40 }));
+    const samples = [...turn(1, 0), ...turn(-1, 400), ...turn(1, 800), ...turn(1, 1200)];
+    // Left, right, left: the fourth turn in the same direction doesn't count again.
+    expect(samples.filter(twist)).toHaveLength(3);
+  });
+
+  it('counts one reach per up-and-down', () => {
+    const reach = reachCounter();
+    const move = (start: number, first: number, second: number) => [1, first, first, first, 1, second, second, second, 1].map((z, i) => ({ x: 0, y: 0, z, t: start + i * 60 }));
+    const samples = [...move(0, 1.7, 0.4), ...move(600, 0.4, 1.7), ...move(1200, 1.7, 0.4), ...move(1800, 0.4, 1.7)];
+    expect(samples.filter(reach)).toHaveLength(2);
+  });
+
+  it('times bright light by level', () => {
+    const lit = lightTimer(2);
+    let ms = 0;
+    for (let t = 0; t <= 5000; t += 250) ms = lit(t < 2000 ? 50 : LIGHT_LUX[2] + 100, t);
+    expect(ms).toBeGreaterThanOrEqual(2750);
+    expect(ms).toBeLessThanOrEqual(3250);
   });
 });
 

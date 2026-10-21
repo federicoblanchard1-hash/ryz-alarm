@@ -1,5 +1,5 @@
 import { emptyData } from '../defaults';
-import { addRecord, buckets, endSleep, formatDuration, lastNights, manualRecord, mergeWatchNights, minutesAsleep, moreStats, nightsFromIntervals, sleepStats, startSleep, wrapDay } from '../sleep';
+import { addRecord, buckets, endSleep, formatDuration, lastNights, manualRecord, mergeWatchNights, minutesAsleep, moreStats, nightsFromIntervals, sleepDebt, sleepSoundVolume, sleepStats, startSleep, tagEffects, wrapDay } from '../sleep';
 import type { SleepRecord } from '../types';
 
 const at = (day: number, h: number, m = 0) => new Date(2026, 9, day, h, m).getTime();
@@ -93,5 +93,49 @@ describe('smartwatch and ranges', () => {
     const weekday = night(15, [23, 0], [7, 0]);
     const weekend = night(17, [1, 0], [9, 0]);
     expect(moreStats([weekday, weekend], 480)!.socialJetLag).toBe(120);
+  });
+});
+
+describe('sleep debt', () => {
+  it('adds up what each night missed, and a long night pays back at most an hour', () => {
+    const nights = [night(10, [23, 0], [6, 0]), night(11, [23, 0], [6, 30]), night(12, [22, 0], [9, 0])];
+    // Goal 8 h: 60 + 30 short, then 11 h is 3 h over but only pays back 60.
+    expect(sleepDebt(nights, 480, at(12, 12)).minutes).toBe(30);
+    expect(sleepDebt([nights[0]], 480, at(12, 12))).toMatchObject({ minutes: 60, nights: 1 });
+    // Nights older than the window don't count.
+    expect(sleepDebt(nights, 480, at(30, 12)).nights).toBe(0);
+  });
+});
+
+describe('night notes', () => {
+  it('compares nights with and without a tag once there are enough of each', () => {
+    const tagged = (day: number, hours: number, tags: string[], rating: 1 | 2 | 3 | 4 | 5): SleepRecord => ({ ...night(day, [23, 0], [(23 + hours) % 24, 0]), tags: tags as SleepRecord['tags'], rating });
+    const list = [
+      tagged(1, 6, ['caffeine'], 2),
+      tagged(2, 6, ['caffeine'], 2),
+      tagged(3, 6, ['caffeine'], 3),
+      tagged(4, 8, [], 4),
+      tagged(5, 8, [], 4),
+      tagged(6, 8, ['exercise'], 5),
+      // Untagged history isn't counted as "without".
+      night(7, [23, 0], [9, 0]),
+    ];
+    const effects = tagEffects(list);
+    const caffeine = effects.find((e) => e.tag === 'caffeine')!;
+    expect(caffeine.minutes).toBe(-120);
+    expect(caffeine.with).toBe(3);
+    expect(caffeine.without).toBe(3);
+    expect(caffeine.rating).toBe(-2);
+    // Exercise has only one night: not enough to say.
+    expect(effects.find((e) => e.tag === 'exercise')).toBeUndefined();
+  });
+});
+
+describe('sleep sounds', () => {
+  it('fades out over the last minute, and all night never stops', () => {
+    expect(sleepSoundVolume(0, 30, 0.6)).toBe(0.6);
+    expect(sleepSoundVolume(29.5 * 60_000, 30, 0.6)).toBeCloseTo(0.3);
+    expect(sleepSoundVolume(31 * 60_000, 30, 0.6)).toBe(0);
+    expect(sleepSoundVolume(10 * 3_600_000, 0, 0.6)).toBe(0.6);
   });
 });

@@ -8,13 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Txt, haptic } from '@/components/ui';
 import { timeAgo, type Article } from '@/core/news';
 import { clusterArticles } from '@/core/stories';
-import { searchNews } from '@/services/news';
+import { openInAppBrowser, searchNews } from '@/services/news';
 import { storyById } from '@/state/storyCache';
 import { useStore } from '@/state/store';
 import { useNow } from '@/state/useNow';
 import { FONT, colors, radius, space } from '@/theme';
 
-function openArticle(a: Article, story: string) {
+function openCard(a: Article, story: string) {
   router.push({ pathname: '/article', params: { url: a.url, title: a.title, image: a.image ?? '', source: a.source, summary: a.summary, published: String(a.published), story } });
 }
 
@@ -89,7 +89,7 @@ export default function StoryScreen() {
           return (
             <View key={a.url}>
               {heading ? <Txt variant="label" style={styles.day}>{heading}</Txt> : null}
-              <Pressable onPress={() => openArticle(a, id)} style={({ pressed }) => [styles.item, pressed && styles.pressed]} accessibilityRole="button">
+              <Pressable onPress={() => openInAppBrowser(a.url)} onLongPress={() => openCard(a, id)} style={({ pressed }) => [styles.item, pressed && styles.pressed]} accessibilityRole="button" accessibilityHint="Opens the article. Hold for more options.">
                 <View style={styles.dot} />
                 <View style={styles.flex}>
                   <Text style={styles.meta}>{`${a.source} · ${timeAgo(a.published, now)}`}</Text>

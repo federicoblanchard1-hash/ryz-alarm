@@ -12,7 +12,11 @@ export type MissionType =
   | 'qr'
   | 'pvt'
   | 'arrows'
-  | 'jacks';
+  | 'jacks'
+  | 'sprint'
+  | 'twists'
+  | 'reach'
+  | 'light';
 export type MissionLevel = 1 | 2 | 3;
 export type MissionGroup = 'brain' | 'body' | 'science';
 
@@ -39,7 +43,7 @@ export interface MissionInfo {
   unit: (n: number) => string;
   hasLevels: boolean;
   /** Needs a sensor or the camera; swapped for sums on a phone without one. */
-  sensor?: 'accelerometer' | 'pedometer' | 'camera';
+  sensor?: 'accelerometer' | 'pedometer' | 'camera' | 'gyroscope' | 'light';
   /** For the Scientific missions: where the idea comes from. */
   research?: string;
 }
@@ -59,7 +63,70 @@ export const MISSIONS: Record<MissionType, MissionInfo> = {
   shake: { group: 'body', title: 'Shake', description: 'Shake your phone hard', amounts: [20, 40, 80], min: 1, max: 100, step: 1, unit: plural('shake', 'shakes'), hasLevels: false, sensor: 'accelerometer' },
   squats: { group: 'body', title: 'Squats', description: 'Hold the phone to your chest and squat', amounts: [5, 10, 20], min: 1, max: 100, step: 1, unit: plural('squat', 'squats'), hasLevels: false, sensor: 'accelerometer' },
   steps: { group: 'body', title: 'Steps', description: 'Get up and walk around', amounts: [20, 50, 100], min: 1, max: 100, step: 1, unit: plural('step', 'steps'), hasLevels: false, sensor: 'pedometer' },
-  qr: { group: 'body', title: 'QR / Barcode', description: 'Get up and scan a code in another room', amounts: [1], min: 1, max: 1, step: 1, unit: plural('scan', 'scans'), hasLevels: false, sensor: 'camera' },
+  qr: {
+    group: 'body',
+    title: 'QR / Barcode',
+    description: 'Get up and scan a code in another room',
+    amounts: [1],
+    min: 1,
+    max: 1,
+    step: 1,
+    unit: plural('scan', 'scans'),
+    hasLevels: false,
+    sensor: 'camera',
+    research: 'Tip: put the code by the bathroom sink and splash cold water on your face and hands. Cooling your hands and feet may help you wake faster (Hilditch & McHill, 2019).',
+  },
+  sprint: {
+    group: 'body',
+    title: '30-second sprint',
+    description: 'Run on the spot or do high knees, phone in hand',
+    amounts: [20, 30, 45],
+    min: 10,
+    max: 100,
+    step: 5,
+    unit: plural('second', 'seconds'),
+    hasLevels: false,
+    sensor: 'accelerometer',
+    research: '30 seconds of hard exercise right after waking made people feel less sleepy and boosted the cortisol that helps you wake (Kovac et al., 2021).',
+  },
+  twists: {
+    group: 'body',
+    title: 'Torso twists',
+    description: 'Hold the phone to your chest and twist left and right',
+    amounts: [10, 20, 30],
+    min: 2,
+    max: 100,
+    step: 2,
+    unit: plural('twist', 'twists'),
+    hasLevels: false,
+    sensor: 'gyroscope',
+    research: 'Standing up and moving gets blood flowing to the brain, which is slow to recover right after waking (Kovac et al., 2020).',
+  },
+  reach: {
+    group: 'body',
+    title: 'Reach for the sky',
+    description: 'Stand up, raise the phone high above your head, bring it down',
+    amounts: [5, 10, 20],
+    min: 1,
+    max: 100,
+    step: 1,
+    unit: plural('reach', 'reaches'),
+    hasLevels: false,
+    sensor: 'accelerometer',
+  },
+  light: {
+    group: 'body',
+    title: 'Let the light in',
+    description: 'Open the curtains or turn on the lights until the room is bright (Android)',
+    amounts: [10, 20, 30],
+    min: 5,
+    max: 100,
+    step: 5,
+    unit: plural('second', 'seconds'),
+    hasLevels: true,
+    sensor: 'light',
+    research: 'Bright light after waking made people feel more alert and energetic at home (Sleep Health, 2024). Easy needs room lights, Medium a bright room, Hard daylight.',
+  },
   pvt: {
     group: 'science',
     title: 'Reaction test',
@@ -469,5 +536,85 @@ export function squatCounter({ dip = 0.85, peak = 1.15, gapMs = 800 } = {}) {
       return true;
     }
     return false;
+  };
+}
+
+/**
+ * Seconds of hard movement, for the sprint: the clock only runs while the
+ * phone is moving hard (more than `threshold` g away from still) at least
+ * once every `holdMs`. Stop moving and it stops.
+ */
+export function sprintTimer(threshold = 0.6, holdMs = 400) {
+  let lastHard = -Infinity;
+  let lastT: number | null = null;
+  let activeMs = 0;
+  return (s: Sample): number => {
+    if (Math.abs(magnitude(s) - 1) >= threshold) lastHard = s.t;
+    if (lastT !== null && s.t - lastHard <= holdMs) activeMs += Math.min(s.t - lastT, 200);
+    lastT = s.t;
+    return activeMs;
+  };
+}
+
+/** A gyroscope reading: rotation speed in radians per second around each axis. */
+export interface Rotation {
+  x: number;
+  y: number;
+  z: number;
+  t: number;
+}
+
+/**
+ * Counts torso twists with the phone held to the chest: a fast turn one way
+ * (above `rate` rad/s around the strongest axis), then one the other way.
+ * Each turn counts as one twist.
+ */
+export function twistCounter(rate = 2, gapMs = 250) {
+  let lastSign = 0;
+  let last = -Infinity;
+  return (r: Rotation): boolean => {
+    const axis = [r.x, r.y, r.z].reduce((a, b) => (Math.abs(b) > Math.abs(a) ? b : a));
+    if (Math.abs(axis) < rate || sign(axis) === lastSign || r.t - last < gapMs) return false;
+    lastSign = sign(axis);
+    last = r.t;
+    return true;
+  };
+}
+const sign = (n: number) => (n > 0 ? 1 : -1);
+
+/**
+ * Counts reaches: raising the phone overhead pushes it hard (heavier than
+ * `push` g) and stopping at the top makes it light (below `stop` g); lowering
+ * does the opposite. Two such movements, up and down, are one reach.
+ */
+export function reachCounter({ push = 1.35, stop = 0.7, gapMs = 350 } = {}) {
+  let smooth = 1;
+  let heavy = false;
+  let light = false;
+  let moves = 0;
+  let last = -Infinity;
+  return (sample: Sample): boolean => {
+    smooth = smooth * 0.6 + magnitude(sample) * 0.4;
+    if (smooth > push) heavy = true;
+    if (smooth < stop) light = true;
+    if (!(heavy && light) || sample.t - last < gapMs) return false;
+    heavy = light = false;
+    last = sample.t;
+    moves += 1;
+    return moves % 2 === 0;
+  };
+}
+
+/** Lux needed per level: room lights, a bright room, daylight. */
+export const LIGHT_LUX: Record<MissionLevel, number> = { 1: 100, 2: 400, 3: 1000 };
+
+/** Seconds spent in light at least as bright as the level asks. */
+export function lightTimer(level: MissionLevel) {
+  let lastT: number | null = null;
+  let litMs = 0;
+  return (lux: number, t: number): number => {
+    if (lastT !== null && lux >= LIGHT_LUX[level]) litMs += Math.min(t - lastT, 1000);
+    lastT = t;
+    return litMs;
   };
 }

@@ -1,9 +1,10 @@
-import { setAudioModeAsync, useAudioPlayer, type AudioPlayer } from 'expo-audio';
-import { useEffect, useRef } from 'react';
+import { createAudioPlayer, setAudioModeAsync, useAudioPlayer, type AudioPlayer } from 'expo-audio';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { Platform, Vibration } from 'react-native';
 
 import { DEEP_RAMP_SECONDS, DEEP_START_DB, GENTLE_START_DB, fadeVolume } from '@/core/fade';
 import { phaseAt, soundAt } from '@/core/plan';
+import { SLEEP_SOUNDS, sleepSoundVolume, type SleepSoundId } from '@/core/sleep';
 import type { Alarm, SoundId } from '@/core/types';
 import { patternLength, vibrationPattern, type VibrationId } from '@/core/vibration';
 
@@ -92,6 +93,8 @@ export function useRingSound(alarm: Alarm | undefined, kind: 'alarm' | 'snooze' 
 
   useEffect(() => {
     if (!active || !alarm) return;
+    // An alarm always wins over sleep sounds.
+    stopSleepSound();
     let current: AudioPlayer | null = null;
     let switchedAt = 0;
     setAlarmAudioMode().catch(() => {});
@@ -177,4 +180,76 @@ export function previewVibration(id: VibrationId) {
 
 export function stopVibration() {
   Vibration.cancel();
+}
+
+// ---- Sleep sounds: rain, waves or noise to fall asleep to, with a timer.
+// One player for the whole app, so it keeps playing when you leave the Sleep tab.
+
+export interface SleepSoundState {
+  id: SleepSoundId | null;
+  startedAt: number;
+  /** 0 plays all night. */
+  minutes: number;
+  volume: number;
+}
+
+let sleepPlayer: AudioPlayer | null = null;
+let sleepTimer: ReturnType<typeof setInterval> | null = null;
+let sleepState: SleepSoundState = { id: null, startedAt: 0, minutes: 0, volume: 0.6 };
+const sleepListeners = new Set<() => void>();
+const emitSleep = () => sleepListeners.forEach((l) => l());
+
+/** Plays a sleep sound in a loop; it fades out over its last minute and stops when the timer ends. */
+export function startSleepSound(id: SleepSoundId, minutes: number, volume: number) {
+  setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => {});
+  if (!sleepPlayer) sleepPlayer = createAudioPlayer(SOUND_SOURCES[id]);
+  else if (sleepState.id !== id) sleepPlayer.replace(SOUND_SOURCES[id]);
+  const player = sleepPlayer;
+  configure(player, { loop: true, volume });
+  player.play();
+  // Android stops background audio after a few minutes without lock screen controls.
+  safely(() => player.setActiveForLockScreen(true, { title: SLEEP_SOUNDS.find((s) => s.id === id)?.title ?? 'Sleep sounds', artist: 'Ryz' }));
+  sleepState = { id, startedAt: Date.now(), minutes, volume };
+  if (sleepTimer) clearInterval(sleepTimer);
+  sleepTimer = setInterval(() => {
+    const v = sleepSoundVolume(Date.now() - sleepState.startedAt, sleepState.minutes, sleepState.volume);
+    if (v <= 0) stopSleepSound();
+    else safely(() => configure(player, { volume: v }));
+  }, 2000);
+  emitSleep();
+}
+
+export function stopSleepSound() {
+  if (sleepTimer) clearInterval(sleepTimer);
+  sleepTimer = null;
+  if (sleepPlayer) {
+    const player = sleepPlayer;
+    safely(() => player.pause());
+    safely(() => player.setActiveForLockScreen(false));
+  }
+  if (sleepState.id !== null) {
+    sleepState = { ...sleepState, id: null };
+    emitSleep();
+  }
+}
+
+/** Change the volume of the sleep sound that's playing. */
+export function setSleepSoundVolume(volume: number) {
+  sleepState = { ...sleepState, volume };
+  if (sleepPlayer && sleepState.id) {
+    const player = sleepPlayer;
+    safely(() => configure(player, { volume: sleepSoundVolume(Date.now() - sleepState.startedAt, sleepState.minutes, volume) }));
+  }
+  emitSleep();
+}
+
+/** What's playing now, for the Sleep screen. */
+export function useSleepSound(): SleepSoundState {
+  return useSyncExternalStore(
+    (l) => {
+      sleepListeners.add(l);
+      return () => sleepListeners.delete(l);
+    },
+    () => sleepState,
+  );
 }

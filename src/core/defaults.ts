@@ -38,6 +38,10 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
   return {
     sleepGoalMinutes: 8 * 60,
     bedtimeReminder: false,
+    // Caffeine 6 hours before bed still costs sleep (Drake et al., 2013); 8 leaves a margin.
+    caffeineReminder: false,
+    caffeineHours: 8,
+    sleepSound: { id: 'rain', minutes: 30, volume: 0.6 },
     reminderLeadMinutes: 30,
     use24h,
     tempUnit,

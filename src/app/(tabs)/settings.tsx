@@ -275,6 +275,21 @@ export default function SettingsScreen() {
               />
             </View>
           ) : null}
+          <Divider />
+          <ToggleRow title="Last call for coffee" description="A reminder to stop caffeine before bedtime: even 6 hours before bed it can cost an hour of sleep" value={settings.caffeineReminder} onChange={(caffeineReminder) => updateSettings({ caffeineReminder })} />
+          {settings.caffeineReminder ? (
+            <View style={styles.picker}>
+              <AmountPicker
+                title="Hours before bedtime"
+                value={settings.caffeineHours}
+                min={3}
+                max={12}
+                step={1}
+                unit={(n) => `${n} ${n === 1 ? 'hour' : 'hours'}`}
+                onChange={(caffeineHours) => updateSettings({ caffeineHours })}
+              />
+            </View>
+          ) : null}
         </Section>
 
         <Section label="Display">

@@ -65,6 +65,16 @@ describe('buildPlan', () => {
     expect(reminders[0].body).toBe('Be in bed by 23:00 for 8 h of sleep before your 07:00 alarm.');
   });
 
+  it('gives a last call for coffee hours before bedtime', () => {
+    const alarm = { ...newAlarm('a'), days: [1 as const], hour: 7, minute: 0 };
+    const settings = { ...emptyData(true).settings, caffeineReminder: true, caffeineHours: 8, sleepGoalMinutes: 480 };
+    const coffee = buildPlan(data([alarm], { settings }), MONDAY_6AM).filter((p) => p.id.startsWith('caffeine:'));
+    expect(coffee).toHaveLength(1);
+    // 07:00 Monday − 8 h sleep − 8 h = 15:00 Sunday.
+    expect(coffee[0].trigger).toEqual({ type: 'weekly', weekday: 1, hour: 15, minute: 0 });
+    expect(coffee[0].title).toBe('Last call for coffee');
+  });
+
   it('uses the earliest alarm of the morning for the reminder', () => {
     const early = { ...newAlarm('early'), days: [2 as const], hour: 6, minute: 0 };
     const late = { ...newAlarm('late'), days: [2 as const], hour: 9, minute: 0 };

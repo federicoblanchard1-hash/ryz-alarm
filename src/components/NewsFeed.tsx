@@ -1,7 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,38 +14,42 @@ import {
 
 import { filterArticles, timeAgo, type Article, type ArticleFormat } from "@/core/news";
 import { FEED_MODES, type FeedMode } from "@/core/newsFeeds";
-import type { Story } from "@/core/stories";
+import { STORY_SORTS, sortStories, type Story, type StorySort } from "@/core/stories";
 import { openInAppBrowser, searchNews } from "@/services/news";
 import { useStore } from "@/state/store";
 import { onNearBottom } from "@/state/nearBottom";
 import { useNews } from "@/state/useNews";
 import { useNow } from "@/state/useNow";
 import { FONT, colors, radius, space } from "@/theme";
-import { PressableScale, Txt } from "./ui";
+import { PressableScale, Segmented, Txt } from "./ui";
 
+/** Tapping a story opens the article itself, on its publisher's page, inside Ryz (Safari Reader on iPhone). */
 function openArticle(a: Article) {
-  // Search results link through Google News, which only a browser can follow.
-  if (a.url.includes("news.google.com")) {
-    openInAppBrowser(a.url);
-    return;
-  }
+  openInAppBrowser(a.url);
+}
+
+/** Holding a story shows its card: summary, tags, follow or mute its topic, block its source, other coverage. */
+function openCard(a: Article) {
   router.push({
     pathname: "/article",
-    params: {
-      url: a.url,
-      title: a.title,
-      image: a.image ?? "",
-      source: a.source,
-      summary: a.summary,
-      published: String(a.published),
-    },
+    params: { url: a.url, title: a.title, image: a.image ?? "", source: a.source, summary: a.summary, published: String(a.published) },
   });
 }
 
-/** A story covered by several publishers opens its own page; a single article opens directly. */
+/** Every publisher covering the story, as a timeline. */
 function openStory(story: Story) {
-  if (story.articles.length > 1) router.push({ pathname: "/story/[id]", params: { id: story.id, q: story.query, title: story.lead.title } });
-  else openArticle(story.lead);
+  router.push({ pathname: "/story/[id]", params: { id: story.id, q: story.query, title: story.lead.title } });
+}
+
+/** "Also in 4 more ›": opens the story's page, separately from the article. */
+function MoreSources({ story }: { story: Story }) {
+  if (story.sources.length < 2) return null;
+  const n = story.sources.length - 1;
+  return (
+    <Pressable onPress={() => openStory(story)} hitSlop={8} accessibilityRole="link" accessibilityLabel={`See ${n} more ${n === 1 ? "source" : "sources"} for this story`} style={styles.moreSources}>
+      <Text style={styles.moreSourcesText}>{`Also in ${n} more ${n === 1 ? "source" : "sources"} ›`}</Text>
+    </Pressable>
+  );
 }
 
 const FORMAT_BADGE: Partial<Record<ArticleFormat, string>> = {
@@ -56,12 +60,12 @@ const FORMAT_BADGE: Partial<Record<ArticleFormat, string>> = {
   longread: "Long read",
 };
 
-function Meta({ article, now, sources = 1 }: { article: Article; now: number; sources?: number }) {
+function Meta({ article, now }: { article: Article; now: number }) {
   const badge = article.tags ? FORMAT_BADGE[article.tags.format] : undefined;
   return (
     <Text style={styles.meta} numberOfLines={1}>
       {badge ? <Text style={article.tags?.format === "live" ? styles.live : styles.badge}>{`${badge} · `}</Text> : null}
-      {`${article.source}${sources > 1 ? ` + ${sources - 1} more` : ""} · ${timeAgo(article.published, now)}${article.paywall ? " · Paywall" : ""}`}
+      {`${article.source} · ${timeAgo(article.published, now)}${article.paywall ? " · Paywall" : ""}`}
     </Text>
   );
 }
@@ -70,7 +74,8 @@ const Lead = memo(function Lead({ story, now }: { story: Story; now: number }) {
   const article = story.lead;
   return (
     <PressableScale
-      onPress={() => openStory(story)}
+      onPress={() => openArticle(article)}
+      onLongPress={() => openCard(article)}
       style={styles.lead}
       accessibilityLabel={`${article.title}. ${article.source}`}
     >
@@ -83,13 +88,14 @@ const Lead = memo(function Lead({ story, now }: { story: Story; now: number }) {
         />
       ) : null}
       <View style={styles.leadText}>
-        <Meta article={article} now={now} sources={story.sources.length} />
+        <Meta article={article} now={now} />
         <Text style={styles.leadTitle}>{article.title}</Text>
         {article.summary ? (
           <Text style={styles.summary} numberOfLines={2}>
             {article.summary}
           </Text>
         ) : null}
+        <MoreSources story={story} />
       </View>
     </PressableScale>
   );
@@ -99,8 +105,10 @@ const Row = memo(function Row({ story, now, rank }: { story: Story; now: number;
   const article = story.lead;
   return (
     <Pressable
-      onPress={() => openStory(story)}
+      onPress={() => openArticle(article)}
+      onLongPress={() => openCard(article)}
       accessibilityRole="button"
+      accessibilityHint="Opens the article. Hold for more options."
       accessibilityLabel={`${article.title}. ${article.source}`}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
@@ -114,7 +122,8 @@ const Row = memo(function Row({ story, now, rank }: { story: Story; now: number;
             {article.summary}
           </Text>
         ) : null}
-        <Meta article={article} now={now} sources={story.sources.length} />
+        <Meta article={article} now={now} />
+        <MoreSources story={story} />
       </View>
       {article.image ? (
         <Image
@@ -252,13 +261,17 @@ const EMPTY: Record<FeedMode, string> = {
 export const NewsFeed = memo(function NewsFeed({ follows }: { follows: string[] }) {
   const [mode, setMode] = useState<FeedMode>("foryou");
   const [format, setFormat] = useState<ArticleFormat | "all">("all");
-  const { stories, articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus, scrollsBack } = useNews(mode, follows, format);
+  // Newest first unless you pick another order.
+  const [sort, setSort] = useState<StorySort>("newest");
+  const { stories: modeStories, articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus, scrollsBack } = useNews(mode, follows, format);
+  const digest = mode === "digest";
+  // The digest is a ranking of the day; every other mode can be re-sorted.
+  const stories = useMemo(() => (digest ? modeStories : sortStories(modeStories, sort)), [digest, modeStories, sort]);
   const [query, setQuery] = useState("");
   // Stories on screen; scrolling near the end shows more, then fetches older ones.
   const [visible, setVisible] = useState(PAGE);
   const searching = query.trim().length > 0;
   const now = useNow(60_000);
-  const digest = mode === "digest";
   const [lead, ...rest] = stories;
   const moreHere = rest.length > visible;
 
@@ -354,6 +367,17 @@ export const NewsFeed = memo(function NewsFeed({ follows }: { follows: string[] 
               setVisible(PAGE);
             }}
           />
+          {digest ? null : (
+            <Segmented
+              label="Sort stories"
+              options={STORY_SORTS.map((o) => ({ value: o.id, label: o.title }))}
+              value={sort}
+              onChange={(v) => {
+                setSort(v);
+                setVisible(PAGE);
+              }}
+            />
+          )}
           <ChipRow
             small
             items={FORMATS}
@@ -471,6 +495,8 @@ const styles = StyleSheet.create({
   filterTextSmall: { fontSize: 13 },
   badge: { color: colors.text, fontFamily: FONT.medium },
   live: { color: colors.danger, fontFamily: FONT.medium },
+  moreSources: { alignSelf: "flex-start" },
+  moreSourcesText: { fontSize: 13, lineHeight: 18, fontFamily: FONT.medium, color: colors.text },
   rank: { fontSize: 28, lineHeight: 32, fontFamily: FONT.display, color: colors.textFaint, width: 30, alignSelf: "flex-start" },
   search: {
     flexDirection: "row",

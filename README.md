@@ -34,7 +34,9 @@ On first launch: a welcome screen, then **create an account** (name, email, pass
   - **Stories, not duplicates**: the same news from many publishers becomes one card ("BBC + 11 more"), and a big ongoing story has its own page with every source as a timeline, the past week's coverage, and a Follow button.
   - **Auto-tagging**: each story is tagged with its categories (one story can be in several), topics and sub-topics, countries and regions, language, the names in it, and its format.
   - **News settings**: languages and editions, your country, region and city (for Local & National), only some world regions, preferred and blocked sources, paywalled sources on or off, muted words and muted topics.
-  - **Respecting publishers**: Ryz shows the headline, a short summary, the picture and a link. It never copies the full story: **Read on …** opens the publisher's own page in an in-app browser. All sources are public RSS/Atom feeds or Google News RSS.
+  - **Tap a story to read it**: the article opens on the publisher's own page inside Ryz (Safari Reader on iPhone). Hold a story for its card: summary, tags, follow or mute its topic, block its source. "Also in N more sources" opens the story's page with every publisher. Ryz never copies the full text; all sources are public RSS/Atom feeds or Google News RSS.
+  - **Sort**: Newest (the default), Recommended, or Most sources.
+  - **Choosing**: a grid of the 31 categories; open one to follow it whole or tap its topics and sub-topics as chips (switch to *Tap to mute* to mute). A strip at the top lists everything you follow and mute, one tap to remove, and **Erase all my choices** starts over.
   - It stays up to date (every 5 minutes while open, on return, on pull-down), stories appear as each source answers, slow sites are skipped, and the Following and For you feeds keep loading older news as you scroll. Topics picked in older versions of Ryz move over to the new taxonomy automatically.
 
 Four tabs: **Morning**, **Alarms**, **Sleep** and **Settings**, in the native iOS tab bar on iPhone (a floating pill on web). **Alarms** shows the time big, a 12h/24h switch, when the next alarm rings, your alarms, and a round + button to add one.
@@ -52,10 +54,11 @@ Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns of
 | **Typing**: type sentences word for word | **Steps** | |
 | **Number hunt**: tap 1, 2, 3… on a shuffled grid | **Jumping jacks** | |
 | **Odd one out**: find the square that's a different grey | **Scan a code**: register any QR code or barcode (toothpaste, coffee jar…) and scan it to stop the alarm, so you have to get up | |
-| **Missing sign**: `12 ? 4 = 48` | | |
-| **Unscramble** a word | | |
+| **Missing sign**: `12 ? 4 = 48` | **30-second sprint**: run on the spot; the clock only runs while you move hard. 30 s of hard exercise after waking made people feel less sleepy and boosted waking cortisol (Kovac et al., 2021) | |
+| **Unscramble** a word | **Torso twists** (gyroscope), **Reach for the sky** (arm raises) | |
+| | **Let the light in** (Android): open the curtains or turn on the lights until the room reaches 100 / 400 / 1,000 lux. Bright light after waking raised alertness and energy at home (Sleep Health, 2024) | |
 
-Every mission has **Try it** in the editor. On a phone without the needed sensor, a body mission turns into sums so you can always turn the alarm off.
+Every mission has **Try it** in the editor. On a phone without the needed sensor, a body mission turns into sums so you can always turn the alarm off (an iPhone has no light sensor apps can read, so Let the light in becomes sums there).
 
 ## Alarms
 
@@ -72,13 +75,16 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 - **Escalation**: if you sleep through a gentle or calm sound, the deep tone takes over after 1–5 minutes.
 - **Snooze** of 5–30 minutes, limited to 1–5 times. Snoozing for up to about 30 minutes didn't hurt sleep or mood in a 2023 study (Sundelin et al.). If nobody touches the alarm for the whole ring time (5–15 min), it snoozes itself while snoozes are left.
 - **"Are you awake?"**: a few minutes after you stop the alarm, Ryz asks. If you don't answer in time, it rings again with the deep tone.
-- **Sleep coaching**: a sleep goal (7–9 h, since adults need at least 7 according to AASM/SRS), the bedtime that goal implies on the home screen, and an optional bedtime reminder before the earliest alarm of each morning.
+- **Sleep coaching**: a sleep goal (7–9 h, since adults need at least 7 according to AASM/SRS), the bedtime that goal implies on the home screen, an optional bedtime reminder before the earliest alarm of each morning, and an optional **last call for coffee** 3–12 hours before bedtime (caffeine even 6 hours before bed cost about an hour of sleep; Drake et al., 2013).
+- **Sleep sounds** on the Sleep tab: rain, ocean, stream, forest, pink or brown noise, with a 15–90 minute timer (or all night) that fades out over the last minute. They keep playing with the screen locked, and an alarm always stops them.
+- **Sleep debt** over the last 14 days, with a gentle payback plan (a long lie-in doesn't undo a short week; Depner et al., 2019).
+- **Night notes**: tap a night to rate it and note the day before (caffeine after 2 pm, alcohol, exercise, late meal, screens in bed, stress, nap, new place). Once there are a few nights with and without each, **What affects your sleep** shows how much longer or shorter you sleep with it.
 - **Ringing screen**: black, with the time inside a dial of 60 ticks that fill with the seconds, a dot sweeping round once a minute and a breathing glow. The screen turns up to full brightness (light right after waking helps clear grogginess; Settings can turn it off).
 - **Good-morning screen** greets you by name, asks how you slept, and lists what helps after waking: bright light, music you like, the same wake time tomorrow.
 
 ## XP and Ryz Pro
 
-**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps, and news for 5 follows (topics or names). Pro adds all 14 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, and unlimited news follows. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
+**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps, and news for 5 follows (topics or names). Pro adds all 18 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, and unlimited news follows. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
 
 **The 14-day reverse trial.** Everyone gets full Pro for 14 days once they finish signing up, with no card. Morning shows the days left, and from 3 days before the end, a reminder. When it ends, Ryz says so once and lists what Pro was doing for you. The trial is once per account (its start date is saved to the account). Why this design: people value something they already have about twice as much as something they don't (loss aversion, the endowment effect), and longer trials convert best (RevenueCat, *State of Subscription Apps 2025*: 17–32-day trials have the highest trial-to-paid rate, 45.7%; Strava and Ladder grew with reverse trials).
 
