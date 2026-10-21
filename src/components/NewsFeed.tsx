@@ -15,21 +15,17 @@ import {
 import { filterArticles, timeAgo, type Article, type ArticleFormat } from "@/core/news";
 import { FEED_MODES, type FeedMode } from "@/core/newsFeeds";
 import { STORY_SORTS, sortStories, type Story, type StorySort } from "@/core/stories";
-import { openInAppBrowser, searchNews } from "@/services/news";
+import { searchNews } from "@/services/news";
 import { useStore } from "@/state/store";
 import { onNearBottom } from "@/state/nearBottom";
 import { useNews } from "@/state/useNews";
 import { useNow } from "@/state/useNow";
 import { FONT, colors, radius, space } from "@/theme";
-import { PressableScale, Segmented, Txt } from "./ui";
+import { Sheet } from "./Sheet";
+import { PressableScale, Txt } from "./ui";
 
-/** Tapping a story opens the article itself, on its publisher's page, inside Ryz (Safari Reader on iPhone). */
+/** Tapping a story opens it inside Ryz: the reader view, or the page itself when it can't be read that way. */
 function openArticle(a: Article) {
-  openInAppBrowser(a.url);
-}
-
-/** Holding a story shows its card: summary, tags, follow or mute its topic, block its source, other coverage. */
-function openCard(a: Article) {
   router.push({
     pathname: "/article",
     params: { url: a.url, title: a.title, image: a.image ?? "", source: a.source, summary: a.summary, published: String(a.published) },
@@ -75,7 +71,6 @@ const Lead = memo(function Lead({ story, now }: { story: Story; now: number }) {
   return (
     <PressableScale
       onPress={() => openArticle(article)}
-      onLongPress={() => openCard(article)}
       style={styles.lead}
       accessibilityLabel={`${article.title}. ${article.source}`}
     >
@@ -106,9 +101,7 @@ const Row = memo(function Row({ story, now, rank }: { story: Story; now: number;
   return (
     <Pressable
       onPress={() => openArticle(article)}
-      onLongPress={() => openCard(article)}
       accessibilityRole="button"
-      accessibilityHint="Opens the article. Hold for more options."
       accessibilityLabel={`${article.title}. ${article.source}`}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
@@ -233,18 +226,34 @@ const FORMATS: { id: ArticleFormat | "all"; title: string }[] = [
   { id: "brief", title: "Briefs" },
 ];
 
-function ChipRow<T extends string>({ items, value, onChange, small }: { items: { id: T; title: string }[]; value: T; onChange: (v: T) => void; small?: boolean }) {
+/** Feed modes as quiet words: the one you're on is bright. */
+function Tabs<T extends string>({ items, value, onChange }: { items: { id: T; title: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filters}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabs}>
       {items.map((it) => {
         const on = value === it.id;
         return (
-          <Pressable key={it.id} onPress={() => onChange(it.id)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={[styles.filter, small && styles.filterSmall, on && styles.filterOn]}>
-            <Text style={[styles.filterText, small && styles.filterTextSmall, on && styles.filterTextOn]}>{it.title}</Text>
+          <Pressable key={it.id} onPress={() => onChange(it.id)} hitSlop={6} accessibilityRole="tab" accessibilityState={{ selected: on }}>
+            <Text style={[styles.tab, on && styles.tabOn]}>{it.title}</Text>
           </Pressable>
         );
       })}
     </ScrollView>
+  );
+}
+
+function SheetChips<T extends string>({ items, value, onChange }: { items: { id: T; title: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <View style={styles.sheetChips}>
+      {items.map((it) => {
+        const on = value === it.id;
+        return (
+          <Pressable key={it.id} onPress={() => onChange(it.id)} accessibilityRole="radio" accessibilityState={{ selected: on }} style={[styles.filter, on && styles.filterOn]}>
+            <Text style={[styles.filterText, on && styles.filterTextOn]}>{it.title}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -263,6 +272,8 @@ export const NewsFeed = memo(function NewsFeed({ follows }: { follows: string[] 
   const [format, setFormat] = useState<ArticleFormat | "all">("all");
   // Newest first unless you pick another order.
   const [sort, setSort] = useState<StorySort>("newest");
+  const [filtering, setFiltering] = useState(false);
+  const filtered = format !== "all" || (sort !== "newest" && mode !== "digest");
   const { stories: modeStories, articles, status, refresh, refreshing, updatedAt, loadOlder, olderStatus, scrollsBack } = useNews(mode, follows, format);
   const digest = mode === "digest";
   // The digest is a ranking of the day; every other mode can be re-sorted.
@@ -359,34 +370,44 @@ export const NewsFeed = memo(function NewsFeed({ follows }: { follows: string[] 
         />
       ) : (
         <>
-          <ChipRow
-            items={FEED_MODES}
-            value={mode}
-            onChange={(m) => {
-              setMode(m);
-              setVisible(PAGE);
-            }}
-          />
-          {digest ? null : (
-            <Segmented
-              label="Sort stories"
-              options={STORY_SORTS.map((o) => ({ value: o.id, label: o.title }))}
-              value={sort}
-              onChange={(v) => {
-                setSort(v);
+          <View style={styles.controls}>
+            <Tabs
+              items={FEED_MODES}
+              value={mode}
+              onChange={(m) => {
+                setMode(m);
                 setVisible(PAGE);
               }}
             />
-          )}
-          <ChipRow
-            small
-            items={FORMATS}
-            value={format}
-            onChange={(f) => {
-              setFormat(f);
-              setVisible(PAGE);
-            }}
-          />
+            <Pressable onPress={() => setFiltering(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Sort and filter" style={styles.filterButton}>
+              <Ionicons name="funnel-outline" size={17} color={filtered ? colors.text : colors.textMuted} />
+              {filtered ? <View style={styles.filterDot} /> : null}
+            </Pressable>
+          </View>
+          <Sheet visible={filtering} onClose={() => setFiltering(false)} title="Show">
+            {digest ? null : (
+              <>
+                <Txt variant="label">Order</Txt>
+                <SheetChips
+                  items={STORY_SORTS}
+                  value={sort}
+                  onChange={(v) => {
+                    setSort(v);
+                    setVisible(PAGE);
+                  }}
+                />
+              </>
+            )}
+            <Txt variant="label">Type</Txt>
+            <SheetChips
+              items={FORMATS}
+              value={format}
+              onChange={(f) => {
+                setFormat(f);
+                setVisible(PAGE);
+              }}
+            />
+          </Sheet>
 
           {status === "loading" && stories.length === 0 ? (
             <View style={styles.state}>
@@ -491,8 +512,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   headerActions: { flexDirection: "row", alignItems: "center", gap: space.lg },
-  filterSmall: { height: 28, paddingHorizontal: space.md, backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border },
-  filterTextSmall: { fontSize: 13 },
   badge: { color: colors.text, fontFamily: FONT.medium },
   live: { color: colors.danger, fontFamily: FONT.medium },
   moreSources: { alignSelf: "flex-start" },
@@ -537,13 +556,19 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     color: colors.textMuted,
   },
-  filterScroll: { marginHorizontal: -space.lg },
-  filters: { gap: space.sm, paddingHorizontal: space.lg },
+  controls: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  tabScroll: { flex: 1, marginLeft: -space.lg },
+  tabs: { gap: space.lg, paddingLeft: space.lg, paddingRight: space.sm, alignItems: "center", height: 32 },
+  tab: { fontSize: 15, fontFamily: FONT.regular, color: colors.textFaint },
+  tabOn: { color: colors.text, fontFamily: FONT.medium },
+  filterButton: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  filterDot: { position: "absolute", top: 5, right: 5, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.text },
+  sheetChips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm, marginBottom: space.sm },
   filter: {
     paddingHorizontal: space.md + 2,
     height: 34,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     justifyContent: "center",
   },
   filterOn: { backgroundColor: colors.accent },

@@ -2,9 +2,8 @@
 // feeds evenly. What to read comes from taxonomy.ts and newsFeeds.ts; which
 // publisher a feed is, in which language and country, from sources.ts.
 //
-// Ryz shows a story's headline, a short summary, its picture and a link to
-// the publisher. It never copies the full text: the story itself is read on
-// the publisher's site.
+// Stories open inside Ryz: in the reader view (reader.ts) when the page has
+// readable text, otherwise as the publisher's page itself.
 
 import { PAYWALLED_PUBLISHERS, sourceForFeed } from './sources';
 
@@ -75,12 +74,12 @@ export interface Article {
   tags?: ArticleTags;
 }
 
-function tag(xml: string, name: string): string | undefined {
+export function tag(xml: string, name: string): string | undefined {
   const m = xml.match(new RegExp(`<${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${name}>`, 'i'));
   return m ? m[1].replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/, '$1') : undefined;
 }
 
-function attr(element: string, name: string): string | undefined {
+export function attr(element: string, name: string): string | undefined {
   const m = element.match(new RegExp(`\\s${name}="([^"]*)"`, 'i'));
   return m ? decodeEntities(m[1]) : undefined;
 }

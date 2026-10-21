@@ -41,9 +41,15 @@ export default function Account() {
   const valid = EMAIL.test(email.trim()) && password.length >= 6 && (!signup || name.trim().length > 0);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const finish = () => {
+    if (router.canDismiss()) router.dismissAll();
+    else router.replace('/');
+  };
+  // New here: on to news topics and goals. Back after logging out: straight in.
   const next = () => {
-    if (onboarding) router.replace({ pathname: '/interests', params: { first: '1' } });
-    else close();
+    if (!onboarding) close();
+    else if (data.settings.onboarded) finish();
+    else router.replace({ pathname: '/interests', params: { first: '1' } });
   };
 
   const submit = async () => {
@@ -67,8 +73,7 @@ export default function Account() {
         if (profile) updateSettings(settingsFromProfile(profile, data.settings));
         if (onboarding && profile && profile.news_topics.length > 0 && profile.goals.length > 0) {
           updateSettings({ onboarded: true });
-          if (router.canDismiss()) router.dismissAll();
-          else router.replace('/');
+          finish();
         } else next();
       }
     } catch (e) {
@@ -99,9 +104,15 @@ export default function Account() {
         <View style={styles.confirmTop}>
           <Ionicons name="mail-unread-outline" size={44} color={colors.text} />
           <Text style={styles.title}>Check your email</Text>
-          <Txt variant="muted">{`We sent a link to ${email.trim()}. Open it to confirm your account, then log in from Settings. Your setup on this phone is kept.`}</Txt>
+          <Txt variant="muted">{`We sent a link to ${email.trim()}. Open it to confirm your account, then come back and log in. Your setup on this phone is kept.`}</Txt>
         </View>
-        <Button title={onboarding ? 'Continue setting up' : 'Done'} onPress={next} />
+        <Button
+          title="I’ve confirmed, log in"
+          onPress={() => {
+            setConfirmSent(false);
+            setMode('login');
+          }}
+        />
       </View>
     );
   }

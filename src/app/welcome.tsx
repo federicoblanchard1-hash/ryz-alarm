@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { BackHandler, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,11 +15,17 @@ const POINTS: { icon: IconName; text: string }[] = [
   { icon: 'analytics-outline', text: 'Sleep tracking, a power-nap timer, the weather and your news' },
 ];
 
-/** First launch: what Ryz is, then create an account or log in. */
+/** First launch (or after logging out): what Ryz is, then create an account or log in. */
 export default function Welcome() {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const { enabled } = useAuth();
+  // Ryz needs an account, so Android's back button can't skip this screen.
+  useEffect(() => {
+    if (!enabled) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [enabled]);
   const enter = (i: number) => (reduced ? undefined : FadeInDown.delay(150 + i * 120).duration(420));
 
   return (
@@ -46,7 +53,7 @@ export default function Welcome() {
         ) : (
           <Button title="Get started" onPress={() => router.replace({ pathname: '/interests', params: { first: '1' } })} />
         )}
-        <Txt variant="caption" style={styles.center}>Your alarms always work, even offline. The account keeps your profile, news and goals.</Txt>
+        <Txt variant="caption" style={styles.center}>Your alarms always work, even offline. Your account keeps your news, goals and XP.</Txt>
       </View>
     </View>
   );

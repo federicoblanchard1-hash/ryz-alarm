@@ -149,6 +149,7 @@ export default function RootLayout() {
               name="account"
               options={{ presentation: "fullScreenModal", headerShown: false }}
             />
+            <Stack.Screen name="settings/[page]" options={{ headerShown: false }} />
             <Stack.Screen name="xp" options={{ presentation: "modal", headerShown: false }} />
             <Stack.Screen name="pro" options={{ presentation: "modal", headerShown: false }} />
             <Stack.Screen

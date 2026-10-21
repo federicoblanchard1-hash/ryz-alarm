@@ -133,6 +133,7 @@ export default function SleepScreen() {
   const [selected, setSelected] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [allStats, setAllStats] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   /** The night whose details sheet is open. */
   const [openNight, setOpenNight] = useState<string | null>(null);
@@ -297,18 +298,23 @@ export default function SleepScreen() {
               <Tile label="Wake-up" value={avgWake ? formatClockText(avgWake.hour, avgWake.minute, use24h) : '–'} note={stats.nights > 2 ? `±${Math.round(stats.wakeSpread)} min` : 'on average'} />
               <Tile label="Regularity" value={stats.nights < 3 ? '–' : stats.wakeSpread <= 30 ? 'Steady' : stats.wakeSpread <= 60 ? 'Fair' : 'Irregular'} note={stats.nights < 3 ? 'after 3 nights' : 'how much wake time moves'} />
               <Tile label={stats.debtMinutes > 0 ? 'Sleep debt' : 'Extra sleep'} value={formatDuration(Math.abs(stats.debtMinutes))} note="vs your goal" />
-              {more ? <Tile label="Nights on goal" value={`${Math.round(more.onGoal * 100)}%`} note={`${Math.round(more.onGoal * stats.nights)} of ${stats.nights}`} /> : null}
-              {more ? <Tile label="Weekend shift" value={more.socialJetLag === null ? '–' : `${more.socialJetLag >= 0 ? '+' : '−'}${formatDuration(Math.abs(more.socialJetLag))}`} note={more.socialJetLag === null ? 'needs weekdays and weekends' : 'social jet lag'} /> : null}
-              {more ? <Tile label="Longest" value={formatDuration(minutesAsleep(more.longest))} note={SHORT_DATE.format(more.longest.end)} /> : null}
-              {more ? <Tile label="Shortest" value={formatDuration(minutesAsleep(more.shortest))} note={SHORT_DATE.format(more.shortest.end)} /> : null}
-              {stats.rating ? <Tile label="Felt" value={RATINGS[Math.round(stats.rating) - 1].label} note={`${stats.rating.toFixed(1)} out of 5`} /> : null}
+              {allStats && more ? <Tile label="Nights on goal" value={`${Math.round(more.onGoal * 100)}%`} note={`${Math.round(more.onGoal * stats.nights)} of ${stats.nights}`} /> : null}
+              {allStats && more ? <Tile label="Weekend shift" value={more.socialJetLag === null ? '–' : `${more.socialJetLag >= 0 ? '+' : '−'}${formatDuration(Math.abs(more.socialJetLag))}`} note={more.socialJetLag === null ? 'needs weekdays and weekends' : 'social jet lag'} /> : null}
+              {allStats && more ? <Tile label="Longest" value={formatDuration(minutesAsleep(more.longest))} note={SHORT_DATE.format(more.longest.end)} /> : null}
+              {allStats && more ? <Tile label="Shortest" value={formatDuration(minutesAsleep(more.shortest))} note={SHORT_DATE.format(more.shortest.end)} /> : null}
+              {allStats && stats.rating ? <Tile label="Felt" value={RATINGS[Math.round(stats.rating) - 1].label} note={`${stats.rating.toFixed(1)} out of 5`} /> : null}
             </View>
+            {more || stats.rating ? (
+              <Pressable onPress={() => setAllStats((v) => !v)} hitSlop={8} accessibilityRole="button" style={styles.moreStats}>
+                <Txt variant="caption">{allStats ? 'Fewer stats' : 'More stats'}</Txt>
+              </Pressable>
+            ) : null}
 
             {tip ? (
               <View style={styles.insight}>
                 <Ionicons name="flask-outline" size={20} color={colors.text} />
                 <View style={styles.flex}>
-                  <Txt variant="heading">{tip.title}</Txt>
+                  <Text style={styles.tipTitle}>{tip.title}</Text>
                   <Txt variant="caption">{tip.text}</Txt>
                 </View>
               </View>
@@ -444,9 +450,11 @@ const styles = StyleSheet.create({
   chartCard: { padding: space.lg, borderRadius: radius.lg, backgroundColor: colors.surface, gap: space.md },
   detail: { minHeight: 18, marginBottom: space.sm },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  tile: { flexBasis: '48%', flexGrow: 1, gap: 2, padding: space.lg, borderRadius: radius.md + 4, backgroundColor: colors.surface },
-  tileValue: { fontSize: 24, lineHeight: 30, fontFamily: FONT.regular, color: colors.text },
-  insight: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md + 4, borderWidth: 1, borderColor: colors.border },
+  tile: { flexBasis: '48%', flexGrow: 1, gap: 1, paddingHorizontal: space.md, paddingVertical: space.md - 2, borderRadius: radius.md, backgroundColor: colors.surface },
+  tileValue: { fontSize: 20, lineHeight: 26, fontFamily: FONT.regular, color: colors.text },
+  tipTitle: { fontSize: 15, fontFamily: FONT.medium, color: colors.text },
+  moreStats: { alignSelf: 'center', paddingVertical: space.xs },
+  insight: { flexDirection: 'row', gap: space.md, padding: space.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   listTitle: { marginTop: space.sm, marginLeft: space.xs },
   list: { borderRadius: radius.lg, backgroundColor: colors.surface, paddingHorizontal: space.lg },
   night: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 60 },

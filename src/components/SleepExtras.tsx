@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { RATINGS, SLEEP_SOUNDS, SLEEP_TAGS, SLEEP_TIMERS, formatDuration, minutesAsleep, type SleepDebt, type SleepTag, type TagEffect } from '@/core/sleep';
@@ -29,66 +30,76 @@ function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () 
 
 /**
  * Rain, waves or noise to fall asleep to, with a timer that fades out over
- * the last minute. Keeps playing when you leave the tab or lock the phone; an
- * alarm stops it.
+ * the last minute. One small row with a play button; the choices fold out.
+ * Keeps playing when you leave the tab or lock the phone; an alarm stops it.
  */
 export function SleepSounds() {
   const { data, updateSettings } = useStore();
   const choice = data.settings.sleepSound;
   const playing = useSleepSound();
   const now = useNow(15_000);
+  const [open, setOpen] = useState(false);
   const on = playing.id !== null;
   const set = (patch: Partial<typeof choice>) => updateSettings({ sleepSound: { ...choice, ...patch } });
   const left = on && playing.minutes > 0 ? Math.max(0, playing.startedAt + playing.minutes * 60_000 - now) : null;
+  const title = SLEEP_SOUNDS.find((x) => x.id === choice.id)?.title ?? 'Sleep sound';
+  const timer = choice.minutes === 0 ? 'all night' : `${choice.minutes} min`;
 
   return (
     <View style={styles.card}>
       <View style={styles.head}>
-        <Ionicons name="musical-notes-outline" size={22} color={colors.text} />
-        <View style={styles.flex}>
-          <Txt variant="heading">Sleep sounds</Txt>
-          <Txt variant="caption">{on ? (left === null ? 'Playing all night' : `Fades out in ${formatDuration(left / 60_000)}`) : 'Steady sound masks the noises that wake you'}</Txt>
-        </View>
+        <Pressable
+          onPress={() => {
+            haptic('light');
+            if (on) stopSleepSound();
+            else startSleepSound(choice.id, choice.minutes, choice.volume);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={on ? 'Stop sleep sound' : `Play ${title}`}
+          style={[styles.play, on && styles.playOn]}
+        >
+          <Ionicons name={on ? 'pause' : 'play'} size={18} color={on ? colors.onAccent : colors.text} />
+        </Pressable>
+        <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityLabel="Sleep sound options" accessibilityState={{ expanded: open }} style={styles.flexRow}>
+          <View style={styles.flex}>
+            <Text style={styles.small}>{title}</Text>
+            <Txt variant="caption">{on ? (left === null ? 'Playing all night' : `Fades out in ${formatDuration(left / 60_000)}`) : `Sleep sound · ${timer}`}</Txt>
+          </View>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textFaint} />
+        </Pressable>
       </View>
-      <View style={styles.chips}>
-        {SLEEP_SOUNDS.map((s) => (
-          <Chip
-            key={s.id}
-            label={s.title}
-            on={choice.id === s.id}
-            onPress={() => {
-              set({ id: s.id });
-              if (on) startSleepSound(s.id, choice.minutes, choice.volume);
+      {open ? (
+        <>
+          <View style={styles.chips}>
+            {SLEEP_SOUNDS.map((x) => (
+              <Chip
+                key={x.id}
+                label={x.title}
+                on={choice.id === x.id}
+                onPress={() => {
+                  set({ id: x.id });
+                  if (on) startSleepSound(x.id, choice.minutes, choice.volume);
+                }}
+              />
+            ))}
+          </View>
+          <View style={styles.chips}>
+            {SLEEP_TIMERS.map((m) => (
+              <Chip key={m} label={m === 0 ? 'All night' : `${m} min`} on={choice.minutes === m} onPress={() => set({ minutes: m })} />
+            ))}
+          </View>
+          <Slider
+            label="Sleep sound volume"
+            value={choice.volume}
+            min={0.05}
+            onSlide={(v) => on && setSleepSoundVolume(v)}
+            onChange={(volume) => {
+              set({ volume });
+              if (on) setSleepSoundVolume(volume);
             }}
           />
-        ))}
-      </View>
-      <Txt variant="label">Timer</Txt>
-      <View style={styles.chips}>
-        {SLEEP_TIMERS.map((m) => (
-          <Chip key={m} label={m === 0 ? 'All night' : `${m} min`} on={choice.minutes === m} onPress={() => set({ minutes: m })} />
-        ))}
-      </View>
-      <Slider
-        label="Sleep sound volume"
-        value={choice.volume}
-        min={0.05}
-        onSlide={(v) => on && setSleepSoundVolume(v)}
-        onChange={(volume) => {
-          set({ volume });
-          if (on) setSleepSoundVolume(volume);
-        }}
-      />
-      <Button
-        title={on ? 'Stop' : 'Play'}
-        icon={on ? 'stop' : 'play'}
-        variant={on ? 'secondary' : 'primary'}
-        onPress={() => {
-          haptic('light');
-          if (on) stopSleepSound();
-          else startSleepSound(choice.id, choice.minutes, choice.volume);
-        }}
-      />
+        </>
+      ) : null}
     </View>
   );
 }
@@ -97,19 +108,15 @@ export function SleepSounds() {
 export function DebtCard({ debt }: { debt: SleepDebt }) {
   if (debt.nights < 3) return null;
   const clear = debt.minutes < 30;
-  // Paying back 30 minutes a night is gentle enough not to shift your body clock.
+  // 30 minutes a night pays it back without shifting your body clock; one long lie-in doesn't undo a short week (Depner et al., 2019).
   const nights = Math.ceil(debt.minutes / 30);
   return (
-    <View style={[styles.card, styles.row]}>
-      <Ionicons name={clear ? 'checkmark-circle-outline' : 'hourglass-outline'} size={22} color={colors.text} />
+    <View style={[styles.card, styles.head]}>
+      <Ionicons name={clear ? 'checkmark-circle-outline' : 'hourglass-outline'} size={20} color={colors.text} />
       <View style={styles.flex}>
-        <Txt variant="heading">{clear ? 'No sleep debt' : `Sleep debt: ${formatDuration(debt.minutes)}`}</Txt>
+        <Text style={styles.small}>{clear ? 'No sleep debt' : `Sleep debt · ${formatDuration(debt.minutes)}`}</Text>
         <Txt variant="caption">
-          {clear
-            ? `Over the last ${debt.days} days you slept as much as your goal. Keep it steady.`
-            : nights <= 14
-              ? `Over the last ${debt.days} days. Going to bed 30 min earlier pays it back in about ${nights} ${nights === 1 ? 'night' : 'nights'}: steadier than one long lie-in, which doesn't undo a short week (Depner et al., 2019).`
-              : `Over the last ${debt.days} days. Aim for 30 to 60 min more a night for the next two weeks; it's steadier than one long lie-in, which doesn't undo a short week (Depner et al., 2019).`}
+          {clear ? `On goal for the last ${debt.days} days` : nights <= 14 ? `Bed 30 min earlier for ${nights} ${nights === 1 ? 'night' : 'nights'}` : 'Bed 30–60 min earlier for two weeks'}
         </Txt>
       </View>
     </View>
@@ -123,10 +130,10 @@ export function TagEffects({ effects, tagged }: { effects: TagEffect[]; tagged: 
   return (
     <View style={styles.card}>
       <View style={styles.head}>
-        <Ionicons name="analytics-outline" size={22} color={colors.text} />
+        <Ionicons name="analytics-outline" size={20} color={colors.text} />
         <View style={styles.flex}>
-          <Txt variant="heading">What affects your sleep</Txt>
-          <Txt variant="caption">{effects.length ? 'Your nights with each one, compared with your nights without.' : `Tap a night below to note caffeine, alcohol, exercise, screens… After a few of each (${tagged} tagged so far), Ryz shows what helps you.`}</Txt>
+          <Text style={styles.small}>What affects your sleep</Text>
+          <Txt variant="caption">{effects.length ? 'Your nights with it vs without' : `Tap a night to tag coffee, screens… (${tagged} so far)`}</Txt>
         </View>
       </View>
       {effects.map((e) => {
@@ -134,11 +141,8 @@ export function TagEffects({ effects, tagged }: { effects: TagEffect[]; tagged: 
         const small = Math.abs(e.minutes) < 10;
         return (
           <View key={e.tag} style={styles.effect}>
-            <View style={styles.flex}>
-              <Text style={styles.effectTitle}>{TAG_TITLE[e.tag]}</Text>
-              <Txt variant="caption">{`${e.with} nights with, ${e.without} without${e.rating !== null ? ` · felt ${e.rating > 0 ? 'better' : e.rating < 0 ? 'worse' : 'the same'}` : ''}`}</Txt>
-            </View>
-            <Text style={[styles.effectValue, !small && !better && styles.worse]}>{small ? 'No change' : `${better ? '+' : '−'}${formatDuration(Math.abs(e.minutes))}`}</Text>
+            <Text style={[styles.effectTitle, styles.flex]}>{TAG_TITLE[e.tag]}</Text>
+            <Text style={[styles.effectValue, !small && !better && styles.worse]}>{small ? 'Same' : `${better ? '+' : '−'}${formatDuration(Math.abs(e.minutes))}`}</Text>
           </View>
         );
       })}
@@ -181,17 +185,20 @@ export function NightSheet({ night, onClose, onRate, onTags, onDelete }: { night
 
 const styles = StyleSheet.create({
   flex: { flex: 1, gap: 2 },
-  card: { padding: space.lg, borderRadius: radius.md + 6, backgroundColor: colors.surface, gap: space.md },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md },
+  flexRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md },
+  card: { paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, backgroundColor: colors.surface, gap: space.md },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  small: { fontSize: 15, fontFamily: FONT.medium, color: colors.text },
+  play: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center', justifyContent: 'center' },
+  playOn: { backgroundColor: colors.accent, borderColor: colors.accent },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: { minHeight: 36, paddingHorizontal: space.md + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, justifyContent: 'center' },
+  chip: { minHeight: 32, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.borderStrong, justifyContent: 'center' },
   chipOn: { backgroundColor: colors.accent, borderColor: colors.accent },
-  chipText: { fontSize: 14, fontFamily: FONT.regular, color: colors.text },
+  chipText: { fontSize: 13, fontFamily: FONT.regular, color: colors.text },
   chipTextOn: { color: colors.onAccent },
   effect: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingTop: space.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  effectTitle: { fontSize: 16, fontFamily: FONT.regular, color: colors.text },
-  effectValue: { fontSize: 16, fontFamily: FONT.medium, color: colors.text, fontVariant: ['tabular-nums'] },
+  effectTitle: { fontSize: 14, fontFamily: FONT.regular, color: colors.text },
+  effectValue: { fontSize: 14, fontFamily: FONT.medium, color: colors.text, fontVariant: ['tabular-nums'] },
   worse: { color: colors.danger },
   sheet: { gap: space.md, paddingBottom: space.md },
   why: { gap: space.xs },

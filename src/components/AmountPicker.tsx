@@ -21,8 +21,8 @@ interface Props {
 }
 
 /**
- * Pick a number from `min` to `max`: drag the slider, or tap the number and
- * type it. The number shows the value live while dragging.
+ * Pick a number from `min` to `max`: drag the slider, or tap the boxed number
+ * and type it. The number shows the value live while dragging.
  */
 export function AmountPicker({ value, min, max, step = 1, unit, onChange, title, hint }: Props) {
   const [live, setLive] = useState<number | null>(null);
@@ -77,7 +77,6 @@ export function AmountPicker({ value, min, max, step = 1, unit, onChange, title,
       />
       <View style={styles.ends}>
         <Txt variant="caption">{min}</Txt>
-        <Txt variant="caption">Tap the number to type it</Txt>
         <Txt variant="caption">{max}</Txt>
       </View>
     </View>
@@ -87,9 +86,9 @@ export function AmountPicker({ value, min, max, step = 1, unit, onChange, title,
 const styles = StyleSheet.create({
   wrap: { gap: space.xs },
   top: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
-  numberBox: { minWidth: 72, paddingHorizontal: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center' },
-  number: { fontSize: 36, lineHeight: 44, fontFamily: FONT.light, color: colors.text, fontVariant: ['tabular-nums'] },
-  input: { minWidth: 72, paddingHorizontal: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.text, textAlign: 'center', paddingVertical: 0 },
+  numberBox: { minWidth: 56, paddingHorizontal: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.borderStrong, alignItems: 'center' },
+  number: { fontSize: 24, lineHeight: 32, fontFamily: FONT.light, color: colors.text, fontVariant: ['tabular-nums'] },
+  input: { minWidth: 56, paddingHorizontal: space.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.text, textAlign: 'center', paddingVertical: 0 },
   ends: { flexDirection: 'row', justifyContent: 'space-between' },
   unit: { flexShrink: 1 },
 });

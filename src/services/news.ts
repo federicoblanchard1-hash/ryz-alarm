@@ -5,6 +5,7 @@ import { mergeArticles, parseFeed, parseSearch, type Article } from '@/core/news
 import { olderUrl, type FeedRef } from '@/core/newsFeeds';
 import type { FollowedEntity } from '@/core/newsPrefs';
 import { gnews } from '@/core/sources';
+import { extractArticle, type ReadableArticle } from '@/core/reader';
 import { tagAll } from '@/core/tagging';
 import { colors } from '@/theme';
 
@@ -133,6 +134,15 @@ export async function fetchOlder(searches: { follow: string; query: string }[], 
 export async function searchNews(query: string, edition?: string): Promise<Article[]> {
   const url = gnews(query, edition);
   return tagAll(parseSearch(await get(url, 10_000, true), 'search', url).slice(0, 30));
+}
+
+/** The story's text, for the reader view; null if the page can't be read (blocked, video, or no text). */
+export async function fetchReadable(url: string): Promise<ReadableArticle | null> {
+  try {
+    return extractArticle(await get(url, 15_000));
+  } catch {
+    return null;
+  }
 }
 
 /** The original page in an in-app browser: Safari's Reader on iPhone, Custom Tabs on Android. */

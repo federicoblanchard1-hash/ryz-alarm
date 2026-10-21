@@ -21,7 +21,7 @@ A QR code appears in the terminal. Scan it with the iPhone **Camera** app, or wi
 
 ## Getting started
 
-On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, pick your **news topics**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase; your name, age, news topics, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms and sleep history stay on the phone, so alarms always work offline.
+On first launch: a welcome screen, then **create an account** (name, email, password) or **log in**, pick your **news topics**, then say **what you want to improve** (wake up on time, stop snoozing, feel less groggy, sleep longer, regular schedule… or *Something else*, in your own words). Accounts use Supabase and are required; your name, news topics, goals and sleep goal are saved to the account and come back when you log in on another phone. Alarms and sleep history stay on the phone, so alarms always work offline.
 
 ## Morning (home)
 
@@ -34,7 +34,7 @@ On first launch: a welcome screen, then **create an account** (name, email, pass
   - **Stories, not duplicates**: the same news from many publishers becomes one card ("BBC + 11 more"), and a big ongoing story has its own page with every source as a timeline, the past week's coverage, and a Follow button.
   - **Auto-tagging**: each story is tagged with its categories (one story can be in several), topics and sub-topics, countries and regions, language, the names in it, and its format.
   - **News settings**: languages and editions, your country, region and city (for Local & National), only some world regions, preferred and blocked sources, paywalled sources on or off, muted words and muted topics.
-  - **Tap a story to read it**: the article opens on the publisher's own page inside Ryz (Safari Reader on iPhone). Hold a story for its card: summary, tags, follow or mute its topic, block its source. "Also in N more sources" opens the story's page with every publisher. Ryz never copies the full text; all sources are public RSS/Atom feeds or Google News RSS.
+  - **Tap a story to read it inside Ryz**: a clean reader view (photo, title, text) when the page allows it, otherwise the publisher's page shown in Ryz itself; no browser, no link to follow. At the bottom: the original page, "Also in N more sources" (the story's page with every publisher), and follow or mute its topic. The order (newest, recommended, most sources) and type (articles, videos, podcasts…) sit behind the small filter icon. All sources are public RSS/Atom feeds or Google News RSS.
   - **Sort**: Newest (the default), Recommended, or Most sources.
   - **Choosing**: a grid of the 31 categories; open one to follow it whole or tap its topics and sub-topics as chips (switch to *Tap to mute* to mute). A strip at the top lists everything you follow and mute, one tap to remove, and **Erase all my choices** starts over.
   - It stays up to date (every 5 minutes while open, on return, on pull-down), stories appear as each source answers, slow sites are skipped, and the Following and For you feeds keep loading older news as you scroll. Topics picked in older versions of Ryz move over to the new taxonomy automatically.
@@ -45,7 +45,7 @@ The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Rin
 
 ## Missions
 
-Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. While you work, the alarm turns down; if you stop for a while (5 s to 1 min, Settings) it's back to full volume. An optional **time limit per mission** (30 s to 3 min) restarts the mission with a new puzzle when it runs out.
+Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the boxed number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. While you work, the alarm turns down; if you stop for a while (5 s to 1 min, Settings) it's back to full volume. An optional **time limit per mission** (30 s to 3 min) restarts the mission with a new puzzle when it runs out.
 
 | Wake your brain | Wake your body | Scientific |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 - **Snooze** of 5–30 minutes, limited to 1–5 times. Snoozing for up to about 30 minutes didn't hurt sleep or mood in a 2023 study (Sundelin et al.). If nobody touches the alarm for the whole ring time (5–15 min), it snoozes itself while snoozes are left.
 - **"Are you awake?"**: a few minutes after you stop the alarm, Ryz asks. If you don't answer in time, it rings again with the deep tone.
 - **Sleep coaching**: a sleep goal (7–9 h, since adults need at least 7 according to AASM/SRS), the bedtime that goal implies on the home screen, an optional bedtime reminder before the earliest alarm of each morning, and an optional **last call for coffee** 3–12 hours before bedtime (caffeine even 6 hours before bed cost about an hour of sleep; Drake et al., 2013).
-- **Sleep sounds** on the Sleep tab: rain, ocean, stream, forest, pink or brown noise, with a 15–90 minute timer (or all night) that fades out over the last minute. They keep playing with the screen locked, and an alarm always stops them.
+- **Sleep sounds** on the Sleep tab, one small row with a play button (tap it to pick the sound, timer and volume): rain, ocean, stream, forest, pink or brown noise, with a 15–90 minute timer (or all night) that fades out over the last minute. They keep playing with the screen locked, and an alarm always stops them.
 - **Sleep debt** over the last 14 days, with a gentle payback plan (a long lie-in doesn't undo a short week; Depner et al., 2019).
 - **Night notes**: tap a night to rate it and note the day before (caffeine after 2 pm, alcohol, exercise, late meal, screens in bed, stress, nap, new place). Once there are a few nights with and without each, **What affects your sleep** shows how much longer or shorter you sleep with it.
 - **Ringing screen**: black, with the time inside a dial of 60 ticks that fill with the seconds, a dot sweeping round once a minute and a breathing glow. The screen turns up to full brightness (light right after waking helps clear grogginess; Settings can turn it off).
@@ -108,14 +108,18 @@ Tap **+** on Alarms (or **Power nap** on Morning) and choose **Quick alarm** for
 
 ## Settings
 
-- **Account**: who's signed in, and Log out.
-- **Profile**: your name and age group. Your age suggests a sleep goal (Hirshkowitz et al., 2015).
-- **Your goals**: what you picked at sign-up; change them any time.
-- **Missions**: time for each mission, quieter during missions, and how long before the alarm is back at full volume.
-- **Waking up**: bright screen when ringing, daylight reminder.
-- Sleep goal and bedtime reminder, clock and temperature units, alarm checks and a test alarm, news topics, location, erase all data, and the research behind Ryz.
+A short list, like iOS Settings; each row opens its own page.
+
+- **Account** (top): your name and email; on its page, Log out and Erase all data. An account is required: when you're signed out, Ryz shows the welcome screen until you log in.
+- **Ryz Pro** and **XP**.
+- **Alarms**: time for each mission, quieter during missions and how long before full volume comes back, bright screen when ringing, daylight reminder.
+- **Sleep**: sleep goal, bedtime reminder, last call for coffee.
+- **News**: news settings (languages, regions, sources, muted words) and what you follow.
+- **Goals**: what you want to improve.
+- **General**: 24-hour clock, °C or °F, location for the weather.
+- **Will my alarm ring?**: notification status and a test alarm. **The research**: the studies behind Ryz.
 - **Test alarm** in Settings, plus a check that notifications and (on Android) exact alarms are allowed.
-- **Swipe an alarm left** to delete it. Time settings (fade-in, snooze, keep ringing, the awake check, mission time limits, sleep goal…) use a slider plus a number you can tap to type.
+- **Swipe an alarm left** to delete it. Time settings (fade-in, snooze, keep ringing, the awake check, mission time limits, sleep goal…) use a slider plus a boxed number you can tap to type.
 - Repeat days, alarm names, volume, vibration, a 12/24-hour clock, haptics, reduced-motion support, and screen-reader labels.
 
 ## How alarms ring

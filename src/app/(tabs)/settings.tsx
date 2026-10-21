@@ -1,409 +1,80 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { AppState, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AmountPicker } from '@/components/AmountPicker';
+import { Group, Row } from '@/components/SettingsKit';
 import { useTabBarSpace } from '@/components/tabBarSpace';
-import { Button, Chips, Divider, Section, ToggleRow, Txt, confirm, haptic } from '@/components/ui';
-import { AGE_GROUPS } from '@/core/defaults';
-import { GOALS } from '@/core/goals';
+import { Txt } from '@/components/ui';
 import { proStatus } from '@/core/pro';
-import { balance, levelOf } from '@/core/xp';
-import { entityTitle } from '@/core/newsPrefs';
-import { nodeById } from '@/core/taxonomy';
-import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
-import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
-import { logOut } from '@/services/account';
+import { balance } from '@/core/xp';
 import { useAuth } from '@/state/auth';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
 import { usePermissions } from '@/state/usePermissions';
-import type { AgeGroup } from '@/core/types';
 import { FONT, colors, radius, space } from '@/theme';
 
-const SOURCES = [
-  { title: 'Low 520 Hz tone wakes deep sleepers', who: 'Bruck & Thomas, Victoria University', url: 'https://vuir.vu.edu.au/3994' },
-  { title: 'Melodic alarms and morning grogginess', who: 'McFarlane et al., RMIT, 2020', url: 'https://neurosciencenews.com/alarm-music-grogginess-15625/' },
-  { title: 'Snoozing up to 30 minutes', who: 'Sundelin et al., J. Sleep Research, 2023', url: 'https://livescience.com/health/sleep/hitting-snooze-can-boost-morning-cognition-study-hints' },
-  { title: 'Sleep inertia: what helps after waking', who: 'Hilditch & McHill, 2019', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6710480/' },
-  { title: 'Regular sleep and long-term health', who: 'Windred et al., SLEEP, 2024', url: 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10782489/' },
-  { title: 'Adults need 7 hours or more', who: 'AASM & Sleep Research Society, 2015', url: 'https://aasm.org/aasm-and-srs-publish-new-sleep-duration-consensus-statement/' },
-  { title: 'How much sleep each age needs', who: 'Hirshkowitz et al., Sleep Health, 2015', url: 'https://pubmed.ncbi.nlm.nih.gov/29073412/' },
-  { title: 'The reaction test (PVT)', who: 'Basner & Dinges, SLEEP, 2011', url: 'https://pubmed.ncbi.nlm.nih.gov/21532953/' },
-  { title: 'Activity, sleep and how alert you wake', who: 'Vallat et al., Nature Communications, 2022', url: 'https://www.nature.com/articles/s41467-022-34503-2' },
-  { title: 'Weather data', who: 'Open-Meteo.com (CC BY 4.0)', url: 'https://open-meteo.com/' },
-  { title: 'Place names on web', who: '© OpenStreetMap contributors', url: 'https://www.openstreetmap.org/copyright' },
-];
+const open = (page: string) => router.push({ pathname: '/settings/[page]', params: { page } });
 
-
-
-/** Name and age, kept on this phone. Age sets the recommended sleep goal. */
-function Profile() {
-  const { data, updateSettings } = useStore();
-  const { profile, sleepGoalMinutes } = data.settings;
-  const [name, setName] = useState(profile.name);
-  const age = profile.ageGroup ? AGE_GROUPS[profile.ageGroup] : null;
-  const initials = profile.name
-    .trim()
+/** Settings: a short list. Each row opens its own page. */
+export default function SettingsScreen() {
+  const { data } = useStore();
+  const auth = useAuth();
+  const now = useNow(60_000);
+  const pro = proStatus(data, now);
+  const permissions = usePermissions();
+  const insets = useSafeAreaInsets();
+  const tabSpace = useTabBarSpace();
+  const { settings } = data;
+  const name = settings.profile.name.trim();
+  const initials = name
     .split(/\s+/)
     .map((w) => w[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
-  const saveName = () => {
-    const trimmed = name.trim();
-    if (trimmed !== profile.name) updateSettings({ profile: { ...profile, name: trimmed } });
-  };
-
-  return (
-    <View style={styles.profile}>
-      <View style={styles.profileTop}>
-        <View style={styles.avatar}>{initials ? <Text style={styles.initials}>{initials}</Text> : <Ionicons name="person" size={30} color={colors.textMuted} />}</View>
-        <View style={styles.flex}>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            onBlur={saveName}
-            onSubmitEditing={saveName}
-            placeholder="Your name"
-            placeholderTextColor={colors.textFaint}
-            style={styles.nameInput}
-            maxLength={30}
-            returnKeyType="done"
-            autoCapitalize="words"
-            accessibilityLabel="Your name"
-          />
-          <Txt variant="caption">Saved on this phone only. No sign-up, nothing leaves your phone.</Txt>
-        </View>
-      </View>
-      <Chips<AgeGroup | 'none'>
-        title="Your age"
-        value={profile.ageGroup ?? 'none'}
-        onChange={(v) => updateSettings({ profile: { ...profile, ageGroup: v === 'none' ? null : v } })}
-        options={(Object.keys(AGE_GROUPS) as AgeGroup[]).map((id) => ({ value: id, label: AGE_GROUPS[id].title }))}
-      />
-      {age ? (
-        <View style={styles.recommend}>
-          <Txt variant="caption" style={styles.flex}>{`Recommended for your age: ${age.range[0]}–${age.range[1]} hours a night.`}</Txt>
-          {sleepGoalMinutes !== age.goal ? (
-            <Pressable onPress={() => updateSettings({ sleepGoalMinutes: age.goal })} hitSlop={8} accessibilityRole="button">
-              <Txt variant="heading">{`Use ${formatHours(age.goal)}`}</Txt>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-const RELIABILITY_NOTE: Partial<Record<typeof Platform.OS, string>> = {
-  ios: 'While Ryz is open, alarms ring even in silent mode. When Ryz is closed they ring as notifications, which follow the silent switch, so keep Ryz open overnight or silent mode off.',
-  android: 'Alarms ring at alarm volume and through Do Not Disturb, even when Ryz is closed.',
-};
-
-function StatusRow({ ok, title, detail, action, onAction }: { ok: boolean; title: string; detail: string; action?: string; onAction?: () => void }) {
-  return (
-    <View style={styles.status}>
-      <Ionicons name={ok ? 'checkmark-circle' : 'alert-circle'} size={22} color={ok ? colors.text : colors.danger} />
-      <View style={styles.flex}>
-        <Txt variant="body">{title}</Txt>
-        <Txt variant="caption">{detail}</Txt>
-      </View>
-      {!ok && action && onAction ? (
-        <Pressable onPress={onAction} hitSlop={10} accessibilityRole="button" style={styles.statusAction}>
-          <Txt variant="heading">{action}</Txt>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function useLocationPermission() {
-  const [state, setState] = useState<LocationPermission | null>(null);
-  useEffect(() => {
-    const refresh = () => getLocationPermission().then(setState);
-    refresh();
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && refresh());
-    return () => sub.remove();
-  }, []);
-  const fix = async () => {
-    if (state === 'denied') await Linking.openSettings();
-    else setState(await requestLocationPermission().catch(() => 'denied' as const));
-  };
-  return { state, fix };
-}
-
-export default function SettingsScreen() {
-  const { data, updateSettings, update, reset } = useStore();
-  const auth = useAuth();
-  const now = useNow(60_000);
-  const pro = proStatus(data, now);
-  const permissions = usePermissions();
-  const location = useLocationPermission();
-  const insets = useSafeAreaInsets();
-  const tabSpace = useTabBarSpace();
-  const { settings } = data;
-  const notificationsOk = permissions.state?.notifications === 'granted';
+  const ringOk = !permissions.supported || permissions.state?.notifications === 'granted';
+  const following = (settings.newsTopics?.length ?? 0) + settings.news.entities.length;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <Txt variant="largeTitle" style={styles.title} accessibilityRole="header">Settings</Txt>
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]} keyboardShouldPersistTaps="handled">
-        <Section label="Account" footer={auth.session ? 'Your name, age, news topics and goals are saved to your account and come back when you log in on another phone.' : 'Create an account to keep your profile, news topics and goals when you change phone.'}>
-          {auth.session ? (
-            <>
-              <View style={styles.status}>
-                <Ionicons name="person-circle-outline" size={26} color={colors.text} />
-                <View style={styles.flex}>
-                  <Txt variant="body">Signed in</Txt>
-                  <Txt variant="caption">{auth.email ?? ''}</Txt>
-                </View>
-              </View>
-              <Divider />
-              <Pressable onPress={() => confirm('Log out?', 'Your alarms stay on this phone. Log in again any time.', 'Log out', () => logOut())} accessibilityRole="button" style={styles.status}>
-                <Ionicons name="log-out-outline" size={22} color={colors.text} />
-                <Txt variant="row" style={styles.flex}>Log out</Txt>
-              </Pressable>
-            </>
-          ) : (
-            <Pressable onPress={() => router.push({ pathname: '/account', params: { mode: 'login' } })} accessibilityRole="button" style={styles.status}>
-              <Ionicons name="person-circle-outline" size={26} color={colors.text} />
-              <View style={styles.flex}>
-                <Txt variant="body">Log in or create an account</Txt>
-                <Txt variant="caption">{auth.enabled ? 'Not signed in' : 'Accounts are off in this build'}</Txt>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-            </Pressable>
-          )}
-        </Section>
-
-        <Section label="Ryz Pro">
-          <Pressable onPress={() => router.push('/pro')} accessibilityRole="button" style={styles.status}>
-            <Ionicons name={pro.kind !== 'free' ? 'diamond' : 'diamond-outline'} size={22} color={colors.text} />
-            <View style={styles.flex}>
-              <Txt variant="body">{pro.kind === 'pro' ? `Pro until ${new Date(pro.until).toLocaleDateString()}` : pro.kind === 'trial' ? `Pro trial · ${pro.daysLeft} days left` : 'Free plan'}</Txt>
-              <Txt variant="caption">1, 3, 6 or 12 months, or free days with your XP</Txt>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-          </Pressable>
-          <Divider />
-          <Pressable onPress={() => router.push('/xp')} accessibilityRole="button" style={styles.status}>
-            <Ionicons name="star-outline" size={22} color={colors.text} />
-            <View style={styles.flex}>
-              <Txt variant="body">{`${balance(data.xp).toLocaleString()} XP · level ${levelOf(data.xp.earned).level}`}</Txt>
-              <Txt variant="caption">Earn XP for good mornings and nights; spend it on free Pro</Txt>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-          </Pressable>
-        </Section>
-
-        <Section label="Profile">
-          <Profile />
-        </Section>
-
-        <Section label="Your goals">
-          <Pressable onPress={() => router.push('/goals')} accessibilityRole="button" style={styles.status}>
-            <Ionicons name="flag-outline" size={22} color={colors.text} />
-            <View style={styles.flex}>
-              <Txt variant="body">What you want to improve</Txt>
-              <Txt variant="caption">
-                {settings.goals.length ? settings.goals.map((id) => (id === 'other' && settings.goalOther ? settings.goalOther : GOALS.find((g) => g.id === id)?.title ?? id)).join(', ') : 'Not picked yet'}
-              </Txt>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-          </Pressable>
-        </Section>
-
-        <Section label="Missions" footer="When time runs out, the mission starts over with a new puzzle and the alarm comes back at full volume.">
-          <View style={styles.picker}>
-            <AmountPicker
-              title="Time for each mission (0 = no limit)"
-              value={settings.missionTimeLimitSeconds}
-              min={0}
-              max={300}
-              step={5}
-              unit={(n) => (n === 0 ? '0 no limit' : `${n} seconds`)}
-              hint={(n) => (n >= 60 ? `${Math.floor(n / 60)} min${n % 60 ? ` ${n % 60} s` : ''}` : null)}
-              onChange={(missionTimeLimitSeconds) => updateSettings({ missionTimeLimitSeconds })}
-            />
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: tabSpace + space.xl }]}>
+        <Pressable
+          onPress={() => (auth.session || !auth.enabled ? open('account') : router.push({ pathname: '/account', params: { mode: 'login' } }))}
+          accessibilityRole="button"
+          accessibilityLabel="Account"
+          style={({ pressed }) => [styles.account, pressed && styles.pressed]}
+        >
+          <View style={styles.avatar}>{initials ? <Text style={styles.initials}>{initials}</Text> : <Ionicons name="person" size={22} color={colors.textMuted} />}</View>
+          <View style={styles.flex}>
+            <Text style={styles.name} numberOfLines={1}>{name || 'You'}</Text>
+            <Text style={styles.email} numberOfLines={1}>{auth.email ?? (auth.enabled ? 'Not signed in' : 'Accounts are off in this build')}</Text>
           </View>
-          <Divider />
-          <ToggleRow title="Quieter during missions" description="Turns the alarm down while you work, so you can think" value={settings.quietDuringMissions} onChange={(quietDuringMissions) => updateSettings({ quietDuringMissions })} />
-          {settings.quietDuringMissions ? (
-            <View style={styles.picker}>
-              <AmountPicker title="Full volume again if you stop for" value={settings.missionIdleSeconds} min={5} max={120} unit={(n) => `${n} seconds`} onChange={(missionIdleSeconds) => updateSettings({ missionIdleSeconds })} />
-            </View>
-          ) : null}
-        </Section>
+          <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+        </Pressable>
 
-        <Section label="Waking up" footer="Bright light right after waking helps clear grogginess faster (Hilditch & McHill, 2019).">
-          <ToggleRow title="Bright screen when ringing" description="Turns the screen up to full brightness" value={settings.brightScreen} onChange={(brightScreen) => updateSettings({ brightScreen })} />
-          <Divider />
-          <ToggleRow title="Daylight reminder" description="After you stop the alarm, a nudge to get light in the first hour" value={settings.morningLight} onChange={(morningLight) => updateSettings({ morningLight })} />
-        </Section>
+        <Group>
+          <Row icon={pro.kind !== 'free' ? 'diamond' : 'diamond-outline'} title="Ryz Pro" value={pro.kind === 'pro' ? 'On' : pro.kind === 'trial' ? `Trial · ${pro.daysLeft} d` : 'Free'} onPress={() => router.push('/pro')} />
+          <Row icon="star-outline" title="XP" value={balance(data.xp).toLocaleString()} onPress={() => router.push('/xp')} />
+        </Group>
 
-        <Section label="Sleep" footer="Adults need at least 7 hours a night. Ryz uses your goal to suggest a bedtime.">
-          <View style={styles.picker}>
-            <AmountPicker
-              title="Sleep goal"
-              value={settings.sleepGoalMinutes}
-              min={240}
-              max={720}
-              step={15}
-              unit={(n) => `${n} minutes`}
-              hint={formatHours}
-              onChange={(sleepGoalMinutes) => updateSettings({ sleepGoalMinutes })}
-            />
-          </View>
-          <Divider />
-          <ToggleRow title="Bedtime reminder" description="Before the earliest alarm of each morning" value={settings.bedtimeReminder} onChange={(bedtimeReminder) => updateSettings({ bedtimeReminder })} />
-          {settings.bedtimeReminder ? (
-            <View style={styles.picker}>
-              <AmountPicker
-                title="Remind me before bedtime"
-                value={settings.reminderLeadMinutes}
-                min={5}
-                max={180}
-                step={5}
-                unit={(n) => `${n} minutes`}
-                hint={(n) => (n >= 60 ? formatHours(n) : null)}
-                onChange={(reminderLeadMinutes) => updateSettings({ reminderLeadMinutes })}
-              />
-            </View>
-          ) : null}
-          <Divider />
-          <ToggleRow title="Last call for coffee" description="A reminder to stop caffeine before bedtime: even 6 hours before bed it can cost an hour of sleep" value={settings.caffeineReminder} onChange={(caffeineReminder) => updateSettings({ caffeineReminder })} />
-          {settings.caffeineReminder ? (
-            <View style={styles.picker}>
-              <AmountPicker
-                title="Hours before bedtime"
-                value={settings.caffeineHours}
-                min={3}
-                max={12}
-                step={1}
-                unit={(n) => `${n} ${n === 1 ? 'hour' : 'hours'}`}
-                onChange={(caffeineHours) => updateSettings({ caffeineHours })}
-              />
-            </View>
-          ) : null}
-        </Section>
+        <Group>
+          <Row icon="alarm-outline" title="Alarms" onPress={() => open('alarms')} />
+          <Row icon="moon-outline" title="Sleep" value={formatHours(settings.sleepGoalMinutes)} onPress={() => open('sleep')} />
+          <Row icon="newspaper-outline" title="News" value={following ? `${following} followed` : 'Off'} onPress={() => router.push('/news-settings')} />
+          <Row icon="flag-outline" title="Goals" value={settings.goals.length ? `${settings.goals.length}` : 'None'} onPress={() => router.push('/goals')} />
+          <Row icon="options-outline" title="General" onPress={() => open('general')} />
+        </Group>
 
-        <Section label="Display">
-          <ToggleRow title="24-hour clock" value={settings.use24h} onChange={(use24h) => updateSettings({ use24h })} />
-          <Divider />
-          <Chips
-            title="Temperature"
-            value={settings.tempUnit}
-            onChange={(tempUnit) => updateSettings({ tempUnit })}
-            options={[
-              { value: 'C', label: '°C' },
-              { value: 'F', label: '°F' },
-            ]}
-          />
-        </Section>
+        <Group>
+          <Row icon="shield-checkmark-outline" title="Will my alarm ring?" dot={ringOk ? 'ok' : 'warn'} onPress={() => open('check')} />
+          <Row icon="book-outline" title="The research" onPress={() => open('research')} />
+        </Group>
 
-        <Section label="Will my alarm ring?" footer={RELIABILITY_NOTE[Platform.OS]}>
-          {permissions.supported ? (
-            <>
-              <StatusRow
-                ok={notificationsOk}
-                title="Notifications"
-                detail={notificationsOk ? 'On — alarms ring when Ryz is closed' : 'Off — alarms only ring while Ryz is open'}
-                action={permissions.state?.notifications === 'denied' ? 'Settings' : 'Allow'}
-                onAction={permissions.fix}
-              />
-              <Divider />
-            </>
-          ) : (
-            <Txt variant="caption" style={styles.webNote}>
-              This is the web preview: alarms only ring while this tab is open. Install the app on a phone for real alarms.
-            </Txt>
-          )}
-          <View style={styles.test}>
-            <Button
-              title={permissions.supported ? 'Test alarm in 1 minute' : 'Test alarm in 5 seconds'}
-              variant="secondary"
-              icon="alarm-outline"
-              onPress={() => {
-                haptic('light');
-                update((d, now) => scheduleTest(d, now, permissions.supported ? 60 : 5));
-              }}
-            />
-            <Txt variant="caption">{permissions.supported ? 'Lock your phone after tapping to hear how it wakes you.' : 'Keep this tab open to hear it.'}</Txt>
-          </View>
-        </Section>
-
-        <Section label="News">
-          <Pressable onPress={() => router.push('/interests')} accessibilityRole="button" style={styles.status}>
-            <Ionicons name="newspaper-outline" size={22} color={colors.text} />
-            <View style={styles.flex}>
-              <Txt variant="body">Following</Txt>
-              <Txt variant="caption">
-                {(() => {
-                  const names = [...(settings.newsTopics ?? []).map((id) => nodeById(id)?.title ?? id), ...settings.news.entities.map(entityTitle)];
-                  return names.length > 0 ? `${names.length}: ${names.slice(0, 4).join(', ')}${names.length > 4 ? '…' : ''}${settings.news.muted.length ? ` · ${settings.news.muted.length} muted` : ''}` : 'Off — tap to pick what you like to read';
-                })()}
-              </Txt>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-          </Pressable>
-          <Pressable onPress={() => router.push('/news-settings')} accessibilityRole="button" style={styles.status}>
-            <Ionicons name="options-outline" size={22} color={colors.text} />
-            <View style={styles.flex}>
-              <Txt variant="body">News settings</Txt>
-              <Txt variant="caption">{`Languages, where you live, regions, sources, paywalls, muted words · ${settings.news.editions.length} ${settings.news.editions.length === 1 ? 'edition' : 'editions'}`}</Txt>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textFaint} />
-          </Pressable>
-        </Section>
-
-        <Section label="Weather">
-          <StatusRow
-            ok={location.state === 'granted'}
-            title="Location"
-            detail={location.state === 'granted' ? 'On — Home shows the weather where you are' : 'Off — Home can’t show your weather'}
-            action={location.state === 'denied' ? 'Settings' : 'Allow'}
-            onAction={location.fix}
-          />
-        </Section>
-
-        <Section label="Your data" footer="Ryz keeps alarms, sleep history and your profile on this phone only. Nothing is uploaded.">
-          <Pressable
-            onPress={() =>
-              confirm('Erase everything?', 'This deletes all alarms, your sleep history and settings. It cannot be undone.', 'Erase', () => {
-                haptic('success');
-                logOut().catch(() => {});
-                reset();
-              })
-            }
-            accessibilityRole="button"
-            style={styles.status}
-          >
-            <Ionicons name="trash-outline" size={22} color={colors.danger} />
-            <Txt variant="row" style={[styles.flex, styles.danger]}>Erase all data</Txt>
-          </Pressable>
-        </Section>
-
-        <Section label="The research behind Ryz">
-          {SOURCES.map((s, i) => (
-            <View key={s.url}>
-              {i > 0 ? <Divider /> : null}
-              <Pressable onPress={() => Linking.openURL(s.url)} accessibilityRole="link" style={styles.source}>
-                <View style={styles.flex}>
-                  <Txt variant="body">{s.title}</Txt>
-                  <Txt variant="caption">{s.who}</Txt>
-                </View>
-                <Ionicons name="open-outline" size={18} color={colors.textFaint} />
-              </Pressable>
-            </View>
-          ))}
-        </Section>
-
-        <Txt variant="caption" style={styles.about}>{`Ryz ${Constants.expoConfig?.version ?? ''} · Made for mornings`}</Txt>
+        <Txt variant="caption" style={styles.about}>{`Ryz ${Constants.expoConfig?.version ?? ''}`}</Txt>
       </ScrollView>
     </View>
   );
@@ -412,20 +83,13 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   title: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.md },
-  content: { paddingHorizontal: space.lg, gap: space.xl },
+  content: { paddingHorizontal: space.lg, gap: space.lg },
   flex: { flex: 1, gap: 2 },
-  status: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
-  statusAction: { minHeight: 44, justifyContent: 'center' },
-  webNote: { paddingVertical: space.md },
-  test: { gap: space.sm, paddingVertical: space.md },
-  danger: { color: colors.danger },
-  picker: { paddingVertical: space.md },
-  about: { textAlign: 'center' },
-  profile: { gap: space.md, paddingVertical: space.md },
-  profileTop: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  initials: { fontSize: 26, fontFamily: FONT.display, color: colors.text },
-  nameInput: { fontSize: 22, fontFamily: FONT.regular, color: colors.text, paddingVertical: space.xs, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderStrong },
-  recommend: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: colors.surfaceRaised, borderRadius: radius.sm, padding: space.md },
-  source: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 56 },
+  pressed: { opacity: 0.6 },
+  account: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surface },
+  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  initials: { fontSize: 18, fontFamily: FONT.display, color: colors.text },
+  name: { fontSize: 17, fontFamily: FONT.medium, color: colors.text },
+  email: { fontSize: 13, fontFamily: FONT.light, color: colors.textMuted },
+  about: { textAlign: 'center', color: colors.textFaint },
 });

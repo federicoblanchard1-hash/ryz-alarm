@@ -13,6 +13,7 @@ import { formatDuration, minutesAsleep } from '@/core/sleep';
 import { HOUR, formatClock, formatClockText, formatSpan } from '@/core/time';
 import { FREE_NEWS_TOPICS, trialJustEnded } from '@/core/pro';
 import { balance, levelOf, nextReward } from '@/core/xp';
+import { useAuth } from '@/state/auth';
 import { usePro } from '@/state/usePro';
 import { nearBottom } from '@/state/nearBottom';
 import { pullToRefresh } from '@/state/pullToRefresh';
@@ -57,14 +58,17 @@ export default function Home() {
   // The most recent night, if it ended in the last day and a half.
   const lastNight = data.sleep.at(-1)?.end && now - data.sleep.at(-1)!.end < 36 * HOUR ? data.sleep.at(-1)! : null;
   const awakeCheck = data.pending.find((e) => e.kind === 'awakeCheck' && e.at > now);
-  const askWelcome = ready && !data.settings.onboarded;
+  // Ryz needs an account: when you're signed out (or new), the welcome screen comes back.
+  const auth = useAuth();
+  const signedOut = auth.enabled && auth.checked && !auth.session;
+  const askWelcome = ready && (!data.settings.onboarded || signedOut);
   const [pulling, setPulling] = useState(false);
   const onRefresh = () => {
     setPulling(true);
     pullToRefresh().finally(() => setPulling(false));
   };
   useEffect(() => {
-    // First launch: welcome, account, news topics and goals. Once; Settings can change them later.
+    // First launch: welcome, account, news topics and goals. After that, only to log back in.
     if (askWelcome) router.push('/welcome');
   }, [askWelcome]);
   // When the trial runs out, say so once, with what Pro was doing for you.
