@@ -5,11 +5,13 @@ import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, Text, TextIn
 
 import { AmountPicker } from '@/components/AmountPicker';
 import { Block, Group, Line, Page, Row, Toggle } from '@/components/SettingsKit';
-import { Button, Segmented, Txt, confirm, haptic } from '@/components/ui';
+import { Button, Chips, Segmented, Txt, confirm, haptic } from '@/components/ui';
 import { AppIconTile } from '@/components/AppIconTile';
 import { APP_ICON, APP_ICONS, type AppIconId } from '@/core/appIcons';
 import { MUSIC_SERVICE_NAME, parseMusicLink } from '@/core/music';
 import { scheduleTest } from '@/core/ring';
+import { SLEEP_NEEDS, goalFit, hoursRange, needFor, suggestedGoal } from '@/core/sleepNeeds';
+import type { AgeGroup } from '@/core/types';
 import { formatHours } from '@/core/time';
 import { logOut, resetPassword } from '@/services/account';
 import { canChangeIcon, currentIcon, setIcon } from '@/services/appIcon';
@@ -211,11 +213,64 @@ function AlarmsPage() {
 function SleepPage() {
   const { data, updateSettings } = useStore();
   const { settings } = data;
+  const age = settings.profile.ageGroup;
+  const need = age ? needFor(age) : null;
+  const fit = age ? goalFit(settings.sleepGoalMinutes, age) : null;
+  const pickAge = (ageGroup: AgeGroup) => {
+    haptic('select');
+    // A new age moves the goal only when it doesn't already suit that age.
+    const goal = goalFit(settings.sleepGoalMinutes, ageGroup) === 'recommended' ? {} : { sleepGoalMinutes: suggestedGoal(ageGroup) };
+    updateSettings({ profile: { ...settings.profile, ageGroup }, ...goal });
+  };
   return (
     <Page title="Sleep">
-      <Group note="Adults need at least 7 hours. Ryz uses your goal to suggest a bedtime.">
+      <Group
+        title="Your age"
+        note={need ? `At ${need.ages}, ${hoursRange(need.recommended)} a night is recommended; ${need.mayBe.map(hoursRange).join(' or ')} may be fine for some people.` : 'Pick your age to see how much sleep you need. Ryz sets a goal to match.'}
+      >
+        <Block>
+          <Chips
+            value={age ?? ('' as AgeGroup)}
+            onChange={pickAge}
+            options={SLEEP_NEEDS.filter((n) => n.group).map((n) => ({ value: n.group!, label: n.ages.replace(' years', '').replace(' and over', '+') }))}
+          />
+        </Block>
+      </Group>
+      <Group
+        note={
+          !age || !need
+            ? 'Adults need at least 7 hours. Ryz uses your goal to suggest a bedtime.'
+            : fit === 'recommended'
+              ? `Right in the recommended range for your age. Ryz uses your goal to suggest a bedtime.`
+              : fit === 'maybe'
+                ? `A little outside ${hoursRange(need.recommended)}, which suits some people but not most.`
+                : `Outside what's recommended for your age (${hoursRange(need.recommended)}).`
+        }
+      >
         <Block>
           <AmountPicker title="Sleep goal" value={settings.sleepGoalMinutes} min={240} max={720} step={15} unit={(n) => `${n} min`} hint={formatHours} onChange={(sleepGoalMinutes) => updateSettings({ sleepGoalMinutes })} />
+          {age && fit !== 'recommended' ? (
+            <Button title={`Use ${formatHours(suggestedGoal(age))}`} variant="secondary" icon="sparkles-outline" onPress={() => updateSettings({ sleepGoalMinutes: suggestedGoal(age) })} />
+          ) : null}
+        </Block>
+      </Group>
+      <Group
+        title="How much sleep each age needs"
+        note="Hours a day, naps included for young children. From the National Sleep Foundation's expert panel (Hirshkowitz et al., 2015). The American Academy of Sleep Medicine and the CDC give close numbers: 9–12 h at 6–12 years, 8–10 h at 13–17, and 7 h or more for adults."
+      >
+        <Block>
+          {SLEEP_NEEDS.map((n) => {
+            const mine = Boolean(age && n.group === age);
+            return (
+              <View key={n.title} style={[styles.needRow, mine && styles.needMine]} accessible accessibilityLabel={`${n.title}, ${n.ages}: ${hoursRange(n.recommended)} recommended${mine ? ', your age' : ''}`}>
+                <View style={styles.needText}>
+                  <Text style={styles.needTitle}>{mine ? `${n.title} · you` : n.title}</Text>
+                  <Txt variant="caption">{`${n.ages} · ${n.mayBe.map(hoursRange).join(' or ')} may be fine`}</Txt>
+                </View>
+                <Text style={styles.needHours}>{hoursRange(n.recommended)}</Text>
+              </View>
+            );
+          })}
         </Block>
       </Group>
       <Group title="Reminders" note="Reminders are notifications, so they need notifications on. Even 6 hours before bed, caffeine can cost an hour of sleep.">
@@ -403,6 +458,11 @@ const styles = StyleSheet.create({
   input: { flex: 1, textAlign: 'right', fontSize: 15, fontFamily: FONT.light, color: colors.text, paddingVertical: space.sm },
   value: { flex: 1, textAlign: 'right' },
   test: { gap: space.sm },
+  needRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, paddingHorizontal: space.sm, borderRadius: 10 },
+  needMine: { backgroundColor: colors.surfaceRaised },
+  needText: { flex: 1, gap: 1 },
+  needTitle: { fontSize: 15, fontFamily: FONT.medium, color: colors.text },
+  needHours: { fontSize: 17, fontFamily: FONT.regular, color: colors.text, fontVariant: ['tabular-nums'] },
   iconGroup: { gap: space.sm },
   iconGroupTitle: { fontSize: 12, lineHeight: 16, fontFamily: FONT.medium, color: colors.textFaint, letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: space.md },
   icons: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },

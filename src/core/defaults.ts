@@ -1,4 +1,4 @@
-import type { AgeGroup, Alarm, AppData, Settings } from './types';
+import type { Alarm, AppData, Settings } from './types';
 import { EMPTY_XP } from './xp';
 
 export const TEST_ALARM_ID = 'test';
@@ -62,17 +62,6 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
     goalOther: '',
     onboarded: false,
   };
-}
-
-/**
- * Recommended sleep by age (National Sleep Foundation, Hirshkowitz et al.,
- * 2015), with the middle of the range as the suggested goal.
- */
-export const AGE_GROUPS: Record<AgeGroup, { title: string; range: [number, number]; goal: number }> = {
-  teen: { title: '14–17', range: [8, 10], goal: 9 * 60 },
-  young: { title: '18–25', range: [7, 9], goal: 8 * 60 },
-  adult: { title: '26–64', range: [7, 9], goal: 8 * 60 },
-  older: { title: '65+', range: [7, 8], goal: 7.5 * 60 },
 }
 
 export function emptyData(use24h: boolean, tempUnit: Settings['tempUnit'] = 'C'): AppData {

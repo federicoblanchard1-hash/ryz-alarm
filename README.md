@@ -174,7 +174,7 @@ A short list, like iOS Settings; each row opens its own page.
 - **Account** (top): your name and email; on its page, Change password, Log out and Erase all data. Without an account, the page offers *Create an account* or *Log in*, to back up alarms, nights, moods and XP.
 - **Ryz Pro** and **XP**.
 - **Alarms**: time for each mission, quieter during missions and how long before full volume comes back, bright screen when ringing, daylight reminder.
-- **Sleep**: sleep goal, bedtime reminder, last call for coffee.
+- **Sleep**: your age (14–17, 18–25, 26–64, 65+), which sets a matching sleep goal and says whether yours fits; a table of how much sleep every age needs, from newborns to 65+ (National Sleep Foundation, Hirshkowitz et al., 2015, with the AASM/CDC numbers noted); sleep goal, bedtime reminder, last call for coffee.
 - **Goals**: what you want to improve.
 - **General**: 24-hour clock, °C or °F, location for the weather.
 - **Will my alarm ring?**: notification status and a test alarm. **The research**: the studies behind Ryz.
