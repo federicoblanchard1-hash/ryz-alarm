@@ -179,7 +179,7 @@ python3 scripts/generate-brand.py
 | Halloween | a witch hat on orange | 15 – 31 October |
 | Christmas | a Santa hat on green | 1 – 30 December |
 
-Holidays win over the season they fall in. There are also three **styles** with no dates, to use any time: **Light** (black on off-white), **Gold** (a gold rz on black) and **Sunrise** (white on a dawn gradient). Pick any of them in **Settings → General → App icon**; when a season or holiday starts, a small card on Morning offers its icon (once a year; *Suggest seasonal icons* turns it off).
+Holidays win over the season they fall in. There are also three **styles** with no dates, to use any time: **Light** (black on off-white), **Gold** (a gold rz on black) and **Sunrise** (white on a dawn gradient). Pick any of them in **Settings → General → App icon**; from a week before each season or holiday, a one-line card on Morning offers its icon ("Halloween icon · in 3 days"). Closing it, or using it, keeps it away until a week before the next one; *Suggest seasonal icons* turns it off.
 
 **Icons are Pro.** Everyday is free; the styles and seasonal icons come with Ryz Pro (and the 14-day trial). Free users see them with a lock, and tapping one, or *Unlock* on the season card, opens the Pro screen about icons. An icon picked during the trial stays on the home screen after it ends; only switching needs Pro.
 

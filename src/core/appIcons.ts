@@ -115,10 +115,33 @@ export function seasonKey(id: AppIconId, ms: number): string {
   return `${id}-${year}`;
 }
 
-/** Which season's icon to suggest now, if any: in season, not already on, not dismissed this year. */
-export function iconToSuggest(now: number, current: AppIconId, seen: string[], enabled: boolean): AppIconId | null {
+/** How many days ahead the Morning card announces the next season or holiday. */
+export const ANNOUNCE_DAYS = 7;
+
+export interface IconSuggestion {
+  id: AppIconId;
+  /** Days until it starts: 0 when it already has. */
+  inDays: number;
+  /** What to remember once it's dismissed (or used), so it stays away until the next one. */
+  key: string;
+}
+
+/**
+ * Which icon the Morning card offers: the season or holiday on now, or one
+ * starting within a week. One that's on the home screen already, or was
+ * dismissed this year, is skipped, so closing the card keeps it away until a
+ * week before the next one.
+ */
+export function iconToSuggest(now: number, current: AppIconId, seen: string[], enabled: boolean): IconSuggestion | null {
   if (!enabled) return null;
-  const season = seasonFor(now);
-  if (!season || season === current || seen.includes(seasonKey(season, now))) return null;
-  return season;
+  const today = new Date(now);
+  for (let inDays = 0; inDays <= ANNOUNCE_DAYS; inDays++) {
+    // Noon, so a daylight-saving change never skips or repeats a day.
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() + inDays, 12).getTime();
+    const id = seasonFor(day);
+    if (!id || id === current) continue;
+    const key = seasonKey(id, day);
+    if (!seen.includes(key)) return { id, inDays, key };
+  }
+  return null;
 }

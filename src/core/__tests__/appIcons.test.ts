@@ -43,13 +43,24 @@ describe('seasonal icons', () => {
     }
   });
 
-  it('suggests a season once a year, and not when it is already on', () => {
+  it('offers the season that is on, once a year, and not when it is already on', () => {
     const now = on(10, 20);
-    expect(iconToSuggest(now, 'default', [], true)).toBe('halloween');
+    expect(iconToSuggest(now, 'default', [], true)).toEqual({ id: 'halloween', inDays: 0, key: 'halloween-2026' });
     expect(iconToSuggest(now, 'halloween', [], true)).toBeNull();
-    expect(iconToSuggest(now, 'default', [seasonKey('halloween', now)], true)).toBeNull();
-    expect(iconToSuggest(now, 'default', ['halloween-2025'], true)).toBe('halloween');
+    expect(iconToSuggest(now, 'default', ['halloween-2025'], true)?.id).toBe('halloween');
     expect(iconToSuggest(now, 'default', [], false)).toBeNull();
+  });
+
+  it('once closed, stays away until a week before the next one', () => {
+    const seen = ['halloween-2026'];
+    expect(iconToSuggest(on(10, 22), 'default', seen, true)).toBeNull();
+    // Halloween ends on the 31st and autumn carries on: the next new one is Christmas, on 1 December.
+    expect(iconToSuggest(on(11, 23), 'default', [...seen, 'autumn-2026'], true)).toBeNull();
+    expect(iconToSuggest(on(11, 24), 'default', [...seen, 'autumn-2026'], true)).toEqual({ id: 'christmas', inDays: 7, key: 'christmas-2026' });
+    expect(iconToSuggest(on(11, 30), 'default', [...seen, 'autumn-2026'], true)?.inDays).toBe(1);
+    // New Year's January days count with the year it started.
+    expect(iconToSuggest(on(12, 26), 'default', ['christmas-2026'], true)).toEqual({ id: 'new-year', inDays: 5, key: 'new-year-2026' });
+    expect(iconToSuggest(on(1, 3, 2027), 'default', ['new-year-2026'], true)).toEqual({ id: 'winter', inDays: 5, key: 'winter-2027' });
   });
 
   it('counts the January days of New Year with the year it started', () => {

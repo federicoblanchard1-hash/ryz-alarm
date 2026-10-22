@@ -324,7 +324,7 @@ function IconPage() {
       <Group note={supported ? 'On iPhone, a short message confirms the change. That message comes from iOS, not Ryz.' : 'Switching needs the full Ryz app, not Expo Go.'}>
         <Toggle
           title="Suggest seasonal icons"
-          note="A small card on Morning when a season or holiday starts, from Lunar New Year to Christmas"
+          note="A one-line card on Morning a week before each season or holiday. Close it and it waits for the next one."
           value={data.settings.seasonalIcons}
           onChange={(seasonalIcons) => updateSettings({ seasonalIcons })}
         />
