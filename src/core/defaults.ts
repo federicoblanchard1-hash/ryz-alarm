@@ -56,6 +56,8 @@ export function defaultSettings(use24h: boolean, tempUnit: Settings['tempUnit'] 
     sampleSleep: true,
     morningMusic: null,
     morningMusicAuto: false,
+    seasonalIcons: true,
+    iconPromptsSeen: [],
     goals: [],
     goalOther: '',
     onboarded: false,

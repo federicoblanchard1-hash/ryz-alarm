@@ -136,6 +136,10 @@ export interface Settings {
   morningMusic: MusicLink | null;
   /** Open the morning music by itself when you tap "I'm up". */
   morningMusicAuto: boolean;
+  /** Suggest the seasonal app icon when a season starts. */
+  seasonalIcons: boolean;
+  /** Seasonal suggestions already answered ("halloween-2026"), so each comes once a year. */
+  iconPromptsSeen: string[];
   /** What you want Ryz to help with, from sign-up. */
   goals: string[];
   /** Anything else you typed under "Other". */

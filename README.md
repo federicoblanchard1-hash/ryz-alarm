@@ -153,6 +153,19 @@ A short list, like iOS Settings; each row opens its own page.
 - **Swipe an alarm left** to delete it. Time settings (fade-in, snooze, keep ringing, the awake check, mission time limits, sleep goal…) use a slider plus a boxed number you can tap to type.
 - Repeat days, alarm names, volume, vibration, a 12/24-hour clock, haptics, reduced-motion support, and screen-reader labels.
 
+## Logo and app icons
+
+The logo is **rz**: a custom ligature cut from the wordmark's own typeface (Instrument Serif Italic), where the r's arm runs straight into the z's top stroke, so the icon and the name read as one family. It's white on black, centred exactly in width and height by its real outline, and the app icon, Android adaptive and themed (monochrome) icons, splash screen, favicon (a slightly bolder cut for small sizes) and `assets/brand/` (the master `rz.svg`, `mark.png` and a brand sheet) all come from one script:
+
+```bash
+pip install fonttools cairosvg pillow
+python3 scripts/generate-brand.py
+```
+
+**Seasonal icons.** The rz never changes; each season only changes the tile colour and adds one small detail: Halloween (witch hat on orange), Christmas (Santa hat on green), New Year (gold sparkles), Valentine's (a heart on red), Spring (a flower on cream), Summer (a sun on yellow) and Winter (snow on navy). Pick one any time in **Settings → General → App icon**, and when a season starts a small card on Morning offers its icon (once a year; *Suggest seasonal icons* turns it off). The dates follow the northern-hemisphere seasons and the usual holiday weeks (Halloween from 15 October, Christmas through December, New Year 31 December to 7 January, Valentine's week).
+
+Switching icons uses `expo-alternate-app-icons`, which needs native code: it works in a development or store build, not in Expo Go (there the picker shows the icons and explains). On iPhone, iOS itself shows a short "You have changed the icon" message each time; apps can't switch silently.
+
 ## How alarms ring
 
 | Situation | What happens |

@@ -144,6 +144,67 @@
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
+      ],
+      [
+        "expo-alternate-app-icons",
+        [
+          {
+            "name": "Halloween",
+            "ios": "./assets/icons/halloween.png",
+            "android": {
+              "foregroundImage": "./assets/icons/halloween-android.png",
+              "backgroundColor": "#FF7A00"
+            }
+          },
+          {
+            "name": "Christmas",
+            "ios": "./assets/icons/christmas.png",
+            "android": {
+              "foregroundImage": "./assets/icons/christmas-android.png",
+              "backgroundColor": "#14532D"
+            }
+          },
+          {
+            "name": "NewYear",
+            "ios": "./assets/icons/new-year.png",
+            "android": {
+              "foregroundImage": "./assets/icons/new-year-android.png",
+              "backgroundColor": "#000000"
+            }
+          },
+          {
+            "name": "Valentines",
+            "ios": "./assets/icons/valentines.png",
+            "android": {
+              "foregroundImage": "./assets/icons/valentines-android.png",
+              "backgroundColor": "#E63950"
+            }
+          },
+          {
+            "name": "Spring",
+            "ios": "./assets/icons/spring.png",
+            "android": {
+              "foregroundImage": "./assets/icons/spring-android.png",
+              "backgroundColor": "#F3EFE4"
+            }
+          },
+          {
+            "name": "Summer",
+            "ios": "./assets/icons/summer.png",
+            "android": {
+              "foregroundImage": "./assets/icons/summer-android.png",
+              "backgroundColor": "#FFC23C"
+            }
+          },
+          {
+            "name": "Winter",
+            "ios": "./assets/icons/winter.png",
+            "android": {
+              "foregroundImage": "./assets/icons/winter-android.png",
+              "backgroundColor": "#0E1F3B"
+            }
+          }
+        ]
       ]
     ]
   }

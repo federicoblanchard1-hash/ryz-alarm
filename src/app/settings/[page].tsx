@@ -1,14 +1,17 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AmountPicker } from '@/components/AmountPicker';
 import { Block, Group, Line, Page, Row, Toggle } from '@/components/SettingsKit';
 import { Button, Segmented, Txt, confirm, haptic } from '@/components/ui';
+import { AppIconTile } from '@/components/AppIconTile';
+import { APP_ICON, APP_ICONS, type AppIconId } from '@/core/appIcons';
 import { MUSIC_SERVICE_NAME, parseMusicLink } from '@/core/music';
 import { scheduleTest } from '@/core/ring';
 import { formatHours } from '@/core/time';
 import { logOut, resetPassword } from '@/services/account';
+import { canChangeIcon, currentIcon, setIcon } from '@/services/appIcon';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { useAuth } from '@/state/auth';
 import { useStore } from '@/state/store';
@@ -243,6 +246,9 @@ function GeneralPage() {
   return (
     <Page title="General">
       <Group>
+        <Row icon="apps-outline" title="App icon" detail="Everyday, or one for each season" value={APP_ICON[currentIcon()].title} onPress={() => router.push({ pathname: '/settings/[page]', params: { page: 'icon' } })} />
+      </Group>
+      <Group>
         <Toggle title="24-hour clock" note="On every screen, alarms and notifications" value={settings.use24h} onChange={(use24h) => updateSettings({ use24h })} />
         <Line title="Temperature">
           <Segmented
@@ -264,6 +270,47 @@ function GeneralPage() {
           value={located ? 'On' : location.state === 'denied' ? 'Off' : 'Allow'}
           dot={located ? 'ok' : 'warn'}
           onPress={location.fix}
+        />
+      </Group>
+    </Page>
+  );
+}
+
+/** Pick the app icon: the everyday one or a seasonal one. The rz never changes, only the colour and one small detail. */
+function IconPage() {
+  const { data, updateSettings } = useStore();
+  const [current, setCurrent] = useState<AppIconId>(() => currentIcon());
+  const supported = canChangeIcon();
+  const pick = async (id: AppIconId) => {
+    haptic('select');
+    if (!supported) {
+      notice('Needs the full app', 'Changing the icon needs the full Ryz app (a store or development build). In Expo Go you can see them here, but not switch.');
+      return;
+    }
+    try {
+      if (await setIcon(id)) setCurrent(id);
+    } catch {
+      notice('Couldn’t change the icon', 'Try again in a moment.');
+    }
+  };
+  return (
+    <Page title="App icon">
+      <View style={styles.icons}>
+        {APP_ICONS.map((icon) => (
+          <Pressable key={icon.id} onPress={() => pick(icon.id)} accessibilityRole="radio" accessibilityState={{ selected: current === icon.id }} accessibilityLabel={icon.title} style={styles.iconCell}>
+            <View style={[styles.iconRing, current === icon.id && styles.iconRingOn]}>
+              <AppIconTile id={icon.id} size={64} />
+            </View>
+            <Txt variant="caption" style={[styles.center, current === icon.id && styles.iconOn]}>{icon.title}</Txt>
+          </Pressable>
+        ))}
+      </View>
+      <Group note={supported ? 'On iPhone, a short message confirms the change. That message comes from iOS, not Ryz.' : 'Switching needs the full Ryz app, not Expo Go.'}>
+        <Toggle
+          title="Suggest seasonal icons"
+          note="A small card on Morning when Halloween, Christmas or a new season starts"
+          value={data.settings.seasonalIcons}
+          onChange={(seasonalIcons) => updateSettings({ seasonalIcons })}
         />
       </Group>
     </Page>
@@ -323,6 +370,7 @@ const PAGES: Record<string, () => React.JSX.Element> = {
   alarms: AlarmsPage,
   sleep: SleepPage,
   general: GeneralPage,
+  icon: IconPage,
   check: CheckPage,
   research: ResearchPage,
 };
@@ -339,6 +387,11 @@ const styles = StyleSheet.create({
   input: { flex: 1, textAlign: 'right', fontSize: 15, fontFamily: FONT.light, color: colors.text, paddingVertical: space.sm },
   value: { flex: 1, textAlign: 'right' },
   test: { gap: space.sm },
+  icons: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
+  iconCell: { width: '25%', alignItems: 'center', gap: space.xs },
+  iconRing: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
+  iconRingOn: { borderColor: colors.text },
+  iconOn: { color: colors.text },
   warn: { color: colors.danger, paddingBottom: space.sm },
   center: { textAlign: 'center' },
 });

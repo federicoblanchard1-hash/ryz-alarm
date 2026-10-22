@@ -5,6 +5,7 @@ import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useTabBarSpace } from '@/components/tabBarSpace';
 import { Button, Card, PressableScale, Txt, type IconName } from '@/components/ui';
+import { SeasonCard } from '@/components/SeasonCard';
 import { Today } from '@/components/Today';
 import { WeatherHero } from '@/components/WeatherHero';
 import { nextRing } from '@/core/next';
@@ -158,6 +159,7 @@ export default function Home() {
           </PressableScale>
         ) : null}
 
+        {ready ? <SeasonCard /> : null}
         {ready ? <Today /> : null}
 
         {awakeCheck ? (
