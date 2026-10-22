@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AmountPicker } from '@/components/AmountPicker';
 import { Block, Group, Line, Page, Row, Toggle } from '@/components/SettingsKit';
@@ -246,7 +246,7 @@ function GeneralPage() {
   return (
     <Page title="General">
       <Group>
-        <Row icon="apps-outline" title="App icon" detail="Everyday, or one for each season" value={APP_ICON[currentIcon()].title} onPress={() => router.push({ pathname: '/settings/[page]', params: { page: 'icon' } })} />
+        <Row icon="apps-outline" title="App icon" detail="Everyday, a style, or one for each season" value={APP_ICON[currentIcon()].title} onPress={() => router.push({ pathname: '/settings/[page]', params: { page: 'icon' } })} />
       </Group>
       <Group>
         <Toggle title="24-hour clock" note="On every screen, alarms and notifications" value={settings.use24h} onChange={(use24h) => updateSettings({ use24h })} />
@@ -295,20 +295,25 @@ function IconPage() {
   };
   return (
     <Page title="App icon">
-      <View style={styles.icons}>
-        {APP_ICONS.map((icon) => (
-          <Pressable key={icon.id} onPress={() => pick(icon.id)} accessibilityRole="radio" accessibilityState={{ selected: current === icon.id }} accessibilityLabel={icon.title} style={styles.iconCell}>
-            <View style={[styles.iconRing, current === icon.id && styles.iconRingOn]}>
-              <AppIconTile id={icon.id} size={64} />
-            </View>
-            <Txt variant="caption" style={[styles.center, current === icon.id && styles.iconOn]}>{icon.title}</Txt>
-          </Pressable>
-        ))}
-      </View>
+      {(['style', 'season'] as const).map((kind) => (
+        <View key={kind} style={styles.iconGroup}>
+          <Text style={styles.iconGroupTitle}>{kind === 'style' ? 'Any time' : 'Seasons and holidays'}</Text>
+          <View style={styles.icons}>
+            {APP_ICONS.filter((icon) => icon.kind === kind).map((icon) => (
+              <Pressable key={icon.id} onPress={() => pick(icon.id)} accessibilityRole="radio" accessibilityState={{ selected: current === icon.id }} accessibilityLabel={icon.title} style={styles.iconCell}>
+                <View style={[styles.iconRing, current === icon.id && styles.iconRingOn]}>
+                  <AppIconTile id={icon.id} size={64} />
+                </View>
+                <Txt variant="caption" style={[styles.center, current === icon.id && styles.iconOn]} numberOfLines={2}>{icon.title}</Txt>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ))}
       <Group note={supported ? 'On iPhone, a short message confirms the change. That message comes from iOS, not Ryz.' : 'Switching needs the full Ryz app, not Expo Go.'}>
         <Toggle
           title="Suggest seasonal icons"
-          note="A small card on Morning when Halloween, Christmas or a new season starts"
+          note="A small card on Morning when a season or holiday starts, from Lunar New Year to Christmas"
           value={data.settings.seasonalIcons}
           onChange={(seasonalIcons) => updateSettings({ seasonalIcons })}
         />
@@ -387,6 +392,8 @@ const styles = StyleSheet.create({
   input: { flex: 1, textAlign: 'right', fontSize: 15, fontFamily: FONT.light, color: colors.text, paddingVertical: space.sm },
   value: { flex: 1, textAlign: 'right' },
   test: { gap: space.sm },
+  iconGroup: { gap: space.sm },
+  iconGroupTitle: { fontSize: 12, lineHeight: 16, fontFamily: FONT.medium, color: colors.textFaint, letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: space.md },
   icons: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.lg },
   iconCell: { width: '25%', alignItems: 'center', gap: space.xs },
   iconRing: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },

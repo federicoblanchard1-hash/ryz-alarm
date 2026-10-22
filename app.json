@@ -203,6 +203,70 @@
               "foregroundImage": "./assets/icons/winter-android.png",
               "backgroundColor": "#0E1F3B"
             }
+          },
+          {
+            "name": "Autumn",
+            "ios": "./assets/icons/autumn.png",
+            "android": {
+              "foregroundImage": "./assets/icons/autumn-android.png",
+              "backgroundColor": "#9A3412"
+            }
+          },
+          {
+            "name": "LunarNewYear",
+            "ios": "./assets/icons/lunar-new-year.png",
+            "android": {
+              "foregroundImage": "./assets/icons/lunar-new-year-android.png",
+              "backgroundColor": "#B91C1C"
+            }
+          },
+          {
+            "name": "StPatricks",
+            "ios": "./assets/icons/st-patricks.png",
+            "android": {
+              "foregroundImage": "./assets/icons/st-patricks-android.png",
+              "backgroundColor": "#15803D"
+            }
+          },
+          {
+            "name": "Easter",
+            "ios": "./assets/icons/easter.png",
+            "android": {
+              "foregroundImage": "./assets/icons/easter-android.png",
+              "backgroundColor": "#CFE8F3"
+            }
+          },
+          {
+            "name": "Pride",
+            "ios": "./assets/icons/pride.png",
+            "android": {
+              "foregroundImage": "./assets/icons/pride-android.png",
+              "backgroundColor": "#000000"
+            }
+          },
+          {
+            "name": "Light",
+            "ios": "./assets/icons/light.png",
+            "android": {
+              "foregroundImage": "./assets/icons/light-android.png",
+              "backgroundColor": "#F4F3EF"
+            }
+          },
+          {
+            "name": "Gold",
+            "ios": "./assets/icons/gold.png",
+            "android": {
+              "foregroundImage": "./assets/icons/gold-android.png",
+              "backgroundColor": "#000000"
+            }
+          },
+          {
+            "name": "Sunrise",
+            "ios": "./assets/icons/sunrise.png",
+            "android": {
+              "foregroundImage": "./assets/icons/sunrise-android.png",
+              "backgroundColor": "#D9507A"
+            }
           }
         ]
       ]

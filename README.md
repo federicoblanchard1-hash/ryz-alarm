@@ -162,7 +162,24 @@ pip install fonttools cairosvg pillow
 python3 scripts/generate-brand.py
 ```
 
-**Seasonal icons.** The rz never changes; each season only changes the tile colour and adds one small detail: Halloween (witch hat on orange), Christmas (Santa hat on green), New Year (gold sparkles), Valentine's (a heart on red), Spring (a flower on cream), Summer (a sun on yellow) and Winter (snow on navy). Pick one any time in **Settings → General → App icon**, and when a season starts a small card on Morning offers its icon (once a year; *Suggest seasonal icons* turns it off). The dates follow the northern-hemisphere seasons and the usual holiday weeks (Halloween from 15 October, Christmas through December, New Year 31 December to 7 January, Valentine's week).
+**Seasonal icons.** The rz never changes; each season or holiday only changes the tile colour and adds one small detail:
+
+| Icon | Look | When Ryz suggests it |
+| --- | --- | --- |
+| Winter | snow on navy | 8 January – 19 March |
+| Spring | a flower on cream | 20 March – 20 June |
+| Summer | a sun on yellow | 21 June – 22 September |
+| Autumn | maple leaves on rust | 23 September – 30 November |
+| New Year | gold sparkles on black | 31 December – 7 January |
+| Lunar New Year | a gold lantern on red, gold rz | the eve and first week (dates looked up to 2036) |
+| Valentine's | a heart on red | 7 – 14 February |
+| St Patrick's | a shamrock on green | 14 – 17 March |
+| Easter | a painted egg on sky blue | Palm Sunday – Easter Monday (worked out each year) |
+| Pride | a rainbow on black | June |
+| Halloween | a witch hat on orange | 15 – 31 October |
+| Christmas | a Santa hat on green | 1 – 30 December |
+
+Holidays win over the season they fall in. There are also three **styles** with no dates, to use any time: **Light** (black on off-white), **Gold** (a gold rz on black) and **Sunrise** (white on a dawn gradient). Pick any of them in **Settings → General → App icon**; when a season or holiday starts, a small card on Morning offers its icon (once a year; *Suggest seasonal icons* turns it off).
 
 Switching icons uses `expo-alternate-app-icons`, which needs native code: it works in a development or store build, not in Expo Go (there the picker shows the icons and explains). On iPhone, iOS itself shows a short "You have changed the icon" message each time; apps can't switch silently.
 

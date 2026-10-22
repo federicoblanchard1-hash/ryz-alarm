@@ -8,7 +8,7 @@ contrast; the z loses its left hook so the join is clean.
 Every icon centres the mark exactly, by its real outline, in width and
 height. Seasonal icons keep the mark in the same place and size, and only
 change the tile colour and add one small accessory, so Ryz is recognisable
-all year.
+all year. A few plain styles (Light, Gold, Sunrise) can be used any time.
 
 Needs: pip install fonttools cairosvg pillow (and `npm install`, for the font).
 Run from the repo root: python3 scripts/generate-brand.py
@@ -176,6 +176,53 @@ def snowflake(x, y, rr, fill):
     return "".join(f'<rect x="{x - rr}" y="{y - 8}" width="{2 * rr}" height="16" rx="8" fill="{fill}" transform="rotate({a} {x} {y})"/>' for a in (0, 60, 120))
 
 
+def maple_leaf(x, y, k, rot, fill):
+    pts = "0 -100 14 -62 38 -72 30 -30 70 -46 60 -20 92 -8 52 18 60 40 18 30 6 60 5 104 -5 104 -6 60 -18 30 -60 40 -52 18 -92 -8 -60 -20 -70 -46 -30 -30 -38 -72 -14 -62"
+    return (f'<polygon points="{pts}" fill="{fill}" stroke="{fill}" stroke-width="10" stroke-linejoin="round" '
+            f'transform="translate({x} {y}) rotate({rot}) scale({k})"/>')
+
+
+def shamrock(x, y, k, fill):
+    # three hearts with their points meeting in the middle, and a curling stem
+    hearts = "".join(f'<g transform="rotate({a})"><path transform="translate(0 -13)" d="M0 12 C-4 8 -16 2 -16 -6 C-16 -12 -11 -16 -6 -16 C-3 -16 -1 -14 0 -12 C1 -14 3 -16 6 -16 C11 -16 16 -12 16 -6 C16 2 4 8 0 12 Z"/></g>'
+                     for a in (0, 120, 240))
+    stem = '<path d="M0 0 Q4 20 16 30" fill="none" stroke-width="4" stroke-linecap="round"/>'
+    return f'<g transform="translate({x} {y}) scale({k})" fill="{fill}" stroke="{fill}">{hearts}{stem}</g>'
+
+
+def egg(x, y, k, shell, band):
+    shape = "M0 -100 C55 -100 80 -10 80 30 C80 80 45 105 0 105 C-45 105 -80 80 -80 30 C-80 -10 -55 -100 0 -100 Z"
+    zig = "M-90 10 " + " ".join(f"L{-90 + 20 * i} {10 + (-18 if i % 2 else 0)}" for i in range(1, 10))
+    dots = "".join(f'<circle cx="{cx}" cy="{cy}" r="9" fill="{band}"/>' for cx, cy in ((-30, -40), (0, -62), (30, -40), (-30, 62), (30, 62), (0, 82)))
+    return (f'<g transform="translate({x} {y}) rotate(14) scale({k})"><clipPath id="egg"><path d="{shape}"/></clipPath>'
+            f'<path d="{shape}" fill="{shell}"/><g clip-path="url(#egg)"><path d="{zig}" fill="none" stroke="{band}" stroke-width="12" stroke-linejoin="round"/>'
+            f'<path d="{zig}" transform="translate(0 28)" fill="none" stroke="{band}" stroke-width="12" stroke-linejoin="round"/>{dots}</g></g>')
+
+
+def lantern(x, y, k, body, rib):
+    return (f'<g transform="translate({x} {y}) scale({k})">'
+            f'<line x1="0" y1="-130" x2="0" y2="-80" stroke="{body}" stroke-width="6"/>'
+            f'<rect x="-36" y="-84" width="72" height="20" rx="6" fill="{body}"/>'
+            f'<ellipse cx="0" cy="0" rx="84" ry="68" fill="{body}"/>'
+            f'<ellipse cx="0" cy="0" rx="42" ry="68" fill="none" stroke="{rib}" stroke-width="6"/>'
+            f'<line x1="0" y1="-68" x2="0" y2="68" stroke="{rib}" stroke-width="6"/>'
+            f'<rect x="-36" y="64" width="72" height="20" rx="6" fill="{body}"/>'
+            f'<path d="M-14 84 L-18 140 M0 84 L0 146 M14 84 L18 140" stroke="{body}" stroke-width="7" stroke-linecap="round"/></g>')
+
+
+def rainbow(x, y, r, w):
+    colours = ("#E40303", "#FF8C00", "#FFED00", "#008026", "#24408E", "#732982")
+    return "".join(f'<path d="M{x - (r - i * w)} {y} A{r - i * w} {r - i * w} 0 0 1 {x + r - i * w} {y}" fill="none" stroke="{c}" stroke-width="{w + 0.5}"/>'
+                   for i, c in enumerate(colours))
+
+
+# in the mark's own units, so the r and the z share one sweep of light
+GOLD = (f'<defs><linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="{XMIN}" y1="{YMAX}" x2="{XMAX}" y2="{YMIN}">'
+        '<stop offset="0" stop-color="#F7E7A1"/><stop offset="0.5" stop-color="#D9B14A"/><stop offset="1" stop-color="#A67C2A"/></linearGradient></defs>')
+DAWN = ('<defs><linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">'
+        '<stop offset="0" stop-color="#2B1F5C"/><stop offset="0.55" stop-color="#D9507A"/><stop offset="1" stop-color="#FFB36B"/></linearGradient></defs>')
+
+
 R_TOP = at(146, 516, SEASON_MARK)   # the top of the r's shoulder
 Z_FLICK = at(Z_OFFSET + 386, 516, SEASON_MARK)  # the z's top-right flick
 
@@ -190,7 +237,25 @@ SEASONS = [
     ("summer", "#FFC23C", "#111111", f'<circle cx="{Z_FLICK[0] - 24}" cy="{Z_FLICK[1] - 120}" r="110" fill="#FFFFFF"/>', ""),
     ("winter", "#0E1F3B", "#FFFFFF", '<path d="M0 928 Q160 856 336 904 Q512 952 680 888 Q856 832 1024 888 V1024 H0 Z" fill="#3A5A86"/>',
      snowflake(184, 200, 48, "#FFFFFF") + snowflake(856, 160, 36, "#FFFFFF") + snowflake(904, 416, 24, "#FFFFFF") + snowflake(120, 512, 24, "#FFFFFF")),
+    ("autumn", "#9A3412", "#FFF4E6", "",
+     maple_leaf(Z_FLICK[0] + 4, Z_FLICK[1] - 140, 0.95, 18, "#F59E0B") + maple_leaf(R_TOP[0] - 120, R_TOP[1] - 70, 0.42, -32, "#FCD34D")
+     + maple_leaf(860, 830, 0.36, 40, "#F59E0B")),
+    ("lunar-new-year", "#B91C1C", "#F6D27A", "", lantern(Z_FLICK[0] + 4, Z_FLICK[1] - 150, 0.9, "#F6D27A", "#B91C1C")),
+    ("st-patricks", "#15803D", "#FFFFFF", "", shamrock(Z_FLICK[0] + 6, Z_FLICK[1] - 128, 3.6, "#FFFFFF")),
+    ("easter", "#CFE8F3", "#111111", "", egg(Z_FLICK[0] + 8, Z_FLICK[1] - 140, 0.95, "#F7B9C8", "#FFFFFF")),
+    ("pride", "#000000", "#FFFFFF", "", rainbow(Z_FLICK[0] - 4, Z_FLICK[1] - 52, 120, 17)),
+    # styles: any time of year
+    ("light", "#F4F3EF", "#000000", "", ""),
+    ("gold", "#000000", "url(#gold)", GOLD, ""),
+    ("sunrise", "url(#dawn)", "#FFFFFF", DAWN, ""),
 ]
+
+
+TITLES = {
+    "halloween": "Halloween", "christmas": "Christmas", "new-year": "New Year", "valentines": "Valentine's",
+    "spring": "Spring", "summer": "Summer", "winter": "Winter", "autumn": "Autumn", "lunar-new-year": "Lunar New Year",
+    "st-patricks": "St Patrick's", "easter": "Easter", "pride": "Pride", "light": "Light", "gold": "Gold", "sunrise": "Sunrise",
+}
 
 
 def seasonal_icon(name, bg, ink, behind, front):
@@ -201,7 +266,9 @@ def seasonal_android(name, bg, ink, behind, front):
     """Android draws the tile colour itself, so the foreground is transparent; everything sits in the
     safe zone (the inner 66 %), so it is shrunk about the centre."""
     k = 0.72
-    return svg(C, f'<g transform="translate({C/2} {C/2}) scale({k}) translate({-C/2} {-C/2})">{behind}{mark(C, SEASON_MARK, ink)}{front}</g>')
+    # A gradient tile can't be an adaptive background colour, so it goes edge to edge in the foreground.
+    sky = f'<rect width="{C}" height="{C}" fill="{bg}"/>' if bg.startswith("url(") else ""
+    return svg(C, f'{sky}<g transform="translate({C/2} {C/2}) scale({k}) translate({-C/2} {-C/2})">{behind}{mark(C, SEASON_MARK, ink)}{front}</g>')
 
 
 # ---- write everything ---------------------------------------------------------
@@ -228,7 +295,7 @@ def main():
         png(seasonal_android(*season), 1024, ICONS / f"{season[0]}-android.png")
 
     sheet()
-    print("wrote the logo, app icons, splash, favicon and", len(SEASONS), "seasonal icons")
+    print("wrote the logo, app icons, splash, favicon and", len(SEASONS), "seasonal icons and styles")
 
 
 def sheet():
@@ -258,14 +325,15 @@ def sheet():
         x += size + 40
     d.text((980, 500), "Small sizes", fill="white", font=label)
 
-    names = ["Everyday", "Halloween", "Christmas", "New Year", "Valentine's", "Spring", "Summer", "Winter"]
-    markups = [svg(C, mark(C, MARK, "#FFFFFF"), bg="#000000")] + [seasonal_icon(*s) for s in SEASONS]
-    d.text((980, 620), "Seasonal icons", fill="white", font=label)
+    names = ["Everyday"] + [TITLES[sn[0]] for sn in SEASONS]
+    markups = [svg(C, mark(C, MARK, "#FFFFFF"), bg="#000000")] + [seasonal_icon(*sn) for sn in SEASONS]
+    d.text((980, 620), "Seasonal icons and styles", fill="white", font=label)
+    small_label = ImageFont.truetype(str(SANS), 22)
     for i, (n, m) in enumerate(zip(names, markups)):
-        cx, cy = 980 + (i % 4) * 330, 680 + (i // 4) * 380
-        tile(m, 260, cx, cy)
-        tw = d.textlength(n, font=label)
-        d.text((cx + (260 - tw) / 2, cy + 280), n, fill=(200, 200, 200), font=label)
+        cx, cy = 980 + (i % 6) * 228, 680 + (i // 6) * 262
+        tile(m, 190, cx, cy)
+        tw = d.textlength(n, font=small_label)
+        d.text((cx + (190 - tw) / 2, cy + 200), n, fill=(200, 200, 200), font=small_label)
     img.save(BRAND / "brand-sheet.png")
 
 
