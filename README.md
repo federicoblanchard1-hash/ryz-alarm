@@ -70,7 +70,7 @@ There are 33 missions in three groups (the 6 marked *free* are on the free plan;
 - **30-second sprint**: run on the spot; the clock only runs while you move hard. 30 s of hard exercise after waking made people feel less sleepy and boosted waking cortisol (Kovac et al., 2021)
 - **Torso twists** (gyroscope) and **Reach for the sky** (arm raises)
 - **Let the light in** (Android): open the curtains or turn on the lights until the room reaches 100 / 400 / 1,000 lux. Bright light after waking raised alertness and energy at home (Sleep Health, 2024)
-- **Object hunt**: Ryz names something (a cup, a shoe, a plant, the sink…) and you photograph it. Google ML Kit recognises it on the phone; photos never leave it. Needs a development or store build, so in Expo Go it becomes sums
+- **Object hunt**: Ryz names something (a cup, a shoe, a plant, the sink…) and you photograph it. Google ML Kit recognises it on the phone; photos never leave it. In the editor you tick which of the 18 objects Ryz may ask for (only things you have), and during the mission **Something else** swaps the object for another on your list. Needs a development or store build, so in Expo Go it becomes sums
 - **Climb the stairs**: go up or down a floor; the barometer feels the height change (about 3 m a floor). Phones without a barometer get sums
 - **Lunges**, phone held to your chest
 - **Shadow boxing**: quick punches with the phone in your fist

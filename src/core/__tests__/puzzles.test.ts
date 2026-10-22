@@ -7,6 +7,8 @@ import {
   countdownStart,
   dsstKey,
   huntItems,
+  huntPool,
+  swapHuntItem,
   huntMatches,
   isNBackMatch,
   nextNBack,
@@ -239,5 +241,23 @@ describe('2-back letters', () => {
       h.push(nextNBack(h, random));
       if (i > 0) expect(h[i]).not.toBe(h[i - 1]);
     }
+  });
+});
+
+describe('object hunt choices', () => {
+  it('only asks for the objects picked, and all of them when none were', () => {
+    expect(huntPool(['cup', 'shoe']).map((i) => i.id)).toEqual(['cup', 'shoe']);
+    expect(huntPool([])).toHaveLength(HUNT_ITEMS.length);
+    expect(huntPool(['gone'])).toHaveLength(HUNT_ITEMS.length);
+    const items = huntItems(5, seeded(3), ['cup', 'shoe']);
+    expect(items.every((i) => i.id === 'cup' || i.id === 'shoe')).toBe(true);
+    for (let i = 1; i < items.length; i++) expect(items[i].id).not.toBe(items[i - 1].id);
+  });
+
+  it('swaps for something else on the list', () => {
+    const cup = HUNT_ITEMS.find((i) => i.id === 'cup')!;
+    expect(swapHuntItem(cup, seeded(1), ['cup', 'plant']).id).toBe('plant');
+    expect(swapHuntItem(cup, seeded(1), ['cup']).id).toBe('cup');
+    expect(new Set(HUNT_ITEMS.map((i) => i.id)).size).toBe(HUNT_ITEMS.length);
   });
 });

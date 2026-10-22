@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Button, haptic, Txt } from '@/components/ui';
-import { huntItems, huntMatches } from '@/core/puzzles';
+import { huntItems, huntMatches, huntPool, swapHuntItem } from '@/core/puzzles';
 import { labelImage } from '@/services/vision';
 import { FONT, colors, radius, space } from '@/theme';
 import { Progress, type MissionProps } from './common';
@@ -11,7 +11,8 @@ import { Progress, type MissionProps } from './common';
 /** Object hunt: Ryz names something, you find it and take a photo; the phone checks what's in it. */
 export function HuntMission({ mission, onActivity, onDone }: MissionProps) {
   const [permission, requestPermission] = useCameraPermissions();
-  const [items] = useState(() => huntItems(mission.amount));
+  const [items, setItems] = useState(() => huntItems(mission.amount, Math.random, mission.objects));
+  const canSwap = huntPool(mission.objects).length > 1;
   const [index, setIndex] = useState(0);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -65,6 +66,20 @@ export function HuntMission({ mission, onActivity, onDone }: MissionProps) {
       )}
       <Txt variant="caption" style={[styles.center, { opacity: seen ? 1 : 0 }]}>{seen ?? ' '}</Txt>
       <Button title={busy ? 'Looking…' : 'Take photo'} icon="camera" onPress={snap} disabled={!ready || busy || !permission?.granted} />
+      {canSwap ? (
+        <Button
+          title="Something else"
+          icon="shuffle"
+          variant="secondary"
+          disabled={busy}
+          onPress={() => {
+            onActivity();
+            haptic('select');
+            setSeen(null);
+            setItems((list) => list.map((it, i) => (i === index ? swapHuntItem(it, Math.random, mission.objects) : it)));
+          }}
+        />
+      ) : null}
     </View>
   );
 }

@@ -279,6 +279,46 @@ export function Chips<T extends string | number>({
   );
 }
 
+/** Like Chips, but any number can be on. */
+export function MultiChips<T extends string | number>({
+  title,
+  options,
+  values,
+  onChange,
+}: {
+  title?: string;
+  options: Option<T>[];
+  values: T[];
+  onChange: (values: T[]) => void;
+}) {
+  return (
+    <View style={styles.chipBlock}>
+      {title ? <Txt variant="caption">{title}</Txt> : null}
+      <View style={styles.chips}>
+        {options.map((o) => {
+          const selected = values.includes(o.value);
+          return (
+            <Pressable
+              key={String(o.value)}
+              onPress={() => {
+                haptic('select');
+                onChange(selected ? values.filter((v) => v !== o.value) : [...values, o.value]);
+              }}
+              hitSlop={4}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected }}
+              accessibilityLabel={o.label}
+              style={[styles.chip, selected && styles.chipOn]}
+            >
+              <Text style={[styles.chipText, selected && styles.chipTextOn]}>{o.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   unpressed: { transform: [{ scale: 1 }] },
   pressed: { transform: [{ scale: 0.97 }] },

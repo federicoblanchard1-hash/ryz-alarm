@@ -6,10 +6,11 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ProTag } from '@/components/ProTag';
 import { Sheet } from '@/components/Sheet';
 import { AmountPicker } from '@/components/AmountPicker';
-import { Button, Chips, LinkRow, Txt, haptic } from '@/components/ui';
+import { Button, Chips, LinkRow, MultiChips, Txt, haptic } from '@/components/ui';
 import { QrScanner } from '@/missions/QrScanner';
 import { LEVEL_NAMES, MAX_MISSIONS, MISSIONS, MISSION_GROUPS, clampAmount, defaultMission, missionsIn, type Mission, type MissionLevel, type MissionType } from '@/core/missions';
 import { FREE_MISSIONS, FREE_MISSION_SLOTS } from '@/core/pro';
+import { HUNT_ITEMS } from '@/core/puzzles';
 import { MISSION_ICONS } from '@/missions/common';
 import { usePro } from '@/state/usePro';
 import { FONT, colors, radius, space } from '@/theme';
@@ -148,6 +149,23 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
                 <Txt variant="caption" style={styles.flex}>{MISSIONS[edited.type].research}</Txt>
               </View>
             ) : null}
+            {edited.type === 'hunt' ? (
+              <View style={styles.hunt}>
+                <MultiChips
+                  title="What Ryz can ask for"
+                  options={HUNT_ITEMS.map((i) => ({ value: i.id, label: i.label }))}
+                  values={edited.objects?.length ? edited.objects : HUNT_ITEMS.map((i) => i.id)}
+                  onChange={(objects) => {
+                    // Keep at least one; all of them is saved as "any".
+                    if (!objects.length) return;
+                    update({ ...edited, objects: objects.length === HUNT_ITEMS.length ? undefined : objects });
+                  }}
+                />
+                <Txt variant="caption">
+                  {`Keep only things you have, ideally outside your bedroom. Ryz picks one at random each time${edited.objects?.length ? ` from your ${edited.objects.length}` : ''}, and "Something else" swaps it for another. Needs the full Ryz app, not Expo Go.`}
+                </Txt>
+              </View>
+            ) : null}
             {edited.type === 'qr' ? (
               <View style={styles.qr}>
                 <Txt variant="caption">
@@ -194,7 +212,7 @@ export function MissionCard({ missions, onChange, awakeCheckLabel, onAwakeCheck 
                 variant="secondary"
                 style={styles.flex}
                 onPress={() => {
-                  const params = { type: edited.type, amount: String(edited.amount), level: String(edited.level), code: edited.code ?? '' };
+                  const params = { type: edited.type, amount: String(edited.amount), level: String(edited.level), code: edited.code ?? '', objects: edited.objects?.join(',') ?? '' };
                   setEditing(null);
                   router.push({ pathname: '/try-mission', params });
                 }}
@@ -229,6 +247,7 @@ const styles = StyleSheet.create({
   groupText: { marginBottom: space.sm },
   research: { flexDirection: 'row', gap: space.sm, padding: space.md, borderRadius: radius.md, backgroundColor: colors.surfaceRaised },
   qr: { gap: space.md, paddingVertical: space.sm },
+  hunt: { gap: space.xs },
   pickRow: { flexDirection: 'row', alignItems: 'center', gap: space.lg, minHeight: 60 },
   pressed: { opacity: 0.6 },
   pickIcon: { width: 46, height: 46, borderRadius: 12, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },

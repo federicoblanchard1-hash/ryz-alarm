@@ -1,4 +1,4 @@
-import { between, type MissionLevel, type Random } from './missions';
+import { between, shuffleBag, type MissionLevel, type Random } from './missions';
 
 // Generators for the newer brain and science missions. Everything takes a
 // random source so the tests can replay it.
@@ -287,37 +287,55 @@ export const BEEP_LIMIT_MS: Record<MissionLevel, number> = { 1: 700, 2: 520, 3: 
 // ---- Object hunt.
 
 export interface HuntItem {
+  id: string;
+  /** What Ryz asks for: "Find a cup or mug". */
   name: string;
+  /** Short, for the picker in the editor. */
+  label: string;
   /** What the on-device image labeller calls it (any of these counts). */
   labels: string[];
 }
 
 /** Things found in most homes outside the bedroom, named the way the labeller knows them. */
 export const HUNT_ITEMS: HuntItem[] = [
-  { name: 'a cup or mug', labels: ['Cup', 'Coffee', 'Cappuccino', 'Tableware'] },
-  { name: 'a shoe', labels: ['Shoe', 'Sneakers'] },
-  { name: 'a chair', labels: ['Chair'] },
-  { name: 'the sofa', labels: ['Couch', 'Loveseat'] },
-  { name: 'a plant', labels: ['Plant', 'Flowerpot', 'Flora', 'Flower'] },
-  { name: 'a sink', labels: ['Sink', 'Bathroom', 'Countertop'] },
-  { name: 'a clock', labels: ['Clock'] },
-  { name: 'glasses or sunglasses', labels: ['Glasses', 'Sunglasses', 'Goggles'] },
-  { name: 'a fork or spoon', labels: ['Cutlery', 'Tableware'] },
-  { name: 'a TV or computer', labels: ['Television', 'Computer', 'Screenshot', 'Web page'] },
-  { name: 'a bag', labels: ['Bag', 'Handbag'] },
-  { name: 'some fruit', labels: ['Fruit', 'Food', 'Vegetable'] },
-  { name: 'some bread', labels: ['Bread', 'Food'] },
-  { name: 'a hat or cap', labels: ['Hat', 'Cap', 'Beanie'] },
-  { name: 'a toy', labels: ['Toy', 'Stuffed toy', 'Plush', 'Lego'] },
-  { name: 'your jeans', labels: ['Jeans', 'Denim'] },
-  { name: 'the kitchen', labels: ['Kitchen', 'Cookware and bakeware', 'Countertop'] },
-  { name: 'a shelf or drawer', labels: ['Shelf', 'Drawer', 'Cabinetry'] },
+  { id: 'cup', label: 'Cup or mug', name: 'a cup or mug', labels: ['Cup', 'Coffee', 'Cappuccino', 'Tableware'] },
+  { id: 'shoe', label: 'Shoe', name: 'a shoe', labels: ['Shoe', 'Sneakers'] },
+  { id: 'chair', label: 'Chair', name: 'a chair', labels: ['Chair'] },
+  { id: 'sofa', label: 'Sofa', name: 'the sofa', labels: ['Couch', 'Loveseat'] },
+  { id: 'plant', label: 'Plant', name: 'a plant', labels: ['Plant', 'Flowerpot', 'Flora', 'Flower'] },
+  { id: 'sink', label: 'Sink', name: 'a sink', labels: ['Sink', 'Bathroom', 'Countertop'] },
+  { id: 'clock', label: 'Clock', name: 'a clock', labels: ['Clock'] },
+  { id: 'glasses', label: 'Glasses', name: 'glasses or sunglasses', labels: ['Glasses', 'Sunglasses', 'Goggles'] },
+  { id: 'cutlery', label: 'Fork or spoon', name: 'a fork or spoon', labels: ['Cutlery', 'Tableware'] },
+  { id: 'screen', label: 'TV or computer', name: 'a TV or computer', labels: ['Television', 'Computer', 'Screenshot', 'Web page'] },
+  { id: 'bag', label: 'Bag', name: 'a bag', labels: ['Bag', 'Handbag'] },
+  { id: 'fruit', label: 'Fruit', name: 'some fruit', labels: ['Fruit', 'Food', 'Vegetable'] },
+  { id: 'bread', label: 'Bread', name: 'some bread', labels: ['Bread', 'Food'] },
+  { id: 'hat', label: 'Hat or cap', name: 'a hat or cap', labels: ['Hat', 'Cap', 'Beanie'] },
+  { id: 'toy', label: 'Toy', name: 'a toy', labels: ['Toy', 'Stuffed toy', 'Plush', 'Lego'] },
+  { id: 'jeans', label: 'Jeans', name: 'your jeans', labels: ['Jeans', 'Denim'] },
+  { id: 'kitchen', label: 'Kitchen', name: 'the kitchen', labels: ['Kitchen', 'Cookware and bakeware', 'Countertop'] },
+  { id: 'shelf', label: 'Shelf or drawer', name: 'a shelf or drawer', labels: ['Shelf', 'Drawer', 'Cabinetry'] },
 ];
 
 export function huntMatches(item: HuntItem, labels: { text: string; confidence: number }[], minConfidence = 0.5): boolean {
   return labels.some((l) => l.confidence >= minConfidence && item.labels.some((x) => x.toLowerCase() === l.text.toLowerCase()));
 }
 
-export function huntItems(count: number, random: Random = Math.random): HuntItem[] {
-  return shuffle(HUNT_ITEMS, random).slice(0, Math.min(count, HUNT_ITEMS.length));
+/** The objects a mission may ask for: the ones picked in the editor, or all of them if none were. */
+export function huntPool(allowed?: string[]): HuntItem[] {
+  const picked = HUNT_ITEMS.filter((i) => allowed?.includes(i.id));
+  return picked.length ? picked : HUNT_ITEMS;
+}
+
+/** `count` objects from the pool, each once before any repeats (a short list repeats), never twice in a row. */
+export function huntItems(count: number, random: Random = Math.random, allowed?: string[]): HuntItem[] {
+  const next = shuffleBag(huntPool(allowed), random);
+  return Array.from({ length: count }, next);
+}
+
+/** Another object from the pool, for "Something else" (the same one only if it's the only one). */
+export function swapHuntItem(current: HuntItem, random: Random = Math.random, allowed?: string[]): HuntItem {
+  const others = huntPool(allowed).filter((i) => i.id !== current.id);
+  return others.length ? others[Math.floor(random() * others.length)] : current;
 }

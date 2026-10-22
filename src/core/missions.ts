@@ -44,6 +44,8 @@ export interface Mission {
   level: MissionLevel;
   /** QR/barcode: the code that has to be scanned. Empty means any code. */
   code?: string;
+  /** Object hunt: the objects it may ask for (ids from HUNT_ITEMS). Empty means any of them. */
+  objects?: string[];
 }
 
 export interface MissionInfo {
