@@ -61,10 +61,17 @@ def ops(ch):
 
 r = ops("r")
 z = ops("z")
-# The r's arm stops a little short and slides under the z's thick start, so the join has no step.
-R_ARM = r[:11] + [("qCurveTo", ((246, 446), (276, 484), (302, 497))), ("lineTo", ((316, 463),))] + r[15:]
-# The z loses its left hook, so its top stroke starts clean where the r's arm arrives.
-Z_JOIN = z[:7] + [("qCurveTo", ((96, 455), (98, 488), (152, 516)))] + z[11:]
+# The top of the r's arm rises and levels out exactly where the z's top stroke starts,
+# so the two read as one stroke.
+R_ARM = r[:11] + [("qCurveTo", ((246, 446), (282, 502), (318, 516), (338, 516))), ("lineTo", ((330, 474),))] + r[15:]
+# The z loses its left hook. Underneath, its stroke bends up into the arm with a curve
+# that meets the arm's underside at a tangent, so the joint has no notch.
+Z_JOIN = z[:6] + [
+    ("qCurveTo", ((230, 406), (183, 427), (163, 437))),
+    ("qCurveTo", ((109, 464), (82, 422))),
+    ("lineTo", ((114, 470),)),
+    ("lineTo", ((152, 516),)),
+] + z[11:]
 Z_OFFSET = 186
 PARTS = [(R_ARM, 0), (Z_JOIN, Z_OFFSET)]
 
