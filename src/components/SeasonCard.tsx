@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { APP_ICON, iconToSuggest } from '@/core/appIcons';
@@ -15,7 +16,7 @@ function notice(title: string, text: string) {
   else Alert.alert(title, text);
 }
 
-/** A one-line card offering the icon for the season or holiday that's on, or starts within a week. Closing it keeps it away until a week before the next one. */
+/** A small card (one line on most phones) offering the icon for the season or holiday that's on, or starts within a week. Closing it keeps it away until a week before the next one. */
 export function SeasonCard() {
   const { data, updateSettings } = useStore();
   const { pro, unlock } = usePro();
@@ -30,10 +31,17 @@ export function SeasonCard() {
   return (
     <View style={styles.card}>
       <AppIconTile id={id} size={28} />
-      <Text style={styles.text} numberOfLines={1}>
-        {`${title} icon`}
-        <Text style={styles.when}>{` · ${when}`}</Text>
-      </Text>
+      <Pressable
+        onPress={() => router.push({ pathname: '/settings/[page]', params: { page: 'icon' } })}
+        accessibilityRole="button"
+        accessibilityLabel={`${title} icon and more, ${when}. See every icon`}
+        style={styles.flex}
+      >
+        <Text style={styles.text} numberOfLines={2}>
+          {`${title} icon`}
+          <Text style={styles.when}>{` and more · ${when}`}</Text>
+        </Text>
+      </Pressable>
       <Pressable
         onPress={async () => {
           haptic('success');
@@ -60,7 +68,8 @@ export function SeasonCard() {
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.xs + 2, paddingLeft: space.sm, paddingRight: space.md, borderRadius: radius.md, backgroundColor: colors.surface },
-  text: { flex: 1, fontSize: 14, fontFamily: FONT.medium, color: colors.text },
+  flex: { flex: 1 },
+  text: { fontSize: 14, fontFamily: FONT.medium, color: colors.text },
   when: { fontFamily: FONT.regular, color: colors.textMuted },
   switch: { paddingHorizontal: space.sm + 2, height: 26, borderRadius: radius.pill, backgroundColor: colors.accent, justifyContent: 'center' },
   switchText: { fontSize: 13, fontFamily: FONT.medium, color: colors.onAccent },
