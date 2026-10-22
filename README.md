@@ -46,18 +46,47 @@ The **alarm editor** copies Alarmy's layout and text sizes: the alarm name, "Rin
 
 Like Alarmy: with missions on, **Stop** starts them, and the alarm only turns off when they're done. Up to five per alarm, done in order. You choose **how many** of each, from 1 to 100, with a slider (tap the boxed number to type it), and how hard. Puzzles never repeat within a mission: sums come in several shapes per level (+, −, ×, ÷, brackets), and sentences and words come from large shuffled pools. **While you work, the alarm is silent.** If you stop for a while (5 s to 2 min, Settings → Alarms) it rings again, and an optional **time limit per mission** restarts the mission with a new puzzle and rings again when it runs out. It only stops for good when every mission is done. There's no *new puzzle* button, so you can't skip one. But if a mission can't be done (the camera won't read your code, the phone won't count steps), after 2 minutes a **Stuck? Do sums instead** button appears, so you're never left with an alarm you can't stop.
 
-| Wake your brain | Wake your body | Scientific |
-| --- | --- | --- |
-| **Math**: sums, easy to hard | **Shake** the phone hard | **Reaction test**: tap the moment the screen lights up. The psychomotor vigilance task sleep labs use to measure alertness (Basner & Dinges) |
-| **Memory**: repeat the squares that light up | **Squats**, phone held to your chest | **Arrow test**: answer where the arrow points, not what the word says (a spatial Stroop test of attention) |
-| **Typing**: type sentences word for word | **Steps** | |
-| **Number hunt**: tap 1, 2, 3… on a shuffled grid | **Jumping jacks** | |
-| **Odd one out**: find the square that's a different grey | **Scan a code**: register any QR code or barcode (toothpaste, coffee jar…) and scan it to stop the alarm, so you have to get up | |
-| **Missing sign**: `12 ? 4 = 48` | **30-second sprint**: run on the spot; the clock only runs while you move hard. 30 s of hard exercise after waking made people feel less sleepy and boosted waking cortisol (Kovac et al., 2021) | |
-| **Unscramble** a word | **Torso twists** (gyroscope), **Reach for the sky** (arm raises) | |
-| | **Let the light in** (Android): open the curtains or turn on the lights until the room reaches 100 / 400 / 1,000 lux. Bright light after waking raised alertness and energy at home (Sleep Health, 2024) | |
+There are 33 missions in three groups (the 6 marked *free* are on the free plan; the rest come with Pro).
 
-Every mission has **Try it** in the editor. On a phone without the needed sensor, a body mission turns into sums so you can always turn the alarm off (an iPhone has no light sensor apps can read, so Let the light in becomes sums there).
+**Wake your brain (12)**
+- **Math** (free): sums, easy to hard
+- **Memory** (free): repeat the squares that light up
+- **Typing** (free): type sentences word for word
+- **Number hunt**: tap 1, 2, 3… on a shuffled grid
+- **Odd one out**: find the square that's a different grey
+- **Missing sign**: `12 ? 4 = 48`
+- **Unscramble** a word
+- **Sliding puzzle**: slide the tiles back into order (3×3, or 4×4 on Hard); always shuffled by real moves, so it can be solved
+- **Pairs**: flip cards two at a time and match every pair (6, 8 or 10 pairs)
+- **What comes next**: finish a number pattern (add, double, squares, Fibonacci-style…); a wrong pick shows the rule and gives a new one
+- **Mini sudoku**: 4×4 (6×6 on Hard); any correct grid counts, clashes show in red
+- **Morning trivia**: a general-knowledge question with four choices, from a pool of 65
+
+**Wake your body (13)**
+- **Shake** (free) the phone hard
+- **Squats** (free), phone held to your chest
+- **Steps** (free)
+- **Scan a code**: register any QR code or barcode (toothpaste, coffee jar…) and scan it to stop the alarm, so you have to get up
+- **30-second sprint**: run on the spot; the clock only runs while you move hard. 30 s of hard exercise after waking made people feel less sleepy and boosted waking cortisol (Kovac et al., 2021)
+- **Torso twists** (gyroscope) and **Reach for the sky** (arm raises)
+- **Let the light in** (Android): open the curtains or turn on the lights until the room reaches 100 / 400 / 1,000 lux. Bright light after waking raised alertness and energy at home (Sleep Health, 2024)
+- **Object hunt**: Ryz names something (a cup, a shoe, a plant, the sink…) and you photograph it. Google ML Kit recognises it on the phone; photos never leave it. Needs a development or store build, so in Expo Go it becomes sums
+- **Climb the stairs**: go up or down a floor; the barometer feels the height change (about 3 m a floor). Phones without a barometer get sums
+- **Lunges**, phone held to your chest
+- **Shadow boxing**: quick punches with the phone in your fist
+- **Balance**: stand on one leg holding the phone upright and still; a wobble restarts the clock
+
+**Scientific (8)**: tests and moves from sleep research
+- **Reaction test**: tap the moment the screen lights up. The psychomotor vigilance task sleep labs use to measure alertness (Basner & Dinges)
+- **Arrow test**: answer where the arrow points, not what the word says (a spatial Stroop test of attention)
+- **Cardio burst**: jumping jacks; a little cardio speeds up blood flow to the brain after waking (Hilditch & McHill, 2019)
+- **Countdown**: keep subtracting 3, 7 or 13 in your head. The descending subtraction test, sensitive to sleep inertia
+- **2-back**: tap when the letter matches the one from two before. The n-back working-memory task
+- **Symbol code**: turn symbols into numbers with a key. The digit symbol substitution test used next to the reaction test in sleep studies
+- **Finger tapping**: alternate two buttons as fast as you can, 40 / 55 / 70 taps in 10 seconds. The finger tapping task from sleep-inertia test batteries
+- **Sound reaction**: the reaction test by ear: a dark screen and a beep after a random wait
+
+Every mission has **Try it** in the editor. On a phone without the needed sensor, a body mission turns into sums so you can always turn the alarm off (an iPhone has no light sensor apps can read, so Let the light in becomes sums there; Object hunt needs a real build, and Climb the stairs a barometer).
 
 ## Alarms
 
@@ -83,7 +112,7 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 
 ## XP and Ryz Pro
 
-**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps and the Today plan. Pro adds all 18 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, every app icon (3 styles and 12 seasonal ones), and Family Sharing (one plan for up to 6 people). No ads on any plan. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
+**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps and the Today plan. Pro adds all 33 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, every app icon (3 styles and 12 seasonal ones), and Family Sharing (one plan for up to 6 people). No ads on any plan. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
 
 **The 14-day reverse trial.** Everyone gets full Pro for 14 days once they finish signing up, with no card. Morning shows the days left, and from 3 days before the end, a reminder. When it ends, Ryz says so once and lists what Pro was doing for you. The trial is once per account (its start date is saved to the account). Why this design: people value something they already have about twice as much as something they don't (loss aversion, the endowment effect), and longer trials convert best (RevenueCat, *State of Subscription Apps 2025*: 17–32-day trials have the highest trial-to-paid rate, 45.7%; Strava and Ladder grew with reverse trials).
 

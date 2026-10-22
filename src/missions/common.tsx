@@ -25,6 +25,21 @@ export const MISSION_ICONS: Record<MissionType, IconName> = {
   twists: 'sync-outline',
   reach: 'arrow-up-circle-outline',
   light: 'sunny-outline',
+  slide: 'grid',
+  pairs: 'copy-outline',
+  sequence: 'trending-up-outline',
+  sudoku: 'keypad-outline',
+  trivia: 'bulb-outline',
+  hunt: 'search-outline',
+  stairs: 'stats-chart-outline',
+  lunges: 'man-outline',
+  boxing: 'hand-left-outline',
+  balance: 'accessibility-outline',
+  countdown: 'remove-circle-outline',
+  nback: 'repeat-outline',
+  dsst: 'shapes-outline',
+  tapping: 'finger-print-outline',
+  beep: 'ear-outline',
 };
 
 export interface MissionProps {

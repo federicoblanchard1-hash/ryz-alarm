@@ -28,7 +28,7 @@ export type ProFeature = 'missions' | 'mission_slots' | 'sounds' | 'vibrations' 
 
 /** The headline on the paywall when it opens from a locked feature. */
 export const FEATURE_COPY: Record<ProFeature, { title: string; text: string }> = {
-  missions: { title: 'Unlock every mission', text: 'QR code, reaction test, arrow test, cardio burst, number hunt and more, for mornings you can’t sleep through.' },
+  missions: { title: 'Unlock every mission', text: 'Object hunt, climb the stairs, sudoku, 2-back, QR code, the reaction tests and more, for mornings you can’t sleep through.' },
   mission_slots: { title: 'Up to 5 missions per alarm', text: 'Free alarms take 3 missions. Pro stacks up to 5.' },
   sounds: { title: 'All 39 alarm sounds', text: 'Every siren, bell, nature sound and melody, including the research-backed ones.' },
   vibrations: { title: 'Every vibration pattern', text: 'Rapid, strong, waves and SOS, for when sound isn’t enough.' },

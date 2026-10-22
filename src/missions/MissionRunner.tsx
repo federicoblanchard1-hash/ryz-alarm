@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Accelerometer, Gyroscope, LightSensor, Pedometer } from 'expo-sensors';
+import { Accelerometer, Barometer, Gyroscope, LightSensor, Pedometer } from 'expo-sensors';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -19,6 +19,18 @@ import { QrMission } from './QrMission';
 import { ReactionMission } from './ReactionMission';
 import { SymbolMission } from './SymbolMission';
 import { UnscrambleMission } from './UnscrambleMission';
+import { BeepMission } from './BeepMission';
+import { CountdownMission } from './CountdownMission';
+import { DsstMission } from './DsstMission';
+import { HuntMission } from './HuntMission';
+import { NBackMission } from './NBackMission';
+import { PairsMission } from './PairsMission';
+import { SequenceMission } from './SequenceMission';
+import { SlideMission } from './SlideMission';
+import { SudokuMission } from './SudokuMission';
+import { TappingMission } from './TappingMission';
+import { TriviaMission } from './TriviaMission';
+import { canLabelImages } from '@/services/vision';
 
 const SCREENS: Record<Mission['type'], (props: MissionProps) => React.ReactElement> = {
   math: MathMission,
@@ -39,6 +51,27 @@ const SCREENS: Record<Mission['type'], (props: MissionProps) => React.ReactEleme
   qr: QrMission,
   pvt: ReactionMission,
   arrows: ArrowMission,
+  slide: SlideMission,
+  pairs: PairsMission,
+  sequence: SequenceMission,
+  sudoku: SudokuMission,
+  trivia: TriviaMission,
+  hunt: HuntMission,
+  stairs: BodyMission,
+  lunges: BodyMission,
+  boxing: BodyMission,
+  balance: BodyMission,
+  countdown: CountdownMission,
+  nback: NBackMission,
+  dsst: DsstMission,
+  tapping: TappingMission,
+  beep: BeepMission,
+};
+
+/** Why a mission became sums, for the sensors where "can't count …" doesn't fit. */
+const SWAP_REASON: Record<string, string> = {
+  vision: 'Recognising photos needs the full Ryz app (not Expo Go or the web)',
+  barometer: 'This phone has no barometer to feel the stairs',
 };
 
 /** Whether this phone can count the mission. Body missions need a motion sensor (and on web there isn't a usable one). */
@@ -47,10 +80,13 @@ async function canRun(mission: Mission): Promise<boolean> {
   if (!sensor) return true;
   if (Platform.OS === 'web') return false;
   if (sensor === 'camera') return true;
+  // Object hunt needs the on-device image recogniser, which isn't in Expo Go.
+  if (sensor === 'vision') return canLabelImages();
   try {
     // The light sensor is Android-only; an iPhone gets the fallback mission.
     if (sensor === 'light') return Platform.OS === 'android' && (await LightSensor.isAvailableAsync());
     if (sensor === 'gyroscope') return await Gyroscope.isAvailableAsync();
+    if (sensor === 'barometer') return await Barometer.isAvailableAsync();
     return sensor === 'accelerometer' ? await Accelerometer.isAvailableAsync() : await Pedometer.isAvailableAsync();
   } catch {
     return false;
@@ -141,7 +177,7 @@ export function MissionRunner({ missions, onActivity, onComplete, timeLimitSecon
         ) : null}
         {attempt > 0 ? <Txt variant="caption" accessibilityLiveRegion="polite">{"Out of time, so here's a fresh one."}</Txt> : null}
         {current?.swapped ? (
-          <Txt variant="caption">{!current.manual ? `This phone can't count ${MISSIONS[wanted.type].unit(2).replace(/^\d+ /, '')}, so here are some sums instead.` : 'Sums instead. Finish them to turn the alarm off.'}</Txt>
+          <Txt variant="caption">{current.manual ? 'Sums instead. Finish them to turn the alarm off.' : `${SWAP_REASON[MISSIONS[wanted.type].sensor ?? ''] ?? `This phone can't count ${MISSIONS[wanted.type].unit(2).replace(/^\d+ /, '')}`}, so here are some sums instead.`}</Txt>
         ) : null}
         {stuck === index && !current?.swapped ? (
           <Pressable onPress={switchToSums} hitSlop={8} accessibilityRole="button" style={styles.stuck}>

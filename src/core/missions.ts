@@ -16,7 +16,22 @@ export type MissionType =
   | 'sprint'
   | 'twists'
   | 'reach'
-  | 'light';
+  | 'light'
+  | 'slide'
+  | 'pairs'
+  | 'sequence'
+  | 'sudoku'
+  | 'trivia'
+  | 'hunt'
+  | 'stairs'
+  | 'lunges'
+  | 'boxing'
+  | 'balance'
+  | 'countdown'
+  | 'nback'
+  | 'dsst'
+  | 'tapping'
+  | 'beep';
 export type MissionLevel = 1 | 2 | 3;
 export type MissionGroup = 'brain' | 'body' | 'science';
 
@@ -42,8 +57,8 @@ export interface MissionInfo {
   step: number;
   unit: (n: number) => string;
   hasLevels: boolean;
-  /** Needs a sensor or the camera; swapped for sums on a phone without one. */
-  sensor?: 'accelerometer' | 'pedometer' | 'camera' | 'gyroscope' | 'light';
+  /** Needs a sensor or the camera; swapped for sums on a phone without one. `vision` is the camera plus on-device image recognition. */
+  sensor?: 'accelerometer' | 'pedometer' | 'camera' | 'gyroscope' | 'light' | 'barometer' | 'vision';
   /** For the Scientific missions: where the idea comes from. */
   research?: string;
 }
@@ -60,6 +75,11 @@ export const MISSIONS: Record<MissionType, MissionInfo> = {
   oddtile: { group: 'brain', title: 'Odd one out', description: 'Find the square that is a different grey', amounts: [5, 10, 15], min: 1, max: 100, step: 1, unit: plural('round', 'rounds'), hasLevels: true },
   symbol: { group: 'brain', title: 'Missing symbol', description: 'Pick the sign that makes the sum true', amounts: [3, 5, 10], min: 1, max: 100, step: 1, unit: plural('problem', 'problems'), hasLevels: true },
   unscramble: { group: 'brain', title: 'Unscramble', description: 'Put the letters back in order', amounts: [2, 3, 5], min: 1, max: 100, step: 1, unit: plural('word', 'words'), hasLevels: true },
+  slide: { group: 'brain', title: 'Sliding puzzle', description: 'Slide the tiles back into order', amounts: [1, 2, 3], min: 1, max: 10, step: 1, unit: plural('puzzle', 'puzzles'), hasLevels: true },
+  pairs: { group: 'brain', title: 'Pairs', description: 'Flip two cards at a time and match every pair', amounts: [1, 2, 3], min: 1, max: 10, step: 1, unit: plural('board', 'boards'), hasLevels: true },
+  sequence: { group: 'brain', title: 'What comes next', description: 'Finish the number pattern', amounts: [3, 5, 10], min: 1, max: 100, step: 1, unit: plural('pattern', 'patterns'), hasLevels: true },
+  sudoku: { group: 'brain', title: 'Mini sudoku', description: 'Fill a small grid so no number repeats', amounts: [1, 2, 3], min: 1, max: 10, step: 1, unit: plural('grid', 'grids'), hasLevels: true },
+  trivia: { group: 'brain', title: 'Morning trivia', description: 'Answer a general-knowledge question', amounts: [1, 3, 5], min: 1, max: 30, step: 1, unit: plural('question', 'questions'), hasLevels: false },
   shake: { group: 'body', title: 'Shake', description: 'Shake your phone hard', amounts: [20, 40, 80], min: 1, max: 100, step: 1, unit: plural('shake', 'shakes'), hasLevels: false, sensor: 'accelerometer' },
   squats: { group: 'body', title: 'Squats', description: 'Hold the phone to your chest and squat', amounts: [5, 10, 20], min: 1, max: 100, step: 1, unit: plural('squat', 'squats'), hasLevels: false, sensor: 'accelerometer' },
   steps: { group: 'body', title: 'Steps', description: 'Get up and walk around', amounts: [20, 50, 100], min: 1, max: 100, step: 1, unit: plural('step', 'steps'), hasLevels: false, sensor: 'pedometer' },
@@ -127,6 +147,66 @@ export const MISSIONS: Record<MissionType, MissionInfo> = {
     sensor: 'light',
     research: 'Bright light after waking made people feel more alert and energetic at home (Sleep Health, 2024). Easy needs room lights, Medium a bright room, Hard daylight.',
   },
+  hunt: {
+    group: 'body',
+    title: 'Object hunt',
+    description: 'Find the thing Ryz names and take a photo of it',
+    amounts: [1, 2, 3],
+    min: 1,
+    max: 5,
+    step: 1,
+    unit: plural('object', 'objects'),
+    hasLevels: false,
+    sensor: 'vision',
+  },
+  stairs: {
+    group: 'body',
+    title: 'Climb the stairs',
+    description: 'Go up or down a floor; the barometer feels the height change',
+    amounts: [1, 2, 3],
+    min: 1,
+    max: 10,
+    step: 1,
+    unit: plural('floor', 'floors'),
+    hasLevels: false,
+    sensor: 'barometer',
+  },
+  lunges: {
+    group: 'body',
+    title: 'Lunges',
+    description: 'Hold the phone to your chest and lunge, one leg then the other',
+    amounts: [10, 20, 30],
+    min: 2,
+    max: 100,
+    step: 2,
+    unit: plural('lunge', 'lunges'),
+    hasLevels: false,
+    sensor: 'accelerometer',
+  },
+  boxing: {
+    group: 'body',
+    title: 'Shadow boxing',
+    description: 'Throw quick punches with the phone in your hand',
+    amounts: [20, 40, 60],
+    min: 1,
+    max: 100,
+    step: 1,
+    unit: plural('punch', 'punches'),
+    hasLevels: false,
+    sensor: 'accelerometer',
+  },
+  balance: {
+    group: 'body',
+    title: 'Balance',
+    description: 'Stand on one leg, holding the phone upright and still',
+    amounts: [20, 30, 60],
+    min: 10,
+    max: 100,
+    step: 5,
+    unit: plural('second', 'seconds'),
+    hasLevels: true,
+    sensor: 'accelerometer',
+  },
   pvt: {
     group: 'science',
     title: 'Reaction test',
@@ -163,6 +243,66 @@ export const MISSIONS: Record<MissionType, MissionInfo> = {
     hasLevels: false,
     sensor: 'accelerometer',
     research: 'Sleep inertia comes with slow blood flow to the front of the brain; a little cardio speeds it up (Hilditch & McHill, 2019). Activity also predicts how alert you wake (Vallat et al., 2022).',
+  },
+  countdown: {
+    group: 'science',
+    title: 'Countdown',
+    description: 'Keep subtracting the same number, as fast as you can',
+    amounts: [5, 10, 20],
+    min: 1,
+    max: 100,
+    step: 1,
+    unit: plural('answer', 'answers'),
+    hasLevels: true,
+    research: 'The descending subtraction test, a working-memory test that sleep researchers use because it is sensitive to sleep loss and sleep inertia. Easy takes away 3, Medium 7, Hard 13.',
+  },
+  nback: {
+    group: 'science',
+    title: '2-back',
+    description: 'Tap when the letter matches the one from two before',
+    amounts: [5, 8, 12],
+    min: 1,
+    max: 50,
+    step: 1,
+    unit: plural('match', 'matches'),
+    hasLevels: true,
+    research: 'The n-back task, a working-memory test that picks up the fog right after waking. Harder levels show each letter for less time.',
+  },
+  dsst: {
+    group: 'science',
+    title: 'Symbol code',
+    description: 'Use the key to turn each symbol into its number',
+    amounts: [10, 20, 30],
+    min: 1,
+    max: 100,
+    step: 1,
+    unit: plural('symbol', 'symbols'),
+    hasLevels: true,
+    research: 'The digit symbol substitution test, used next to the reaction test in sleep studies to measure processing speed. Harder levels give less time per symbol.',
+  },
+  tapping: {
+    group: 'science',
+    title: 'Finger tapping',
+    description: 'Tap left, right, left… as fast as you can for 10 seconds',
+    amounts: [1, 2, 3],
+    min: 1,
+    max: 10,
+    step: 1,
+    unit: plural('round', 'rounds'),
+    hasLevels: true,
+    research: 'The finger tapping task from sleep-inertia test batteries measures motor speed, which is slow right after waking. Easy needs 40 taps, Medium 55, Hard 70.',
+  },
+  beep: {
+    group: 'science',
+    title: 'Sound reaction',
+    description: 'Tap the moment you hear the beep',
+    amounts: [5, 10, 20],
+    min: 1,
+    max: 100,
+    step: 1,
+    unit: plural('reaction', 'reactions'),
+    hasLevels: true,
+    research: 'The auditory reaction time task from sleep-inertia research: the reaction test, but by ear, with nothing on screen to watch.',
   },
 };
 
@@ -203,7 +343,7 @@ export function seeded(seed: number): Random {
   };
 }
 
-function between(random: Random, min: number, max: number): number {
+export function between(random: Random, min: number, max: number): number {
   return min + Math.floor(random() * (max - min + 1));
 }
 
@@ -616,5 +756,67 @@ export function lightTimer(level: MissionLevel) {
     if (lastT !== null && lux >= LIGHT_LUX[level]) litMs += Math.min(t - lastT, 1000);
     lastT = t;
     return litMs;
+  };
+}
+
+/** Lunges are a shallower dip than squats, one leg at a time. */
+export function lungeCounter() {
+  return squatCounter({ dip: 0.88, peak: 1.12, gapMs: 700 });
+}
+
+/**
+ * Counts punches with the phone in your fist: a sharp jab pushes the phone
+ * well past 1 g and snaps back. Quicker than a jumping jack, sharper than a
+ * stroll, at most one every `gapMs`.
+ */
+export function punchCounter(threshold = 2, gapMs = 220) {
+  return shakeCounter(threshold, gapMs);
+}
+
+/** Height in metres from air pressure (the international barometric formula). */
+export function altitudeFromPressure(hPa: number): number {
+  return 44330 * (1 - (hPa / 1013.25) ** (1 / 5.255));
+}
+
+/** One floor of stairs, a little under the usual 3 m so a short floor still counts. */
+export const FLOOR_METRES = 2.6;
+
+/**
+ * Counts floors from the barometer: the height is smoothed (indoor pressure
+ * jitters), and each time it has moved a floor's height up or down from where
+ * the last floor was counted, that's one floor.
+ */
+export function floorCounter(metres = FLOOR_METRES) {
+  let smooth: number | null = null;
+  let anchor: number | null = null;
+  return (hPa: number): { floors: number; climbed: number } => {
+    const h = altitudeFromPressure(hPa);
+    smooth = smooth === null ? h : smooth * 0.8 + h * 0.2;
+    anchor ??= smooth;
+    const climbed = smooth - anchor;
+    if (Math.abs(climbed) < metres) return { floors: 0, climbed };
+    anchor = smooth;
+    return { floors: 1, climbed: 0 };
+  };
+}
+
+/** How still the phone has to be held, by level: how far from a steady 1 g it may wobble. */
+export const BALANCE_WOBBLE: Record<MissionLevel, number> = { 1: 0.35, 2: 0.22, 3: 0.14 };
+
+/**
+ * Balance: the clock runs while the phone is held upright (gravity mostly
+ * along its long side) and steady. A big wobble, or laying the phone down,
+ * puts it back to zero: you lost your balance.
+ */
+export function balanceTimer(level: MissionLevel) {
+  let lastT: number | null = null;
+  let heldMs = 0;
+  return (s: Sample): { ms: number; upright: boolean } => {
+    const upright = Math.abs(s.y) >= 0.7;
+    const steady = Math.abs(magnitude(s) - 1) <= BALANCE_WOBBLE[level];
+    if (!upright || !steady) heldMs = 0;
+    else if (lastT !== null) heldMs += Math.min(s.t - lastT, 200);
+    lastT = s.t;
+    return { ms: heldMs, upright };
   };
 }

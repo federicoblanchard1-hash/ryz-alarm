@@ -5,6 +5,7 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Txt, haptic, type IconName } from '@/components/ui';
+import { MAX_MISSIONS, MISSIONS } from '@/core/missions';
 import { FEATURE_COPY, TRIAL_DAYS, proStatus, proThingsInUse, type ProFeature } from '@/core/pro';
 import { SHOP, balance, cantRedeem, redeem, streakDays } from '@/core/xp';
 import { useNow } from '@/state/useNow';
@@ -27,7 +28,8 @@ const MONTHLY = 4.99;
 const money = (n: number) => `$${n.toFixed(2)}`;
 
 const PERKS: { icon: IconName; text: string }[] = [
-  { icon: 'flash-outline', text: 'All 14 missions, and up to 5 per alarm' },
+  // Counted from the mission list, so it stays right as missions are added.
+  { icon: 'flash-outline', text: `All ${Object.keys(MISSIONS).length} missions, and up to ${MAX_MISSIONS} per alarm` },
   { icon: 'musical-notes-outline', text: 'All 39 sounds and every vibration pattern' },
   { icon: 'analytics-outline', text: 'Your whole sleep history: a year, any dates' },
   { icon: 'watch-outline', text: 'Automatic sleep from your smartwatch' },
