@@ -5,6 +5,7 @@ import { APP_ICON, iconToSuggest, seasonKey } from '@/core/appIcons';
 import { canChangeIcon, currentIcon, setIcon } from '@/services/appIcon';
 import { useNow } from '@/state/useNow';
 import { useStore } from '@/state/store';
+import { usePro } from '@/state/usePro';
 import { FONT, colors, radius, space } from '@/theme';
 import { AppIconTile } from './AppIconTile';
 import { Txt, haptic } from './ui';
@@ -17,6 +18,7 @@ function notice(title: string, text: string) {
 /** When a season starts, a small card offers its icon. Once a year; Settings can turn it off. */
 export function SeasonCard() {
   const { data, updateSettings } = useStore();
+  const { pro, unlock } = usePro();
   const now = useNow(60 * 60_000);
   const { seasonalIcons, iconPromptsSeen } = data.settings;
   const season = iconToSuggest(now, currentIcon(), iconPromptsSeen, seasonalIcons);
@@ -28,12 +30,13 @@ export function SeasonCard() {
       <AppIconTile id={season} size={44} />
       <View style={styles.flex}>
         <Text style={styles.title}>{`${title} icon`}</Text>
-        <Txt variant="caption">Same Ryz, dressed for the season</Txt>
+        <Txt variant="caption">{pro ? 'Same Ryz, dressed for the season' : 'Same Ryz, dressed for the season · Pro'}</Txt>
       </View>
       <Pressable
         onPress={async () => {
           haptic('success');
           done();
+          if (!pro) return unlock('app_icons');
           if (!canChangeIcon()) {
             notice('Needs the full app', `Switching to the ${title} icon needs the full Ryz app, not Expo Go. You'll find every icon in Settings → General → App icon.`);
             return;
@@ -43,7 +46,7 @@ export function SeasonCard() {
         accessibilityRole="button"
         style={styles.switch}
       >
-        <Text style={styles.switchText}>Switch</Text>
+        <Text style={styles.switchText}>{pro ? 'Switch' : 'Unlock'}</Text>
       </Pressable>
       <Pressable onPress={done} hitSlop={10} accessibilityRole="button" accessibilityLabel="Not now">
         <Ionicons name="close" size={18} color={colors.textMuted} />

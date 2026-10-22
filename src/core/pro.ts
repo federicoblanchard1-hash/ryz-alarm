@@ -13,6 +13,8 @@ import type { VibrationId } from './vibration';
 //   variety and depth: more missions and sounds, longer history, smartwatch.
 // - Alarms that are already set never lose anything: a Pro sound or mission
 //   chosen during the trial keeps working. Waking people up comes first.
+// - App icons other than the everyday one are Pro. An icon picked during the
+//   trial stays on the home screen; only switching needs Pro.
 
 const DAY = 24 * 60 * 60_000;
 export const TRIAL_DAYS = 14;
@@ -22,7 +24,7 @@ export const FREE_MISSION_SLOTS = 3;
 export const FREE_SOUNDS: AlarmSoundId[] = ['gentle', 'deep', 'air_raid', 'buzzer', 'bell', 'birds', 'ocean', 'wind_chimes'];
 export const FREE_VIBRATIONS: VibrationId[] = ['basic', 'heartbeat'];
 
-export type ProFeature = 'missions' | 'mission_slots' | 'sounds' | 'vibrations' | 'sleep_history' | 'smartwatch' | 'trial_ended';
+export type ProFeature = 'missions' | 'mission_slots' | 'sounds' | 'vibrations' | 'sleep_history' | 'smartwatch' | 'app_icons' | 'trial_ended';
 
 /** The headline on the paywall when it opens from a locked feature. */
 export const FEATURE_COPY: Record<ProFeature, { title: string; text: string }> = {
@@ -32,6 +34,7 @@ export const FEATURE_COPY: Record<ProFeature, { title: string; text: string }> =
   vibrations: { title: 'Every vibration pattern', text: 'Rapid, strong, waves and SOS, for when sound isn’t enough.' },
   sleep_history: { title: 'Your whole sleep history', text: 'A year at a glance, any dates you pick, and every stat across them.' },
   smartwatch: { title: 'Automatic sleep from your watch', text: 'Apple Watch, Galaxy, Pixel, Fitbit, Garmin: your nights appear by themselves.' },
+  app_icons: { title: 'Every app icon', text: 'Light, Gold and Sunrise any time, and an icon for every season and holiday, from Lunar New Year to Christmas.' },
   trial_ended: { title: 'Your Pro trial has ended', text: 'You’re back on the free plan. Your alarms keep working exactly as you set them.' },
 };
 

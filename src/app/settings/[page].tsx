@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, AppState, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -15,6 +16,7 @@ import { canChangeIcon, currentIcon, setIcon } from '@/services/appIcon';
 import { getLocationPermission, requestLocationPermission, type LocationPermission } from '@/services/weather';
 import { useAuth } from '@/state/auth';
 import { useStore } from '@/state/store';
+import { usePro } from '@/state/usePro';
 import { usePermissions } from '@/state/usePermissions';
 import { FONT, colors, space } from '@/theme';
 
@@ -246,7 +248,7 @@ function GeneralPage() {
   return (
     <Page title="General">
       <Group>
-        <Row icon="apps-outline" title="App icon" detail="Everyday, a style, or one for each season" value={APP_ICON[currentIcon()].title} onPress={() => router.push({ pathname: '/settings/[page]', params: { page: 'icon' } })} />
+        <Row icon="apps-outline" title="App icon" detail="Everyday, plus Pro styles and seasonal icons" value={APP_ICON[currentIcon()].title} onPress={() => router.push({ pathname: '/settings/[page]', params: { page: 'icon' } })} />
       </Group>
       <Group>
         <Toggle title="24-hour clock" note="On every screen, alarms and notifications" value={settings.use24h} onChange={(use24h) => updateSettings({ use24h })} />
@@ -279,10 +281,13 @@ function GeneralPage() {
 /** Pick the app icon: the everyday one or a seasonal one. The rz never changes, only the colour and one small detail. */
 function IconPage() {
   const { data, updateSettings } = useStore();
+  const { pro, unlock } = usePro();
   const [current, setCurrent] = useState<AppIconId>(() => currentIcon());
   const supported = canChangeIcon();
+  const locked = (id: AppIconId) => !pro && id !== 'default';
   const pick = async (id: AppIconId) => {
     haptic('select');
+    if (id !== current && locked(id)) return unlock('app_icons');
     if (!supported) {
       notice('Needs the full app', 'Changing the icon needs the full Ryz app (a store or development build). In Expo Go you can see them here, but not switch.');
       return;
@@ -300,9 +305,14 @@ function IconPage() {
           <Text style={styles.iconGroupTitle}>{kind === 'style' ? 'Any time' : 'Seasons and holidays'}</Text>
           <View style={styles.icons}>
             {APP_ICONS.filter((icon) => icon.kind === kind).map((icon) => (
-              <Pressable key={icon.id} onPress={() => pick(icon.id)} accessibilityRole="radio" accessibilityState={{ selected: current === icon.id }} accessibilityLabel={icon.title} style={styles.iconCell}>
+              <Pressable key={icon.id} onPress={() => pick(icon.id)} accessibilityRole="radio" accessibilityState={{ selected: current === icon.id }} accessibilityLabel={locked(icon.id) ? `${icon.title}, Pro` : icon.title} style={styles.iconCell}>
                 <View style={[styles.iconRing, current === icon.id && styles.iconRingOn]}>
                   <AppIconTile id={icon.id} size={64} />
+                  {locked(icon.id) ? (
+                    <View style={styles.iconLock}>
+                      <Ionicons name="lock-closed" size={11} color={colors.onAccent} />
+                    </View>
+                  ) : null}
                 </View>
                 <Txt variant="caption" style={[styles.center, current === icon.id && styles.iconOn]} numberOfLines={2}>{icon.title}</Txt>
               </Pressable>
@@ -310,6 +320,7 @@ function IconPage() {
           </View>
         </View>
       ))}
+      {!pro ? <Txt variant="caption" style={styles.center}>Everyday is free. Every other icon comes with Ryz Pro.</Txt> : null}
       <Group note={supported ? 'On iPhone, a short message confirms the change. That message comes from iOS, not Ryz.' : 'Switching needs the full Ryz app, not Expo Go.'}>
         <Toggle
           title="Suggest seasonal icons"
@@ -398,6 +409,7 @@ const styles = StyleSheet.create({
   iconCell: { width: '25%', alignItems: 'center', gap: space.xs },
   iconRing: { padding: 3, borderRadius: 20, borderWidth: 2, borderColor: 'transparent' },
   iconRingOn: { borderColor: colors.text },
+  iconLock: { position: 'absolute', right: 0, bottom: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bg },
   iconOn: { color: colors.text },
   warn: { color: colors.danger, paddingBottom: space.sm },
   center: { textAlign: 'center' },

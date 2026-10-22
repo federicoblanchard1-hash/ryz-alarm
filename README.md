@@ -83,7 +83,7 @@ Every mission has **Try it** in the editor. On a phone without the needed sensor
 
 ## XP and Ryz Pro
 
-**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps and the Today plan. Pro adds all 18 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, and Family Sharing (one plan for up to 6 people). No ads on any plan. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
+**Free and Pro.** The free plan is a complete alarm app: unlimited alarms, 6 missions (math, memory, typing, shake, squats, steps) with up to 3 per alarm, 8 sounds, 2 vibration patterns, the sleep tracker by week, 2 weeks and month, power naps and the Today plan. Pro adds all 18 missions and up to 5 per alarm, all 39 sounds and every vibration, a year or any dates of sleep history, automatic sleep from a smartwatch, every app icon (3 styles and 12 seasonal ones), and Family Sharing (one plan for up to 6 people). No ads on any plan. Locked items show a small PRO tag; sounds and vibrations can still be previewed, and tapping a locked item opens the paywall about that feature. An alarm that already uses a Pro sound or mission keeps working after Pro ends: waking people up comes first.
 
 **The 14-day reverse trial.** Everyone gets full Pro for 14 days once they finish signing up, with no card. Morning shows the days left, and from 3 days before the end, a reminder. When it ends, Ryz says so once and lists what Pro was doing for you. The trial is once per account (its start date is saved to the account). Why this design: people value something they already have about twice as much as something they don't (loss aversion, the endowment effect), and longer trials convert best (RevenueCat, *State of Subscription Apps 2025*: 17–32-day trials have the highest trial-to-paid rate, 45.7%; Strava and Ladder grew with reverse trials).
 
@@ -180,6 +180,8 @@ python3 scripts/generate-brand.py
 | Christmas | a Santa hat on green | 1 – 30 December |
 
 Holidays win over the season they fall in. There are also three **styles** with no dates, to use any time: **Light** (black on off-white), **Gold** (a gold rz on black) and **Sunrise** (white on a dawn gradient). Pick any of them in **Settings → General → App icon**; when a season or holiday starts, a small card on Morning offers its icon (once a year; *Suggest seasonal icons* turns it off).
+
+**Icons are Pro.** Everyday is free; the styles and seasonal icons come with Ryz Pro (and the 14-day trial). Free users see them with a lock, and tapping one, or *Unlock* on the season card, opens the Pro screen about icons. An icon picked during the trial stays on the home screen after it ends; only switching needs Pro.
 
 Switching icons uses `expo-alternate-app-icons`, which needs native code: it works in a development or store build, not in Expo Go (there the picker shows the icons and explains). On iPhone, iOS itself shows a short "You have changed the icon" message each time; apps can't switch silently.
 

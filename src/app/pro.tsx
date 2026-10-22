@@ -31,6 +31,7 @@ const PERKS: { icon: IconName; text: string }[] = [
   { icon: 'musical-notes-outline', text: 'All 39 sounds and every vibration pattern' },
   { icon: 'analytics-outline', text: 'Your whole sleep history: a year, any dates' },
   { icon: 'watch-outline', text: 'Automatic sleep from your smartwatch' },
+  { icon: 'apps-outline', text: 'Every app icon: 3 styles and 12 for the seasons' },
   { icon: 'people-outline', text: 'Family Sharing: one plan for up to 6 people' },
 ];
 
