@@ -1,6 +1,8 @@
 // Generates the alarm sounds in assets/sounds as 16-bit mono WAV files.
 // Run with `npm run sounds`. Each file stays under 30 s, the iOS limit for
-// notification sounds.
+// notification sounds. Six sounds are real recordings instead (gentle melody,
+// birdsong, kalimba, digital buzzer, alarm clock bell, continuous tone): see
+// scripts/real-sounds.py; this script leaves those files alone.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -82,24 +84,6 @@ function addBell(out, start, freq, gain, decay = 1.4) {
 
 const NOTE = { C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880, C6: 1046.5, D6: 1174.66 };
 
-// Gentle: a slow, rising pentatonic melody. A 2020 RMIT survey linked melodic
-// alarms with less morning grogginess than harsh beeps.
-function gentleMelody(seconds) {
-  const out = new Float32Array(RATE * seconds);
-  const phrases = [
-    ['C5', 'E5', 'G5', 'A5'],
-    ['G5', 'A5', 'C6', 'A5'],
-    ['D5', 'G5', 'A5', 'D6'],
-    ['C6', 'A5', 'G5', 'E5'],
-  ];
-  const phraseLength = 3.5;
-  let n = 0;
-  for (let t = 0; t + phraseLength <= seconds; t += phraseLength, n++) {
-    phrases[n % phrases.length].forEach((name, j) => addBell(out, t + j * 0.42, NOTE[name], j === 3 ? 0.9 : 0.7));
-  }
-  return normalize(out, 0.8);
-}
-
 // Two soft notes for "Are you awake?" and bedtime reminders.
 function chime() {
   const out = new Float32Array(RATE * 2.5);
@@ -158,46 +142,6 @@ function twoTone(seconds) {
     out[i] = softClip(richTone(phase, freq, 6));
   }
   return normalize(out, 0.95);
-}
-
-// Digital alarm clock: four quick beeps at 2.6 kHz, then a short gap.
-function buzzer(seconds) {
-  const out = new Float32Array(RATE * seconds);
-  const freq = 2600;
-  for (let i = 0; i < out.length; i++) {
-    const t = i / RATE;
-    const inCycle = t % 1;
-    if (inCycle >= 0.56) continue;
-    const inBeep = inCycle % 0.14;
-    if (inBeep >= 0.07) continue;
-    const env = Math.min(1, inBeep / 0.003, (0.07 - inBeep) / 0.003);
-    out[i] = (Math.sin(tau * freq * t) + Math.sin(tau * freq * 3 * t) / 3 > 0 ? 1 : -1) * 0.5 * env + Math.sin(tau * freq * t) * 0.5 * env;
-  }
-  return normalize(out, 0.9);
-}
-
-// Old mechanical alarm clock: a hammer hitting two bells about 18 times a second.
-function mechanicalBell(seconds) {
-  const out = new Float32Array(RATE * seconds);
-  const partials = [
-    [2100, 1],
-    [2870, 0.6],
-    [4300, 0.35],
-    [5600, 0.2],
-  ];
-  const strikes = [];
-  for (let t = 0; t < seconds; t += 1 / 18) if (t % 2.6 < 2) strikes.push(t);
-  for (const start of strikes) {
-    const from = Math.floor(start * RATE);
-    const length = Math.floor(0.25 * RATE);
-    for (let i = 0; i < length && from + i < out.length; i++) {
-      const t = i / RATE;
-      let s = 0;
-      for (const [f, a] of partials) s += a * Math.sin(tau * f * t) * Math.exp(-t * (14 + f / 400));
-      out[from + i] += s;
-    }
-  }
-  return normalize(out.map((x) => softClip(x * 0.6)), 0.95);
 }
 
 // ---- Calm: soft sounds that fade in.
@@ -427,13 +371,6 @@ function rhythmicMelody(seconds) {
 }
 
 // ---- More loud sounds.
-
-// Continuous tone: a single steady 1 kHz beep that never pauses.
-function continuousTone(seconds) {
-  const out = new Float32Array(RATE * seconds);
-  for (let i = 0; i < out.length; i++) out[i] = softClip(square((tau * 1000 * i) / RATE, 1000) * 0.9);
-  return normalize(out, 0.9);
-}
 
 // Smoke detector: the piercing 3.1 kHz T-3 pattern.
 function smokeDetector(seconds) {
@@ -763,20 +700,6 @@ function guitar(seconds) {
   return normalize(out, 0.75);
 }
 
-// Kalimba: soft thumb-piano notes with a woody overtone.
-function kalimba(seconds) {
-  const out = new Float32Array(RATE * seconds);
-  const tune = [72, 76, 79, 76, 74, 77, 81, 77, 72, 79, 76, 84, 81, 79, 76, 74];
-  for (let n = 0, t = 0.05; t < seconds - 1.5; n++, t += n % 8 === 0 ? 0.7 : 0.32) {
-    addPartials(out, t, midi(tune[n % tune.length]), n % 4 === 0 ? 0.9 : 0.65, [
-      [1, 1, 0.7],
-      [5.4, 0.12, 0.08],
-      [8.9, 0.05, 0.04],
-    ], 0.002);
-  }
-  return normalize(out, 0.75);
-}
-
 // Soft piano: slow chords and a simple melody.
 function softPiano(seconds) {
   const out = new Float32Array(RATE * seconds);
@@ -846,7 +769,6 @@ function lofi(seconds) {
 mkdirSync(OUT, { recursive: true });
 const files = {
   'deep_520hz.wav': deepTone(28),
-  'gentle_melody.wav': gentleMelody(28),
   'chime.wav': chime(),
 };
 for (const [name, samples] of Object.entries(files)) {
@@ -859,17 +781,13 @@ const smaller = {
   'loud_air_raid.wav': airRaid(28),
   'loud_yelp.wav': yelp(28),
   'loud_two_tone.wav': twoTone(28),
-  'loud_buzzer.wav': buzzer(28),
-  'loud_bell.wav': mechanicalBell(28),
   'calm_wind_chimes.wav': windChimes(28),
   'calm_ocean.wav': ocean(28),
-  'calm_birds.wav': birds(28),
   'calm_sunrise.wav': sunrise(28),
   'calm_music_box.wav': musicBox(28),
   'science_deep_400.wav': deep400(20),
   'science_rising.wav': risingMelody(24),
   'science_rhythmic.wav': rhythmicMelody(19.2),
-  'loud_continuous.wav': continuousTone(10),
   'loud_smoke.wav': smokeDetector(20),
   'loud_fire_bell.wav': fireBell(15),
   'loud_phone.wav': phoneRing(18),
@@ -889,7 +807,6 @@ const smaller = {
   'calm_brown_noise.wav': brownNoise(15),
   'calm_harp.wav': harp(22),
   'calm_guitar.wav': guitar(18),
-  'calm_kalimba.wav': kalimba(20),
   'calm_piano.wav': softPiano(22.4),
   'calm_singing_bowl.wav': singingBowl(24),
   'calm_lofi.wav': lofi(25.3),
